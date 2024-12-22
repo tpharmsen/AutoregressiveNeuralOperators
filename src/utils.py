@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from matplotlib import animation
 import numpy as np
+from matplotlib.widgets import Slider
 
 def get_meshgrid(shape, tstep):
     batch_size, x_size, y_size, t_size, _ = shape
@@ -71,3 +72,37 @@ def createGif(data, filename, colormap='viridis'):
     outputFolder = 'output/'
     anim.save(outputFolder + filename + ".gif")  
     plt.close(fig)
+
+
+def sliderPlot(y, y_hat, batchSize, colormap='turbo'):
+    ts = 0
+    batch_idx = 0
+
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    plt.subplots_adjust(bottom=0.3)  
+    im0 = ax[0].imshow(y[batch_idx, :, :, ts].cpu(), cmap=colormap)
+    im1 = ax[1].imshow(y_hat[batch_idx, :, :, ts].cpu().detach(), cmap=colormap)
+    im2 = ax[2].imshow(abs(y[batch_idx, :, :, ts].cpu() - y_hat[batch_idx, :, :, ts].cpu().detach()))
+
+    ax[0].set_title("Ground Truth")
+    ax[1].set_title("Prediction")
+    ax[2].set_title("Absolute Difference")
+
+    ax_slider_ts = plt.axes([0.25, 0.15, 0.5, 0.03]) 
+    slider_ts = Slider(ax_slider_ts, 'Timestep', 0, 9, valinit=ts, valstep=1)
+
+    ax_slider_batch = plt.axes([0.25, 0.05, 0.5, 0.03])  
+    slider_batch = Slider(ax_slider_batch, 'Batch Index', 0, y.shape[0] - 1, valinit=batch_idx, valstep=1)
+
+    def update(val):
+        ts = int(slider_ts.val)
+        batch_idx = int(slider_batch.val) 
+        im0.set_data(y[batch_idx, :, :, ts].cpu())
+        im1.set_data(y_hat[batch_idx, :, :, ts].cpu().detach())
+        im2.set_data(abs(y[batch_idx, :, :, ts].cpu() - y_hat[batch_idx, :, :, ts].cpu().detach()))
+        fig.canvas.draw_idle()
+
+    slider_ts.on_changed(update)
+    slider_batch.on_changed(update)
+    #plt.tight_layout()
+    plt.show()    
