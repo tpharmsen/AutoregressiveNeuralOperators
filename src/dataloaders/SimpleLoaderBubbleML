@@ -1,0 +1,56 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset
+import h5py
+
+
+TEMPERATURE = 'temperature'
+VELX = 'velx'
+VELY = 'vely'
+PRESSURE = 'pressure'
+
+
+class SimpleLoaderBubbleML(Dataset):
+    def __init__(self, filename):
+        self.filename = filename
+        self.data = h5py.File(self.filename, 'r')
+        self.timesteps = self.data[TEMPERATURE][:].shape[0]
+    
+    def __len__(self):
+        return self.timesteps - 1
+
+    def _get_state(self, idx):
+        r"""
+        The input is the temperature, x-velocity, and y-velocity at time == idx
+        """
+        temp = torch.from_numpy(self.data[TEMPERATURE][idx])
+        velx = torch.from_numpy(self.data[VELX][idx])
+        vely = torch.from_numpy(self.data[VELY][idx])
+        # returns a stack with shape [3 x Y x X]
+        return torch.stack((temp, velx, vely), dim=0)
+    
+    def __getitem__(self, idx):
+        r"""
+        As input, get temperature and velocities at time == idx.
+        As the output label, get the temperature at time == idx + 1.
+        """
+        input = self._get_state(idx)
+        label = self._get_state(idx+1)
+        return input, label
+    
+    def get_full_stack(self):
+        r"""
+        Retrieve the full temporal domain stack for the entire simulation.
+        The returned stack will have shape: [timesteps, channels, Y, X].
+        """
+        # Load temperature, velx, and vely data from the HDF5 file
+        temp_data = torch.from_numpy(self.data[TEMPERATURE][:])  # Shape: [timesteps, Y, X]
+        velx_data = torch.from_numpy(self.data[VELX][:])         # Shape: [timesteps, Y, X]
+        vely_data = torch.from_numpy(self.data[VELY][:])         # Shape: [timesteps, Y, X]
+        
+        # Stack the data along the channel dimension
+        full_stack = torch.stack((temp_data, velx_data, vely_data), dim=1)  # Shape: [timesteps, channels, Y, X]
+        return full_stack
+
+    
