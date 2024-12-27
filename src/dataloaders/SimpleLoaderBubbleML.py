@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, ConcatDataset, DataLoader
 import h5py
 
 
@@ -10,6 +10,12 @@ VELX = 'velx'
 VELY = 'vely'
 PRESSURE = 'pressure'
 
+def get_dataloaders(train_files, val_files, batch_size):
+    train_dataset = ConcatDataset((SimpleLoaderBubbleML(file) for file in train_files))
+    val_dataset = ConcatDataset((SimpleLoaderBubbleML(file) for file in val_files))
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    return train_loader, val_loader
 
 class SimpleLoaderBubbleML(Dataset):
     def __init__(self, filename):
