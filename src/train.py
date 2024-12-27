@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import datetime
+import wandb
 
 import yaml
 
@@ -43,6 +44,9 @@ def train(config_path):
     modelname = config['modelname']
     print("Model name:", modelname)
     
+    wandb.init(project="bubbleml_DS", name=modelname)
+    wandb.config.update(config)
+
     for epoch in range(EPOCHS):
         avg_train_loss = one_epoch_train_simple(model, train_loader, optimizer, DEVICE)
         train_losses.append(avg_train_loss)
@@ -52,7 +56,10 @@ def train(config_path):
 
         print(f"Epoch {epoch + 1}/{EPOCHS} - Train Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}")
 
-        # Save the model if the validation loss improves
+        wandb.log({"epoch": epoch, 
+                   "train_loss": avg_train_loss, 
+                   "val_loss": avg_val_loss})
+        
         if epoch % 10 == 0:
             if avg_val_loss < best_val_loss:
                 best_val_loss = avg_val_loss
@@ -67,6 +74,9 @@ def train(config_path):
     torch.save(model.state_dict(), filename)
     print("Training is finished. Model is saved as:", filename)
 
+    wandb.save(filename)
+    wandb.save(best_model_path)
+    wandb.finish()
 
 if __name__ == "__main__":
     train("conf/example.yaml")
