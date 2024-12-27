@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=simplejob
+#SBATCH --job-name=loadmoduletest
 #SBATCH --partition=gpu_mig
-#SBATCH --time=30:00
+#SBATCH --time=45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -11,4 +11,9 @@
 module load 2022
 module load Anaconda3/2022.05
 . "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/etc/profile.d/conda.sh"
-conda activate grad311
+conda activate grad312
+cd AutoregressiveNeuralOperators
+
+
+python -c "import torch; print('cuda available: ', torch.cuda.is_available())"
+python src/train.py
