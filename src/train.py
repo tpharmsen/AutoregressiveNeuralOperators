@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+import datetime
 
 import yaml
 
 from modelComp.UNet import UNet2D
 from trainers.simpletrainer import one_epoch_train_simple, one_epoch_val_simple
-from dataloaders.SimpleLoaderBubbleML import SimpleLoaderBubbleML
+from dataloaders.SimpleLoaderBubbleML import SimpleLoaderBubbleML, get_dataloaders
 
 
 def load_config(config_path):
@@ -17,25 +17,30 @@ def load_config(config_path):
     return config
 
 def prepare_dataloader(config):
-    # blabla
-    #return SimpleLoaderBubbleML()
-    pass
+    train_files = [config['data_path'] + file for file in config['training']['files']]
+    val_files = [config['data_path'] + file for file in config['training']['files']]
+    train_loader, val_loader = get_dataloaders(train_files, val_files, config['batch_size'])
+    return train_loader, val_loader
 
 def train(config_path):
-
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    print("Training is starting...:", current_time)
+    print(torch.cuda.is_available())
+    
     config = load_config(config_path)
     EPOCHS = config['training']['epochs']
     DEVICE = torch.device(config["device"])
 
-    #train_loader, val_loader = prepare_dataloader(config)
+    train_loader, val_loader = prepare_dataloader(config)
 
     model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256, 512]).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=config['training']['learning_rate'])
     
     train_losses = []
     val_losses = []
-    '''
+    
     for epoch in range(EPOCHS):
+        print(f"Epoch {epoch + 1}/{EPOCHS}")
         avg_train_loss = one_epoch_train_simple(model, train_loader, optimizer, DEVICE)
         train_losses.append(avg_train_loss)
     
@@ -43,11 +48,11 @@ def train(config_path):
         val_losses.append(avg_val_loss)
         
         print(f"Epoch {epoch + 1}/{EPOCHS} - Train Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}")
-    '''
-
-    print(EPOCHS, DEVICE)
-    print("Training is done!")
+    
+    filename = f"models/model_{current_time}.pth"
+    torch.save(model.state_dict(), filename)
+    print("Training is finished. Model is saved as:", filename)
 
 
 if __name__ == "__main__":
-    train("../conf/example.yaml")
+    train("conf/example.yaml")
