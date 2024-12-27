@@ -38,18 +38,30 @@ def train(config_path):
     
     train_losses = []
     val_losses = []
+    modelname = config['modelname']
+    print("Model name:", modelname)
     
     for epoch in range(EPOCHS):
-        print(f"Epoch {epoch + 1}/{EPOCHS}")
         avg_train_loss = one_epoch_train_simple(model, train_loader, optimizer, DEVICE)
         train_losses.append(avg_train_loss)
-    
+
         avg_val_loss = one_epoch_val_simple(model, val_loader, DEVICE)
         val_losses.append(avg_val_loss)
-        
+
         print(f"Epoch {epoch + 1}/{EPOCHS} - Train Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}")
-    
-    filename = f"models/model_{current_time}.pth"
+
+        # Save the model if the validation loss improves
+        if epoch % 10 == 0:
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                best_model_path = f"models/best_model_train_{modelname}.pth"
+                torch.save(model.state_dict(), best_model_path)
+            if avg_train_loss < best_train_loss:
+                best_train_loss = avg_train_loss
+                best_model_path = f"models/best_model_epoch_train_{modelname}.pth"
+                torch.save(model.state_dict(), best_model_path)
+
+    filename = f"models/finalmodel_{modelname}.pth"
     torch.save(model.state_dict(), filename)
     print("Training is finished. Model is saved as:", filename)
 
