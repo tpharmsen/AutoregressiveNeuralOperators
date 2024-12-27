@@ -1,6 +1,6 @@
 data_path: "data/PoolBoiling-SubCooled-FC72-2D/"
 device: "cuda"
-batch_size: 32
+batch_size: 16
 
 
 training:
