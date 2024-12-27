@@ -38,6 +38,8 @@ def train(config_path):
     
     train_losses = []
     val_losses = []
+    best_val_loss = float('inf')
+    best_train_loss = float('inf')
     modelname = config['modelname']
     print("Model name:", modelname)
     
