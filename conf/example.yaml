@@ -1,13 +1,12 @@
 data_path: "/data/PoolBoiling-SubCooled-FC72-2D"
 device: "cuda"
+batch_size: 32
 
 
 training:
   files: ["Twall-79.csv", "Twall-81.csv", "Twall-85.csv", "Twall-90.csv", "Twall-95.csv", "Twall-98.csv", "Twall-103.csv", "Twall-106.csv", "Twall-110.csv", ]
-  batch_size: 32
   epochs: 10
   learning_rate: 0.001
 
 validation:
   files: ["Twall-100.csv"]
-  batch_size: 32
