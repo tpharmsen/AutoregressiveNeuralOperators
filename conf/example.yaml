@@ -5,7 +5,7 @@ batch_size: 16
 
 training:
   files: ["Twall-79.hdf5", "Twall-81.hdf5", "Twall-85.hdf5", "Twall-90.hdf5", "Twall-95.hdf5", "Twall-98.hdf5", "Twall-103.hdf5", "Twall-106.hdf5", "Twall-110.hdf5"]
-  epochs: 10
+  epochs: 3
   learning_rate: 0.001
 
 validation:
