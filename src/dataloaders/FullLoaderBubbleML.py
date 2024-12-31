@@ -25,9 +25,9 @@ class FullLoaderBubbleML(Dataset):
     def __getitem__(self, idx):
         file = self.files[idx]
         with h5py.File(file, 'r') as data:
-            temp = torch.from_numpy(data[TEMPERATURE][:])
-            velx = torch.from_numpy(data[VELX][:])
-            vely = torch.from_numpy(data[VELY][:])
+            temp = torch.from_numpy(data[TEMPERATURE][:]).float()
+            velx = torch.from_numpy(data[VELX][:]).float()
+            vely = torch.from_numpy(data[VELY][:]).float()
         
         data = torch.stack((temp, velx, vely), dim=1)
         return data
@@ -35,4 +35,5 @@ class FullLoaderBubbleML(Dataset):
     def get_time_length(self):
             file = self.files[0]
             with h5py.File(file, 'r') as data:
-                return data[TEMPERATURE].shape[0]  # Time dimension size
+                tres = data[TEMPERATURE].shape[0]  # Time dimension size
+            return tres
