@@ -15,4 +15,4 @@ conda activate grad312
 cd AutoregressiveNeuralOperators
 
 python -c "import torch; print('cuda available: ', torch.cuda.is_available())"
-python src/train.py
+python src/PFtrainer.py --conf conf/example.yaml
