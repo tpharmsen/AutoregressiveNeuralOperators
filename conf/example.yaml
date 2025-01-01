@@ -1,9 +1,9 @@
 data_path: "data/PoolBoiling-SubCooled-FC72-2D/downsampled_redimensionalized/"
 device: "cuda"
-batch_size: 32
+batch_size: 16
 save_path: "models/PoolBoiling-SubCooled-FC72-2D/"
 discard_first: 20
-wandb: "False"
+wandb: "True"
 
 modelname: "UNet2D_DS2015"
 tw: 5
