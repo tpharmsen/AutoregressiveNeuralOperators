@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class UNet3D(nn.Module):
     def __init__(self, in_channels, out_channels, features=(64, 128, 256, 512), time_steps=1):
-        super(UNet2D, self).__init__()
+        super(UNet3D, self).__init__()
         self.time_steps = time_steps
         self.encoder = nn.ModuleList([
             self._conv_block(in_channels * time_steps if i == 0 else features[i - 1], feature)
