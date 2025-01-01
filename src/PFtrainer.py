@@ -85,13 +85,14 @@ def val_unrolled(model, steps, batch_size, nr_gt_steps, nx_base_resolution, data
             losses_tmp.append(loss / batch_size)
 
             # Unroll trajectory and add losses which are obtained for each unrolling
-            for step in range(args.tw * (nr_gt_steps + 1), args.t_res - args.tw + 1, args.tw):
+            #for step in range(args.tw * (nr_gt_steps + 1), args.t_res - args.tw + 1, args.tw):
+            for step in range(args.tw, args.t_res - args.tw + 1, args.tw):
                 same_steps = [step] * batch_size
                 _, labels = args.create_data(args, raw_data, same_steps)
                 
                 labels = labels.to(device)
                 pred = model(pred)
-                loss = criterion(pred, labels) / nx_base_resolution
+                loss = criterion(pred, labels) #/ nx_base_resolution
                 losses_tmp.append(loss / batch_size)
 
         losses.append(torch.sum(torch.stack(losses_tmp)))
@@ -112,6 +113,7 @@ def train(args, epoch, model, dataloader, optimizer, criterion, device):
     epoch_losses = []
 
     for i in range(args.tres):
+        print(i/args.tres, end='\r')
         batch_losses = train_one_epoch(args, model, unrolling, args.batch_size, optimizer, dataloader, criterion, device)
         epoch_losses.append(batch_losses.mean().item())
     return epoch_losses
@@ -141,13 +143,14 @@ def train_one_epoch(args, model, unrolling, batch_size, optimizer, dataloader, c
                 labels = labels.to(device)
         optimizer.zero_grad()
         pred = model(data)
+        #print(pred.shape)
+        #print(labels.shape)
         loss = criterion(pred, labels)
 
         loss.backward()
         losses.append(loss.detach() / batch_size)
         optimizer.step()
         
-        losses.append(torch.Tensor(1))
     losses = torch.stack(losses)
     return losses
 
@@ -155,7 +158,7 @@ def create_data(args, raw_data, random_steps):
     data = torch.Tensor()
     labels = torch.Tensor()
     for (dp, step) in zip(raw_data, random_steps):
-        print(raw_data.shape)
+        #print(raw_data.shape)
         d = dp[step - args.tw:step]
         l = dp[step:args.tw + step]
         data = torch.cat((data, d[None, :]), 0)
@@ -169,11 +172,11 @@ def main(args: argparse):
     # check directories for saving...
 
     args.epochs = config['training']['epochs']
-    args.epochs = 10
+    #args.epochs = 10
     args.device = torch.device(config["device"])
     args.max_unrolling = config['training']['max_unrolling']
     args.tw = config['tw']
-    args.batch_size = 1 # config[]
+    args.batch_size = config['batch_size']
     args.wandb = config['wandb'] == "True"
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
@@ -181,13 +184,13 @@ def main(args: argparse):
     
 
     if args.modelname == "UNet2D_DS2015":
-        from modelComp.UNet import UNet2D
-        model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256, 512]).to(args.device)
+        from modelComp.UNet import UNet3D
+        model = UNet3D(in_channels=3, out_channels=3, features=[64, 128, 256, 512], time_steps=args.tw).to(args.device)
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-    criterion = None
+    criterion = nn.MSELoss(reduction="sum")
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
