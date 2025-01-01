@@ -223,7 +223,7 @@ def main(args: argparse):
     best_val_loss_unrolled = 10e30
     for epoch in range(args.epochs):
 
-        #train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
+        train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
         # also validation
         print('validating...')
         val_loss_timestep, val_loss_unrolled = validate(args, model, val_loader, criterion, device=args.device)
