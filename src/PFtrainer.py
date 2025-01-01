@@ -247,8 +247,8 @@ def main(args: argparse):
                         "train_losses": train_losses 
                     })
         
-        #print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
-        #              f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
+        print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
+                      f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
         
     if wandb:
         wandb.finish()
