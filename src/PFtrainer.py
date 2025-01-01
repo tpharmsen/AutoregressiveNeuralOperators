@@ -32,7 +32,7 @@ def validate(args, model, dataloader, criterion, device):
     # we calculate both timestep losses and full unrolling losses
     model.eval()
     
-    steps = [t for t in range(args.tw, args.t_res-args.tw + 1)]
+    steps = [t for t in range(args.tw, args.tres-args.tw + 1)]
     val_loss_timestep = val_timestep(model=model,
                                     steps=steps,
                                     batch_size=args.batch_size,
@@ -49,7 +49,7 @@ def validate(args, model, dataloader, criterion, device):
 
     return val_loss_timestep, val_loss_unrolled
 
-def val_timestep(model, steps, batch_size, loader, graph_creator, criterion, device):
+def val_timestep(model, steps, batch_size, loader, criterion, device):
     for step in steps:
     
         #if (step != graph_creator.tw and step % graph_creator.tw != 0):
@@ -69,13 +69,13 @@ def val_timestep(model, steps, batch_size, loader, graph_creator, criterion, dev
         #print(f'Step {step}, mean loss {torch.mean(losses)}')
     return torch.mean(losses)
 
-def val_unrolled(model, steps, batch_size, nr_gt_steps, nx_base_resolution, dataloader, criterion, device):
+def val_unrolled(model, steps, batch_size, dataloader, criterion, device):
     losses = []
     for raw_data in dataloader:
         losses_tmp = []
         with torch.no_grad():
             #same_steps = [args.tw * nr_gt_steps] * batch_size
-            same_steps = [step] * batch_size
+            same_steps = [args.tw] * batch_size
             data, labels = create_data(args, raw_data, same_steps)
         
             data, labels = data.to(device), labels.to(device)
@@ -86,9 +86,9 @@ def val_unrolled(model, steps, batch_size, nr_gt_steps, nx_base_resolution, data
 
             # Unroll trajectory and add losses which are obtained for each unrolling
             #for step in range(args.tw * (nr_gt_steps + 1), args.t_res - args.tw + 1, args.tw):
-            for step in range(args.tw, args.t_res - args.tw + 1, args.tw):
+            for step in range(args.tw, args.tres - args.tw + 1, args.tw):
                 same_steps = [step] * batch_size
-                _, labels = args.create_data(args, raw_data, same_steps)
+                _, labels = create_data(args, raw_data, same_steps)
                 
                 labels = labels.to(device)
                 pred = model(pred)
@@ -173,13 +173,20 @@ def main(args: argparse):
 
     args.epochs = config['training']['epochs']
     #args.epochs = 10
-    args.device = torch.device(config["device"])
+    if config['device'] == "cuda":
+        args.device = torch.device("cuda")
+    elif config['device'] == "cpu":
+        args.device = torch.device("cpu")
+    else:
+        raise ValueError('DEVICE UNKNOWN')
     args.max_unrolling = config['training']['max_unrolling']
     args.tw = config['tw']
     args.batch_size = config['batch_size']
+    args.batch_size=1
     args.wandb = config['wandb'] == "True"
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
+    args.discard_first = config['discard_first']
 
     
 
@@ -189,14 +196,14 @@ def main(args: argparse):
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss(reduction="sum")
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
     val_files = [config['data_path'] + file for file in config['validation']['files']]
-    train_dataset = get_dataset(train_files)
-    val_dataset = get_dataset(val_files)
+    train_dataset = get_dataset(train_files, args.discard_first)
+    val_dataset = get_dataset(val_files, args.discard_first)
     train_loader = get_dataloader(train_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = get_dataloader(val_dataset, batch_size=1, shuffle=False)
     args.tres = train_dataset.tres
@@ -212,10 +219,11 @@ def main(args: argparse):
     if args.wandb:
         wandb.init(project="BubbleML_DS", name=args.modelname)
         wandb.config.update(config)
-
+    best_val_loss_timestep = 10e30
+    best_val_loss_unrolled = 10e30
     for epoch in range(args.epochs):
 
-        train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
+        #train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
         # also validation
         print('validating...')
         val_loss_timestep, val_loss_unrolled = validate(args, model, val_loader, criterion, device=args.device)
@@ -239,8 +247,8 @@ def main(args: argparse):
                         "train_losses": train_losses 
                     })
         
-        print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
-                      f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
+        #print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
+        #              f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
         
     if wandb:
         wandb.finish()
