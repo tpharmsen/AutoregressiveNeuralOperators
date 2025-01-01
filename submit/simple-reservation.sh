@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=loadmoduletest
 #SBATCH --partition=gpu_mig
-#SBATCH --time=01:20:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
