@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class UNet2D(nn.Module):
+class UNet3D(nn.Module):
     def __init__(self, in_channels, out_channels, features=(64, 128, 256, 512), time_steps=1):
         super(UNet2D, self).__init__()
         self.time_steps = time_steps
@@ -59,12 +59,6 @@ class UNet2D(nn.Module):
             nn.GELU(),
         )
 
-
-"""
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
 class UNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, features=(64, 128, 256, 512)):
         super(UNet2D, self).__init__()
@@ -116,4 +110,3 @@ class UNet2D(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.GELU(),
         )
-"""
