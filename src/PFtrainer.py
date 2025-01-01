@@ -182,7 +182,7 @@ def main(args: argparse):
     args.max_unrolling = config['training']['max_unrolling']
     args.tw = config['tw']
     args.batch_size = config['batch_size']
-    args.batch_size=1
+    #args.batch_size=1
     args.wandb = config['wandb'] == "True"
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
@@ -190,7 +190,7 @@ def main(args: argparse):
 
     
 
-    if args.modelname == "UNet2D_DS2015":
+    if args.modelname == "UNet3D_DS2015":
         from modelComp.UNet import UNet3D
         model = UNet3D(in_channels=3, out_channels=3, features=[64, 128, 256, 512], time_steps=args.tw).to(args.device)
     else:
