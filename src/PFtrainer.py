@@ -217,7 +217,7 @@ def main(args: argparse):
     dt = 1
 
     if args.wandb:
-        wandb.init(project="BubbleML_DS", name=args.modelname)
+        wandb.init(project="BubbleML_DS_PF", name=args.modelname)
         wandb.config.update(config)
     best_val_loss_timestep = 10e30
     best_val_loss_unrolled = 10e30
