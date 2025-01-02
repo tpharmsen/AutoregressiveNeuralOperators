@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import datetime
+import time
 import wandb
 import argparse
 import yaml
@@ -239,6 +240,8 @@ def main(args: argparse):
                 torch.save(model.state_dict(), best_model_path)
 
         if args.wandb:
+            current_time = time.time()  # Current time in seconds since epoch
+    
             #table_train_losses = wandb.Table(data=[[x] for x in train_losses], columns=["Values"])
             wandb.log({
                 "epoch": epoch,
@@ -246,6 +249,7 @@ def main(args: argparse):
                 "val_loss_timestep": val_loss_timestep.item(),
                 "val_loss_unrolled": val_loss_unrolled.item(),
                 "len_train_losses": len(train_losses), 
+                "current_time": current_time,
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
