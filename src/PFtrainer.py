@@ -222,6 +222,8 @@ def main(args: argparse):
         wandb.config.update(config)
     best_val_loss_timestep = 10e30
     best_val_loss_unrolled = 10e30
+
+    start_time = time.time()
     for epoch in range(args.epochs):
 
         train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
@@ -249,7 +251,8 @@ def main(args: argparse):
                 "val_loss_timestep": val_loss_timestep.item(),
                 "val_loss_unrolled": val_loss_unrolled.item(),
                 "len_train_losses": len(train_losses), 
-                "current_time": current_time,
+                "elapsed_time": time.time() - start_time(),
+                "timestamp": datetime.now().strftime("%H:%M:%S")
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
