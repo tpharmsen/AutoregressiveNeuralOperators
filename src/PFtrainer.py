@@ -197,7 +197,8 @@ def main(args: argparse):
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    #optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss(reduction="sum")
     
 
