@@ -256,10 +256,9 @@ def main(args: argparse):
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
-                wandb.log({"train_loss_elem": train_loss_elem}, step=epoch)
+                wandb.log({"train_loss_elem": train_loss_elem})
            
             
-        print("len(train_losses)", len(train_losses))
         
         print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
                       f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
