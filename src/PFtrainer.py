@@ -192,8 +192,8 @@ def main(args: argparse):
     
 
     if args.modelname == "UNet3D_DS2015":
-        from modelComp.UNet import UNet3D
-        model = UNet3D(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
+        from modelComp.UNet import UNetTest
+        model = UNetTest(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
