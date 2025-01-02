@@ -239,15 +239,17 @@ def main(args: argparse):
                 torch.save(model.state_dict(), best_model_path)
 
         if args.wandb:
-            table_train_losses = wandb.Table(data=[[x] for x in train_losses], columns=["Values"])
+            #table_train_losses = wandb.Table(data=[[x] for x in train_losses], columns=["Values"])
             wandb.log({
                 "epoch": epoch,
                 "train_loss_mean": sum(train_losses) / len(train_losses),
                 "val_loss_timestep": val_loss_timestep.item(),
                 "val_loss_unrolled": val_loss_unrolled.item(),
                 "len_train_losses": len(train_losses), 
-                "train_losses_elements": table_train_losses
+            #    "train_losses_elements": table_train_losses
             })
+            for train_loss_elem in train_losses:
+                wandb.log({"train_loss_elem": train_loss_elem}, step=epoch)
            
             
         print("len(train_losses)", len(train_losses))
