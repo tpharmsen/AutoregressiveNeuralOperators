@@ -123,7 +123,7 @@ def train_one_epoch(args, model, unrolling, batch_size, optimizer, dataloader, c
     
     losses = []
     for raw_data in dataloader:
-        #print(raw_data.shape)
+        #print("raw data shape: 0", raw_data.shape)
         
         unrolled_choice = random.choice(unrolling)
         #print("unrolled_unrolling: ", unrolled_choice)
@@ -132,6 +132,7 @@ def train_one_epoch(args, model, unrolling, batch_size, optimizer, dataloader, c
         random_steps = random.choices(steps, k=batch_size)
         #print("random_steps: ", random_steps)
         data, labels = create_data(args, raw_data, random_steps)
+        #print("data shape: ", data.shape)
         #print('\nget data\n')
         data, labels = data.to(device), labels.to(device)
         
@@ -159,11 +160,18 @@ def create_data(args, raw_data, random_steps):
     data = torch.Tensor()
     labels = torch.Tensor()
     for (dp, step) in zip(raw_data, random_steps):
-        #print(raw_data.shape)
+        #print("data point shape: ", dp.shape)
         d = dp[step - args.tw:step]
         l = dp[step:args.tw + step]
         data = torch.cat((data, d[None, :]), 0)
+        #print("create_data-data shape: ", data.shape)
         labels = torch.cat((labels, l[None, :]), 0)
+
+    #data = data.permute(0, 2, 1, 3, 4)
+    #labels = labels.permute(0, 2, 1, 3, 4)
+    data = data.reshape(data.shape[0], -1, data.shape[3], data.shape[4])
+    labels = labels.reshape(labels.shape[0], -1, labels.shape[3], labels.shape[4])
+    #print(data.shape)
     return data, labels
 
 
@@ -192,10 +200,10 @@ def main(args: argparse):
     
 
     if args.modelname == "UNet3D_DS2015":
-        from modelComp.UNet import UNetBubbleML
+        from modelComp.UNet import UNet2D
         #model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
         #model = UNetTest(in_channels=3, out_channels=3).to(args.device)
-        model = UNetBubbleML(in_channels=3, out_channels=3).to(args.device)
+        model = UNet2D(in_channels=args.tw * 3, out_channels=args.tw * 3).to(args.device)
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
