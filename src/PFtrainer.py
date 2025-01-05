@@ -12,13 +12,10 @@ import random
 
 
 
-from dataloaders.FullLoaderBubbleML import FullLoaderBubbleML, get_dataloader, get_dataset
+from dataloaders.FullLoaderBubbleML import FullLoaderBubbleML, get_dataloader, get_datasets
 
 """
-
-
-#TODO implement temporal bundling and PF method
-#TODO also make classes instead of scripts with functions
+notes:
 
 
 """
@@ -192,7 +189,7 @@ def main(args: argparse):
     args.tw = config['tw']
     args.batch_size = config['batch_size']
     #args.batch_size=1
-    args.wandb = config['wandb'] == "True"
+    args.wandb = config['wandb'] == "True" or config['wandb'] == 1
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
     args.discard_first = config['discard_first']
@@ -214,8 +211,7 @@ def main(args: argparse):
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
     val_files = [config['data_path'] + file for file in config['validation']['files']]
-    train_dataset = get_dataset(train_files, args.discard_first)
-    val_dataset = get_dataset(val_files, args.discard_first)
+    train_dataset, val_dataset = get_datasets(train_files, val_files, discard_first=args.discard_first, norm=True)
     train_loader = get_dataloader(train_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = get_dataloader(val_dataset, batch_size=1, shuffle=False)
     args.tres = train_dataset.tres
@@ -239,7 +235,7 @@ def main(args: argparse):
 
         train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
         # also validation
-        print('validating...')
+        print('validating............')
         val_loss_timestep, val_loss_unrolled = validate(args, model, val_loader, criterion, device=args.device)
 
         if epoch % 10 == 0:
@@ -282,7 +278,7 @@ def main(args: argparse):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model on the BubbleML dataset')
     # add parse arguments
-    print('starting...')
+    print('starting... (please make sure that the data is redimensionalized)')
     # load config
     parser.add_argument("--conf", type=str, default="conf/example.yaml")
     # get data ready
