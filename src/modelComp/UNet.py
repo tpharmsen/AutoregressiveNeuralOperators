@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from collections import OrderedDict
+
 class UNet3D(nn.Module):
     def __init__(self, in_channels, out_channels, features=(64, 128, 256, 512), time_steps=1):
         super(UNet3D, self).__init__()
@@ -166,10 +168,6 @@ class UNetTest(nn.Module):
         # Final output
         return self.final(dec1)
 
-
-from collections import OrderedDict
-import torch
-from torch import nn
 
 class UNetBubbleML(nn.Module):
     def __init__(self, in_channels, out_channels, init_features=32):
