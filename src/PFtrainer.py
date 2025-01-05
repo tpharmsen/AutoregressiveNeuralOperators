@@ -192,8 +192,10 @@ def main(args: argparse):
     
 
     if args.modelname == "UNet3D_DS2015":
-        from modelComp.UNet import UNetTest
-        model = UNetTest(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
+        from modelComp.UNet import UNetBubbleML
+        #model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
+        #model = UNetTest(in_channels=3, out_channels=3).to(args.device)
+        model = UNetBubbleML(in_channels=3, out_channels=3).to(args.device)
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
