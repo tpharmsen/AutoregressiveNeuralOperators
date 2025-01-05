@@ -204,9 +204,9 @@ def main(args: argparse):
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     #optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
-    criterion = nn.MSELoss(reduction="sum")
+    criterion = nn.MSELoss() #nn.MSELoss(reduction="sum")
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
