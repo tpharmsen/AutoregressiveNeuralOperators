@@ -255,11 +255,12 @@ def main(args: argparse):
         for raw_data in val_loader:
             break
         input_rollout, _ = create_data(args, raw_data, [args.tw])
+        input_rollout = input_rollout.to(args.device)
         print(input_rollout.shape)
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
         print(rollout_data.shape)
         raw_data_temp = raw_data[:, :, 0, :, :].squeeze(0)
-        anim = create_gif2(raw_data_temp.cpu(), rollout_data.cpu(), args.gif_length)
+        anim = create_gif2(raw_data_temp, rollout_data.cpu(), args.gif_length)
 
         if args.wandb:
             current_time = time.time()  # Current time in seconds since epoch
