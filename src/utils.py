@@ -107,10 +107,10 @@ def sliderPlot(y, y_hat, batchSize, colormap='turbo'):
     #plt.tight_layout()
     plt.show()    
 
-def rollout_temp(model, input, device, steps=180):
+def rollout_temp(model, input, device, tw, steps=180):
     model.eval()
     print(input.shape)
-    stacked_pred = input[0, ::3, :, :]  
+    stacked_pred = input[0, :tw, :, :]  
     with torch.no_grad():
         while stacked_pred.shape[0] < steps:
             output = model(input)

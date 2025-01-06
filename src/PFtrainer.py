@@ -195,7 +195,7 @@ def main(args: argparse):
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
     args.discard_first = config['discard_first']
-    args.gif_length = config['gif_length']
+    args.gif_length = config['validation']['gif_length']
 
     
 
@@ -255,7 +255,7 @@ def main(args: argparse):
         for raw_data in val_loader:
             break
         input_rollout = raw_data[0, :args.tw, :, :, :].to(args.device)
-        rollout_data = rollout_temp(model, input_rollout, args.device, args.gif_length)
+        rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
         raw_data_temp = raw_data[:, :, 0, :, :]
         raw_data_temp = raw_data_temp.squeeze(0)
         anim = create_gif2(raw_data_temp.cpu(), rollout_data.cpu(), args.gif_length)
