@@ -254,10 +254,11 @@ def main(args: argparse):
         # do a small rollout gif here
         for raw_data in val_loader:
             break
-        input_rollout = create_data(args, raw_data, [args.tw])
+        input_rollout, _ = create_data(args, raw_data, [args.tw])
+        print(input_rollout.shape)
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
-        raw_data_temp = raw_data[:, :, 0, :, :]
-        raw_data_temp = raw_data_temp.squeeze(0)
+        print(rollout_data.shape)
+        raw_data_temp = raw_data[:, :, 0, :, :].squeeze(0)
         anim = create_gif2(raw_data_temp.cpu(), rollout_data.cpu(), args.gif_length)
 
         if args.wandb:
@@ -272,7 +273,7 @@ def main(args: argparse):
                 "elapsed_time": time.time() - start_time,
                 "timestamp": datetime.now().strftime("%H:%M:%S"), 
                 "learning_rate": optimizer.param_groups[0]['lr'],
-                "rollout_val_gif": wandb.Video(anim, fps=1, format="gif")
+                "rollout_val_gif": wandb.Video(anim, fps=5, format="gif")
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
