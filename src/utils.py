@@ -106,3 +106,54 @@ def sliderPlot(y, y_hat, batchSize, colormap='turbo'):
     slider_batch.on_changed(update)
     #plt.tight_layout()
     plt.show()    
+
+def rollout_temp(model, input, device, steps=180):
+    model.eval()
+    print(input.shape)
+    stacked_pred = input[0, ::3, :, :]  
+    with torch.no_grad():
+        while stacked_pred.shape[0] < steps:
+            output = model(input)
+            # stack the output on stacked_pred but take only every first 5 frames
+            #print(output.shape)
+            print(output.shape)
+            stacked_pred = torch.cat((stacked_pred, output[0, :tw, :, :]), 0)
+            #stacked_pred = torch.cat((stacked_pred, output), 0)
+            input = output
+    return stacked_pred
+
+
+def create_gif3(stacked_true, stacked_pred, output_path, timesteps='all', vertical=False):
+    if timesteps == 'all':
+        timesteps = stacked_pred.shape[0]
+    else:
+        timesteps = int(timesteps)
+    imgtrue_stacked = torch.flip(stacked_true, dims=[1])
+    imgpred_stacked = torch.flip(stacked_pred, dims=[1])
+    if vertical:
+        fig, ax = plt.subplots(2, 1, figsize=(5, 10))
+    else:
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    def update_frame(i):
+        ax[0].clear()
+        ax[1].clear()
+
+        imgtrue = imgtrue_stacked[i, :, :]
+        imgpred = imgpred_stacked[i, :, :]
+
+        ax[0].imshow(imgtrue, cmap='jet', vmin=-1, vmax=1)
+        ax[0].set_title("True")
+        ax[0].axis('off')
+
+        ax[1].imshow(imgpred, cmap='jet', vmin=-1, vmax=1)
+        ax[1].set_title("Prediction")
+        ax[1].axis('off')
+
+        fig.suptitle(f"Step {i + 1}/{timesteps}")
+
+    ani = animation.FuncAnimation(fig, update_frame, frames=timesteps, interval=500)
+    if output_path is not None:
+        ani.save(output_path, writer='ffmpeg', fps=10)
+    plt.close()
+    return ani
+    
