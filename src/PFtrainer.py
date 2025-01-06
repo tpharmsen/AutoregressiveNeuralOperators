@@ -14,6 +14,7 @@ import random
 
 
 from dataloaders.FullLoaderBubbleML import FullLoaderBubbleML, get_dataloader, get_datasets
+from utils import rollout_temp, create_gif2
 
 """
 notes:
@@ -194,6 +195,7 @@ def main(args: argparse):
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
     args.discard_first = config['discard_first']
+    args.gif_length = config['gif_length']
 
     
 
@@ -249,6 +251,15 @@ def main(args: argparse):
                 best_model_path = f"models/best_val_loss_unrolled_{args.modelname}_E{epoch}.pth"
                 torch.save(model.state_dict(), best_model_path)
 
+        # do a small rollout gif here
+        for raw_data in val_loader:
+            break
+        input_rollout = raw_data[0, :args.tw, :, :, :].to(args.device)
+        rollout_data = rollout_temp(model, input_rollout, args.device, args.gif_length)
+        raw_data_temp = raw_data[:, :, 0, :, :]
+        raw_data_temp = raw_data_temp.squeeze(0)
+        anim = create_gif2(raw_data_temp.cpu(), rollout_data.cpu(), args.gif_length)
+
         if args.wandb:
             current_time = time.time()  # Current time in seconds since epoch
     
@@ -260,7 +271,8 @@ def main(args: argparse):
                 "len_train_losses": len(train_losses), 
                 "elapsed_time": time.time() - start_time,
                 "timestamp": datetime.now().strftime("%H:%M:%S"), 
-                "learning_rate": optimizer.param_groups[0]['lr']
+                "learning_rate": optimizer.param_groups[0]['lr'],
+                "rollout_val_gif": wandb.Video(anim, fps=1, format="gif")
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
