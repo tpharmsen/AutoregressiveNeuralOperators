@@ -13,7 +13,7 @@ import random
 
 
 
-from dataloaders.FullLoaderBubbleML import FullLoaderBubbleML, get_dataloader, get_datasets
+from dataloaders.FullLoaderBubbleML import FullLoaderBubbleML, get_dataloaders, get_datasets
 from utils import rollout_temp, create_gif2
 
 """
@@ -113,7 +113,7 @@ def train(args, epoch, model, dataloader, optimizer, criterion, device):
     epoch_losses = []
 
     for i in range(args.tres):
-        print(i/args.tres, end='\r')
+        print(f"{i / args.tres:.2f}", end='\r')
         batch_losses = train_one_epoch(args, model, unrolling, args.batch_size, optimizer, dataloader, criterion, device)
         epoch_losses.append(batch_losses.mean().item())
     return epoch_losses
@@ -122,7 +122,7 @@ def train_one_epoch(args, model, unrolling, batch_size, optimizer, dataloader, c
     
     losses = []
     for raw_data in dataloader:
-        #print("raw data shape: 0", raw_data.shape)
+        print("raw data shape: ", raw_data.shape)
         
         unrolled_choice = random.choice(unrolling)
         #print("unrolled_unrolling: ", unrolled_choice)
@@ -180,7 +180,6 @@ def main(args: argparse):
     # check directories for saving...
 
     args.epochs = config['training']['epochs']
-    #args.epochs = 10
     if config['device'] == "cuda":
         args.device = torch.device("cuda")
     elif config['device'] == "cpu":
@@ -190,7 +189,6 @@ def main(args: argparse):
     args.max_unrolling = config['training']['max_unrolling']
     args.tw = config['tw']
     args.batch_size = config['batch_size']
-    #args.batch_size=1
     args.wandb = config['wandb'] == "True" or config['wandb'] == 1
     args.modelname = config['modelname']
     args.learning_rate = config['training']['learning_rate']
@@ -210,14 +208,13 @@ def main(args: argparse):
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     #optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss() #nn.MSELoss(reduction="sum")
-    scheduler = StepLR(optimizer, step_size=10, gamma=0.2)
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
     val_files = [config['data_path'] + file for file in config['validation']['files']]
     train_dataset, val_dataset = get_datasets(train_files, val_files, discard_first=args.discard_first, norm=True)
-    train_loader = get_dataloader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = get_dataloader(val_dataset, batch_size=1, shuffle=False)
+    train_loader, val_loader = get_dataloaders(train_dataset, val_dataset, train_batch_size=args.batch_size, train_shuffle=True)
     args.tres = train_dataset.tres
     
 
@@ -256,11 +253,11 @@ def main(args: argparse):
             break
         input_rollout, _ = create_data(args, raw_data, [args.tw])
         input_rollout = input_rollout.to(args.device)
-        print(input_rollout.shape)
+        #print(input_rollout.shape)
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
-        print(rollout_data.shape)
+        #print(rollout_data.shape)
         raw_data_temp = raw_data[:, :, 0, :, :].squeeze(0)
-        anim = create_gif2(raw_data_temp, rollout_data.cpu(), 'output/wandb_log_gif.gif', timesteps=args.gif_length, vertical=False)
+        create_gif2(raw_data_temp, rollout_data.cpu(), 'output/wandb_log_gif.gif', timesteps=args.gif_length, vertical=False)
 
         if args.wandb:
             current_time = time.time()  # Current time in seconds since epoch
@@ -279,12 +276,12 @@ def main(args: argparse):
             })
             for train_loss_elem in train_losses:
                 wandb.log({"train_loss_elem": train_loss_elem})
-
+        print("lr: ", optimizer.param_groups[0]['lr'])
+        print(args.learning_rate)
         scheduler.step()
             
-        
-        print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
-                      f"Val Loss Timestep = {val_loss_timestep}, Val Loss Unrolled = {val_loss_unrolled}")
+        print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses):.8f}, "
+                      f"Val Loss Timestep = {val_loss_timestep:.8f}, Val Loss Unrolled = {val_loss_unrolled:.8f}")
         
     if wandb:
         wandb.finish()
