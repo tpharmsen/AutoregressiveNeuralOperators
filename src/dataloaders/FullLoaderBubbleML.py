@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, SequentialSampler, RandomSampler, BatchSampler
 import h5py
 
 TEMPERATURE = 'temperature'
@@ -22,9 +22,13 @@ def get_datasets(train_files, val_files, discard_first, norm):
 
     return train_dataset, val_dataset
 
-def get_dataloader(dataset, batch_size=1, shuffle=False):
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-    return dataloader
+def get_dataloaders(train_dataset, val_dataset, train_batch_size, train_shuffle=False):
+    print(train_batch_size)
+    train_sampler = RandomSampler(train_dataset, replacement=True, num_samples=train_batch_size)
+    train_batch_sampler = BatchSampler(train_sampler, batch_size=train_batch_size, drop_last=False)
+    train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
+    return train_loader, val_loader
 
 class FullLoaderBubbleML(Dataset):
     def __init__(self, files, discard_first):
