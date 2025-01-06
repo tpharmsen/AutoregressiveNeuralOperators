@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import StepLR
 from datetime import datetime
 import time
 import wandb
@@ -196,7 +197,7 @@ def main(args: argparse):
 
     
 
-    if args.modelname == "UNet3D_DS2015":
+    if args.modelname == "UNet2015_DS":
         from modelComp.UNet import UNet2D
         #model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256], time_steps=args.tw).to(args.device)
         #model = UNetTest(in_channels=3, out_channels=3).to(args.device)
@@ -204,9 +205,10 @@ def main(args: argparse):
     else:
         raise ValueError('MODEL NOT RECOGNIZED')
 
-    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     #optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss() #nn.MSELoss(reduction="sum")
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
@@ -234,11 +236,10 @@ def main(args: argparse):
     for epoch in range(args.epochs):
 
         train_losses = train(args, epoch, model, train_loader, optimizer, criterion, device=args.device)
-        # also validation
-        print('validating............')
+        
         val_loss_timestep, val_loss_unrolled = validate(args, model, val_loader, criterion, device=args.device)
 
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             if val_loss_timestep < best_val_loss_timestep:
                 best_val_loss_timestep = val_loss_timestep
                 best_model_path = f"models/best_val_loss_timestep_{args.modelname}_E{epoch}.pth"
@@ -251,7 +252,6 @@ def main(args: argparse):
         if args.wandb:
             current_time = time.time()  # Current time in seconds since epoch
     
-            #table_train_losses = wandb.Table(data=[[x] for x in train_losses], columns=["Values"])
             wandb.log({
                 "epoch": epoch,
                 "train_loss_mean": sum(train_losses) / len(train_losses),
@@ -259,12 +259,14 @@ def main(args: argparse):
                 "val_loss_unrolled": val_loss_unrolled.item(),
                 "len_train_losses": len(train_losses), 
                 "elapsed_time": time.time() - start_time,
-                "timestamp": datetime.now().strftime("%H:%M:%S")
+                "timestamp": datetime.now().strftime("%H:%M:%S"), 
+                "learning_rate": optimizer.param_groups[0]['lr']
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
                 wandb.log({"train_loss_elem": train_loss_elem})
-           
+
+        scheduler.step()
             
         
         print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses)}, "
