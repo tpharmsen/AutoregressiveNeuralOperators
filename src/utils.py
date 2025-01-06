@@ -123,7 +123,7 @@ def rollout_temp(model, input, device, steps=180):
     return stacked_pred
 
 
-def create_gif3(stacked_true, stacked_pred, output_path, timesteps='all', vertical=False):
+def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertical=False):
     if timesteps == 'all':
         timesteps = stacked_pred.shape[0]
     else:
