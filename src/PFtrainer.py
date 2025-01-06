@@ -122,7 +122,7 @@ def train_one_epoch(args, model, unrolling, batch_size, optimizer, dataloader, c
     
     losses = []
     for raw_data in dataloader:
-        print("raw data shape: ", raw_data.shape)
+        #print("raw data shape: ", raw_data.shape)
         
         unrolled_choice = random.choice(unrolling)
         #print("unrolled_unrolling: ", unrolled_choice)
