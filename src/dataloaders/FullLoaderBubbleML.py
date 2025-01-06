@@ -9,7 +9,7 @@ PRESSURE = 'pressure'
 
 def get_datasets(train_files, val_files, discard_first, norm):
     train_dataset = FullLoaderBubbleML(train_files, discard_first)
-    val_dataset = FullLoaderBubbleML(train_files, discard_first)
+    val_dataset = FullLoaderBubbleML(val_files, discard_first)
     train_dataset.tres = train_dataset.get_time_length()
     if norm:
         max_temp = max(train_dataset.get_max_temperature(), val_dataset.get_max_temperature())
@@ -40,10 +40,10 @@ class FullLoaderBubbleML(Dataset):
 
     def __getitem__(self, idx):
         file = self.files[idx]
-        with h5py.File(file, 'r') as data:
-            temp = torch.from_numpy(data[TEMPERATURE][self.discard_first:]).float()
-            velx = torch.from_numpy(data[VELX][self.discard_first:]).float()
-            vely = torch.from_numpy(data[VELY][self.discard_first:]).float()
+        with h5py.File(file, 'r') as filedata:
+            temp = torch.from_numpy(filedata[TEMPERATURE][self.discard_first:]).float()
+            velx = torch.from_numpy(filedata[VELX][self.discard_first:]).float()
+            vely = torch.from_numpy(filedata[VELY][self.discard_first:]).float()
         
         if self.min_temp is not None and self.max_temp is not None:
             temp = self.normalize(temp, self.min_temp, self.max_temp)
