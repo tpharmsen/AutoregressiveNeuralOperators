@@ -208,7 +208,7 @@ def main(args: argparse):
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     #optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     criterion = nn.MSELoss() #nn.MSELoss(reduction="sum")
-    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.2)
     
 
     train_files = [config['data_path'] + file for file in config['training']['files']]
