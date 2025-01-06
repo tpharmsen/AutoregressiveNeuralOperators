@@ -166,8 +166,8 @@ def create_data(args, raw_data, random_steps):
 
     #data = data.permute(0, 2, 1, 3, 4)
     #labels = labels.permute(0, 2, 1, 3, 4)
-    data = data.reshape(data.shape[0], -1, data.shape[3], data.shape[4])
-    labels = labels.reshape(labels.shape[0], -1, labels.shape[3], labels.shape[4])
+    data = data.permute(0, 2, 1, 3, 4).reshape(data.shape[0], -1, data.shape[3], data.shape[4])
+    labels = labels.permute(0, 2, 1, 3, 4).reshape(labels.shape[0], -1, labels.shape[3], labels.shape[4])
     #print(data.shape)
     return data, labels
 
