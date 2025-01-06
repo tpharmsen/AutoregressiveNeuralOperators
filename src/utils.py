@@ -109,16 +109,14 @@ def sliderPlot(y, y_hat, batchSize, colormap='turbo'):
 
 def rollout_temp(model, input, device, tw, steps=180):
     model.eval()
-    print(input.shape)
     stacked_pred = input[0, :tw, :, :]  
     with torch.no_grad():
         while stacked_pred.shape[0] < steps:
             output = model(input)
             # stack the output on stacked_pred but take only every first 5 frames
-            #print(output.shape)
-            print(output.shape)
             stacked_pred = torch.cat((stacked_pred, output[0, :tw, :, :]), 0)
             #stacked_pred = torch.cat((stacked_pred, output), 0)
+            #print(stacked_pred.shape)   
             input = output
     return stacked_pred
 

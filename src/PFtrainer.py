@@ -260,7 +260,7 @@ def main(args: argparse):
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
         print(rollout_data.shape)
         raw_data_temp = raw_data[:, :, 0, :, :].squeeze(0)
-        anim = create_gif2(raw_data_temp, rollout_data.cpu(), args.gif_length)
+        anim = create_gif2(raw_data_temp, rollout_data.cpu(), 'output/wandb_log_gif.gif', timesteps=args.gif_length, vertical=False)
 
         if args.wandb:
             current_time = time.time()  # Current time in seconds since epoch
@@ -274,7 +274,7 @@ def main(args: argparse):
                 "elapsed_time": time.time() - start_time,
                 "timestamp": datetime.now().strftime("%H:%M:%S"), 
                 "learning_rate": optimizer.param_groups[0]['lr'],
-                "rollout_val_gif": wandb.Video(anim, fps=5, format="gif")
+                "rollout_val_gif": wandb.Video('output/wandb_log_gif.gif', fps=5, format="gif")
             #    "train_losses_elements": table_train_losses
             })
             for train_loss_elem in train_losses:
