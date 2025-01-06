@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=loadmoduletest
+#SBATCH --job-name=train_BubbleML
 #SBATCH --partition=gpu_mig
 #SBATCH --time=02:30:00
 #SBATCH --nodes=1
