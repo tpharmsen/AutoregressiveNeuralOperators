@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=train_BubbleML
 #SBATCH --partition=gpu_mig
-#SBATCH --time=02:30:00
+#SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
