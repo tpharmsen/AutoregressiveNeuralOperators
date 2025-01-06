@@ -254,7 +254,7 @@ def main(args: argparse):
         # do a small rollout gif here
         for raw_data in val_loader:
             break
-        input_rollout = raw_data[0, :3*args.tw, :, :, :].to(args.device)
+        input_rollout = create_data(args, raw_data, [args.tw])
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
         raw_data_temp = raw_data[:, :, 0, :, :]
         raw_data_temp = raw_data_temp.squeeze(0)
