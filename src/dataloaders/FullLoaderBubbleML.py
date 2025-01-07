@@ -40,7 +40,7 @@ class FullLoaderBubbleML(Dataset):
         self.max_vel = None
 
     def __len__(self):
-        return len(self.files)
+        return len(self.files) - self.discard_first
 
     def __getitem__(self, idx):
         file = self.files[idx]
