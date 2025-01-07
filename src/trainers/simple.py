@@ -83,7 +83,7 @@ class SimpleTrainer:
     
         with torch.no_grad():  # Disable gradient tracking to save memory
             for i, (input, label) in enumerate(self.val_loader):
-                print(i, self.gif_length)
+                #print(i, self.gif_length)
                 
                 # Transfer input and label to the device and convert to float
                 input = input.to(self.DEVICE).float()
@@ -98,9 +98,9 @@ class SimpleTrainer:
                     # Stack the predictions and ground truth
                     stacked_pred = torch.cat((stacked_pred, pred[0, 0, :, :].unsqueeze(0)), 0)
                     stacked_true = torch.cat((stacked_true, label[0, 0, :, :].unsqueeze(0)), 0)
-                    print(stacked_pred.shape, stacked_true.shape)
+                    #print(stacked_pred.shape, stacked_true.shape)
                 else:
-                    print('breaking\n\n')
+                    #print('breaking\n\n')
                     break
         create_gif2(stacked_true.cpu(), stacked_pred.cpu(), 'output/temp_log.gif', timesteps=10, vertical=False)
     
