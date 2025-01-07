@@ -17,7 +17,7 @@ class SimpleTrainer:
         self.DEVICE = torch.device(self.config["device"])
         self.modelname = self.config['modelname']
         self.wandb_enabled = self.config['wandb'] in ["True", 1]
-        self.wandb_enabled = False
+        #self.wandb_enabled = False
 
         self.train_loader, self.val_loader = self.prepare_dataloader()
         self.model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256, 512]).to(self.DEVICE)
@@ -121,7 +121,8 @@ class SimpleTrainer:
             if self.wandb_enabled:
                 wandb.log({"epoch": epoch, 
                         "train_loss": avg_train_loss, 
-                        "val_loss": avg_val_loss})
+                        "val_loss": avg_val_loss, 
+                        "rollout_val_gif": wandb.Video('output/temp_log.gif', fps=10, format="gif")})
 
             if epoch % 10 == 0:
                 if avg_val_loss < self.best_val_loss:
