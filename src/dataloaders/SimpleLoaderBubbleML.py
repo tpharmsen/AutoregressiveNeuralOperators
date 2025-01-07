@@ -70,6 +70,10 @@ class SimpleLoaderBubbleML(Dataset):
         label = self._get_state(idx+1)
         return input, label
     
+    def set_normalization_params(self, min_temp, max_temp, min_vel, max_vel):
+        self.min_temp, self.max_temp, self.min_vel, self.max_vel = min_temp, max_temp, min_vel, max_vel
+
+
     def get_full_stack(self):
         
         temp_data = torch.from_numpy(self.data[TEMPERATURE][self.discard_first:]) 
