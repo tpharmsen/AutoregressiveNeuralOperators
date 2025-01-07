@@ -17,6 +17,7 @@ class SimpleTrainer:
         self.DEVICE = torch.device(self.config["device"])
         self.modelname = self.config['modelname']
         self.wandb_enabled = self.config['wandb'] in ["True", 1]
+        self.discard_first = self.config['discard_first']
         #self.wandb_enabled = False
 
         self.train_loader, self.val_loader = self.prepare_dataloader()
@@ -40,7 +41,7 @@ class SimpleTrainer:
     def prepare_dataloader(self):
         train_files = [self.config['data_path'] + file for file in self.config['training']['files']]
         val_files = [self.config['data_path'] + file for file in self.config['training']['files']]
-        self.train_dataset, self.val_dataset = get_datasets(train_files, val_files)
+        self.train_dataset, self.val_dataset = get_datasets(train_files, val_files, self.discard_first)
         train_loader, val_loader = get_dataloaders(self.train_dataset, self.val_dataset, self.config['batch_size'])
         return train_loader, val_loader
 
