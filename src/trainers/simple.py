@@ -40,7 +40,7 @@ class SimpleTrainer:
 
     def prepare_dataloader(self):
         train_files = [self.config['data_path'] + file for file in self.config['training']['files']]
-        val_files = [self.config['data_path'] + file for file in self.config['training']['files']]
+        val_files = [self.config['data_path'] + file for file in self.config['validation']['files']]
         self.train_dataset, self.val_dataset = get_datasets(train_files, val_files, self.discard_first)
         train_loader, val_loader = get_dataloaders(self.train_dataset, self.val_dataset, self.config['batch_size'])
         return train_loader, val_loader
@@ -102,7 +102,7 @@ class SimpleTrainer:
                 else:
                     #print('breaking\n\n')
                     break
-        create_gif2(stacked_true.cpu(), stacked_pred.cpu(), 'output/temp_log.gif', timesteps=10, vertical=False)
+        create_gif2(stacked_true.cpu(), stacked_pred.cpu(), 'output/temp_log.gif', timesteps=self.gif_length, vertical=False)
     
     def train(self):
         current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

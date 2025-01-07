@@ -17,7 +17,7 @@ def get_datasets(train_files, val_files, discard_first):
 
 def get_dataloaders(train_dataset, val_dataset, batch_size):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
     return train_loader, val_loader
 
 class SimpleLoaderBubbleML(Dataset):
