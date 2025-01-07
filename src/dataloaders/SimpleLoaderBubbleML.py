@@ -10,9 +10,12 @@ VELX = 'velx'
 VELY = 'vely'
 PRESSURE = 'pressure'
 
-def get_dataloaders(train_files, val_files, batch_size):
+def get_datasets(train_files, val_files):
     train_dataset = ConcatDataset((SimpleLoaderBubbleML(file) for file in train_files))
     val_dataset = ConcatDataset((SimpleLoaderBubbleML(file) for file in val_files))
+    return train_dataset, val_dataset
+
+def get_dataloaders(train_dataset, val_dataset, batch_size):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     return train_loader, val_loader
