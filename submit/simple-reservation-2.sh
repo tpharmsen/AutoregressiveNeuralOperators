@@ -6,7 +6,9 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=1
-#SBATCH --reservation=jhs_tue2022
+
+
+###SBATCH --reservation=jhs_tue2022
 
 module load 2022
 module load Anaconda3/2022.05
