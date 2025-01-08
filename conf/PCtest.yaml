@@ -5,7 +5,7 @@ save_path: "models/PoolBoiling-SubCooled-FC72-2D/"
 discard_first: 20
 wandb: "nah"
 
-modelname: "UNet2015_DS"
+modelname: "UNet_plusplus"
 tw: 4
 
 training:
