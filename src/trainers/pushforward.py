@@ -10,6 +10,7 @@ import wandb
 import argparse
 import yaml
 import random
+import matplotlib.pyplot as plt
 
 from dataloaders.FullLoaderBubbleML import get_dataloaders, get_datasets
 from trainers.utils import rollout_temp, create_gif2
@@ -28,7 +29,10 @@ class PFTrainer:
         self.discard_first = self.config['discard_first']
         self.gif_length = self.config['validation']['gif_length']
         self.tres = None
-        self.makegif = True
+        self.makegif_val = True
+        self.makegif_train = True
+        self.makeplot_val = True
+        self.makeplot_train = True
 
         self._initialize_model()
 
@@ -37,13 +41,17 @@ class PFTrainer:
             return yaml.safe_load(file)
 
     def _initialize_model(self):
-        if self.model_name == "UNet2015_DS":
-            from modelComp.UNet import UNet2D
-            self.model = UNet2D(in_channels=self.tw * 3, out_channels=self.tw * 3).to(self.device)
+        if self.model_name == "UNet_Classic":
+            from modelComp.UNetplusplus import UNet2DTest
+            #self.model = UNet2D(in_channels=self.tw * 3, out_channels=self.tw * 3).to(self.device)
+            self.model = UNet2DTest(n_class=3 * self.tw).to(self.device)
+        elif self.model_name == "UNet_plusplus":
+            from modelComp.UNetplusplus import UNetPlusPlus
+            self.model = UNetPlusPlus(in_channels=self.tw * 3, out_channels=self.tw * 3).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.MSELoss(reduction='mean')
         self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
 
     def prepare_dataloader(self):
@@ -54,13 +62,15 @@ class PFTrainer:
                                                              train_batch_size=self.batch_size, train_shuffle=True)
         self.tres = train_dataset.tres
 
-    def train_one_epoch(self, epoch):
-        max_unrolling = min(epoch, self.max_unrolling)
+    def train_one_epoch(self):
+        max_unrolling = min(self.epoch, self.max_unrolling)
         unrolling_choices = list(range(max_unrolling + 1))
         epoch_losses = []
+        #print(len(self.train_loader))
 
         for i in range(self.tres):
             print(f"{i / self.tres:.2f}", end='\r')
+            
             batch_losses = self._train_one_batch(unrolling_choices)
             epoch_losses.append(batch_losses.mean().item())
 
@@ -68,10 +78,17 @@ class PFTrainer:
 
     def _train_one_batch(self, unrolling_choices):
         losses = []
+        
+        #print('trainloader training')
         for raw_data in self.train_loader:
+            #print(raw_data.shape)
+            #for name, param in self.model.named_parameters():
+            #    print(f"Parameter: {name}, dtype: {param.dtype}")
             unrolled_choice = random.choice(unrolling_choices)
             steps = [t for t in range(self.tw, self.tres - self.tw - (self.tw * unrolled_choice) + 1)]
             random_steps = random.choices(steps, k=self.batch_size)
+            
+            #print(random_steps)
 
             data, labels = self.create_data(raw_data, random_steps)
             data, labels = data.to(self.device), labels.to(self.device)
@@ -87,33 +104,24 @@ class PFTrainer:
             pred = self.model(data)
             loss = self.criterion(pred, labels)
             loss.backward()
-            losses.append(loss.detach() / self.batch_size)
             self.optimizer.step()
-
+            losses.append(loss.detach() / self.batch_size)
+            
         return torch.stack(losses)
 
     def validate(self):
         val_loss_timestep = self._validate_timestep()
         val_loss_unrolled = self._validate_unrolled()
-        if self.makegif:
-            for raw_data in self.val_loader:
-                break
-            input_rollout, _ = self.create_data(raw_data, [self.tw])
-            print(input_rollout.shape)
-            input_rollout = input_rollout.to(self.device)
-            stacked_pred = rollout_temp(self.model, input_rollout, self.device, self.tw, steps=self.gif_length)
-            stacked_true = raw_data[0, :, 0, :, :]
-            print(stacked_true.shape, stacked_pred.shape)
-            create_gif2(stacked_true, stacked_pred.cpu(), f"output/wandb_temp_rollout.gif", timesteps=self.gif_length)
         return val_loss_timestep, val_loss_unrolled
 
     def _validate_timestep(self):
         steps = [t for t in range(self.tw, self.tres - self.tw + 1)]
         losses = []
-
-        for step in steps:
+        #print('valloader training timestep')
+        for raw_data in self.val_loader:
             step_losses = []
-            for raw_data in self.val_loader:
+            
+            for step in steps:
                 with torch.no_grad():
                     same_steps = [step] * self.batch_size
                     data, labels = self.create_data(raw_data, same_steps)
@@ -128,7 +136,7 @@ class PFTrainer:
 
     def _validate_unrolled(self):
         losses = []
-
+        #print('valloader training   unrolled')
         for raw_data in self.val_loader:
             unrolled_losses = []
             with torch.no_grad():
@@ -158,12 +166,61 @@ class PFTrainer:
         for (dp, step) in zip(raw_data, random_steps):
             d = dp[step - self.tw:step]
             l = dp[step:step + self.tw]
+            #print(step, d.shape, l.shape)
             data = torch.cat((data, d[None, :]), 0)
             labels = torch.cat((labels, l[None, :]), 0)
 
         data = data.permute(0, 2, 1, 3, 4).reshape(data.shape[0], -1, data.shape[3], data.shape[4])
         labels = labels.permute(0, 2, 1, 3, 4).reshape(labels.shape[0], -1, labels.shape[3], labels.shape[4])
         return data, labels
+    
+    def make_gif(self, output_path, on_val=True):
+        if on_val:
+            #print('valloader gif')
+            for raw_data in self.val_loader:
+                break
+        else:
+            #print('trainloader gif')
+            for raw_data in self.train_loader:
+                raw_data = raw_data[0, :, :, :, :].unsqueeze(0)
+                break
+        input_rollout, _ = self.create_data(raw_data, [self.tw])
+        #print(input_rollout.shape)
+        input_rollout = input_rollout.to(self.device)
+        stacked_pred = rollout_temp(self.model, input_rollout, self.device, self.tw, steps=self.gif_length)
+        stacked_true = raw_data[0, :, 0, :, :]
+        #print(stacked_true.shape, stacked_pred.shape)
+        create_gif2(stacked_true, stacked_pred.cpu(), output_path, timesteps=self.gif_length,  vertical=True)
+    
+    def make_plot(self, output_path, on_val=True):
+        if on_val:
+            #print('valloader plot')
+            for raw_data in self.val_loader:
+                break
+        else:
+            #print('trainloader plot')
+            for raw_data in self.train_loader:
+                raw_data = raw_data[0, :, :, :, :].unsqueeze(0)
+                break
+        data, labels = self.create_data(raw_data, [random.choice(range(self.tw, self.tres - self.tw + 1))])
+        data, labels = data.to(self.device), labels.to(self.device)
+        pred = self.model(data)
+        
+        fig, ax = plt.subplots(3, 3, figsize=(10, 10))
+        fig.suptitle(f"Epoch {self.epoch}")
+        ax = ax.flatten()
+        for i in range(3):
+            ax[i].imshow(data[0, i, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"input")
+        for i in range(3,6):
+            ax[i].imshow(pred[0, i-3, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"pred")
+        for i in range(6,9):
+            ax[i].imshow(labels[0, i-6, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"labels")
+        
+        plt.savefig(output_path)
+        plt.close()
 
     def train(self):
         self.prepare_dataloader()
@@ -179,24 +236,36 @@ class PFTrainer:
 
         start_time = time.time()
 
-        for epoch in range(self.epochs):
+        for self.epoch in range(self.epochs):
+            #print('learning rate:', self.optimizer.param_groups[0]['lr'])
             self.model.train()
-            train_losses = self.train_one_epoch(epoch)
+            train_losses = self.train_one_epoch()
             self.model.eval()
             val_loss_timestep, val_loss_unrolled = self.validate()
+            self.scheduler.step()
+            
+            if self.epoch % 5 == 0:
+                if self.makegif_val:
+                    self.make_gif("output/wandb_temp_rollout_val.gif", on_val=True)
+                if self.makegif_train:
+                    self.make_gif("output/wandb_temp_rollout_train.gif", on_val=False)
 
-            if epoch % 5 == 0:
+                if self.makeplot_val:
+                    self.make_plot("output/wandb_temp_plot_val.png", on_val=True)
+                if self.makeplot_train:
+                    self.make_plot("output/wandb_temp_plot_train.png", on_val=False)
+
                 if val_loss_timestep < best_val_loss_timestep:
                     best_val_loss_timestep = val_loss_timestep
-                    torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{epoch}.pth")
+                    torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}.pth")
 
                 if val_loss_unrolled < best_val_loss_unrolled:
                     best_val_loss_unrolled = val_loss_unrolled
-                    torch.save(self.model.state_dict(), f"models/best_val_loss_unrolled_{self.model_name}_E{epoch}.pth")
+                    torch.save(self.model.state_dict(), f"models/best_val_loss_unrolled_{self.model_name}_E{self.epoch}.pth")
 
             if self.wandb_enabled:
                 wandb.log({
-                    "epoch": epoch,
+                    "epoch": self.epoch,
                     "train_loss_mean": sum(train_losses) / len(train_losses),
                     "val_loss_timestep": val_loss_timestep.item(),
                     "val_loss_unrolled": val_loss_unrolled.item(),
@@ -207,8 +276,8 @@ class PFTrainer:
                 for train_loss_elem in train_losses:
                     wandb.log({"train_loss": train_loss_elem})
 
-            print(f"Epoch {epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses):.8f}, "
-                  f"Val Loss Timestep = {val_loss_timestep:.8f}, Val Loss Unrolled = {val_loss_unrolled:.8f}")
+            print(f"Epoch {self.epoch}: Train Loss Mean = {sum(train_losses) / len(train_losses):.8f}, "
+                  f"Val Loss Timestep = {val_loss_timestep:.8f}, Val Loss Unrolled = {val_loss_unrolled:.8f}, lr={self.optimizer.param_groups[0]['lr']}")
 
         if self.wandb_enabled:
             wandb.finish()

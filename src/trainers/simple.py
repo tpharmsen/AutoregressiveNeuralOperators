@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import datetime
 import wandb
 import yaml
-from modelComp.UNet import UNet2D
+from modelComp.UNet import UNet2D, UNet2DTest
 from dataloaders.SimpleLoaderBubbleML import SimpleLoaderBubbleML, get_datasets, get_dataloaders
 from trainers.utils import create_gif2, rollout_temp
 
@@ -18,11 +18,14 @@ class SimpleTrainer:
         self.modelname = self.config['modelname']
         self.wandb_enabled = self.config['wandb'] in ["True", 1]
         self.discard_first = self.config['discard_first']
+        self.lr = self.config['training']['learning_rate']
         #self.wandb_enabled = False
 
         self.train_loader, self.val_loader = self.prepare_dataloader()
-        self.model = UNet2D(in_channels=3, out_channels=3, features=[64, 128, 256, 512]).to(self.DEVICE)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config['training']['learning_rate'])
+        self.model = UNet2DTest(in_channels=3, out_channels=3).to(self.DEVICE)
+        # print amount of param in model
+        print(f"Amount of parameters in model: {sum(p.numel() for p in self.model.parameters())}")
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         if self.wandb_enabled:
             wandb.init(project="bubbleml_DS", name=self.modelname)
@@ -41,7 +44,7 @@ class SimpleTrainer:
     def prepare_dataloader(self):
         train_files = [self.config['data_path'] + file for file in self.config['training']['files']]
         val_files = [self.config['data_path'] + file for file in self.config['validation']['files']]
-        self.train_dataset, self.val_dataset = get_datasets(train_files, val_files, self.discard_first)
+        self.train_dataset, self.val_dataset = get_datasets(train_files, val_files, self.discard_first, norm=True)
         train_loader, val_loader = get_dataloaders(self.train_dataset, self.val_dataset, self.config['batch_size'])
         return train_loader, val_loader
 
@@ -50,6 +53,10 @@ class SimpleTrainer:
         self.model.train()
 
         for idx, (input, label) in enumerate(self.train_loader):
+            #print(input.dtype)
+            #for name, param in self.model.named_parameters():
+            #    print(f"Parameter: {name}, dtype: {param.dtype}")
+            #print(input.shape)
             print(f"{idx/len(self.train_loader):2f}", end='\r')
             input = input.to(self.DEVICE).float()
             label = label.to(self.DEVICE).float()
@@ -93,7 +100,10 @@ class SimpleTrainer:
                     stacked_pred = input[0, 0, :, :].unsqueeze(0)
                     stacked_true = input[0, 0, :, :].unsqueeze(0)
                     pred = self.model(input)  # Model prediction
+                    stacked_pred = torch.cat((stacked_pred, pred[0, 0, :, :].unsqueeze(0)), 0)
+                    stacked_true = torch.cat((stacked_true, label[0, 0, :, :].unsqueeze(0)), 0)
                 elif i < self.gif_length:
+                    input = pred
                     pred = self.model(input)
                     # Stack the predictions and ground truth
                     stacked_pred = torch.cat((stacked_pred, pred[0, 0, :, :].unsqueeze(0)), 0)

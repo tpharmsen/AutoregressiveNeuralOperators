@@ -31,9 +31,9 @@ def get_datasets(train_files, val_files, discard_first, norm):
     return ConcatDataset(train_dataset), ConcatDataset(val_dataset)
 
 def get_dataloaders(train_dataset, val_dataset, train_batch_size, train_shuffle=False):
-    train_sampler = RandomSampler(train_dataset, replacement=True, num_samples=train_batch_size)
-    train_batch_sampler = BatchSampler(train_sampler, batch_size=train_batch_size, drop_last=False)
-    train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler)
+    #train_sampler = RandomSampler(train_dataset, replacement=True, num_samples=train_batch_size)
+    #train_batch_sampler = BatchSampler(train_sampler, batch_size=train_batch_size, drop_last=False)
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=train_shuffle)#, batch_sampler=train_batch_sampler)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
     return train_loader, val_loader
 
@@ -52,6 +52,7 @@ class SimpleLoaderBubbleML(Dataset):
         return self.timesteps - 1 - self.discard_first
 
     def _get_state(self, idx):
+        coords = self._get_coords(idx)
         temp = torch.from_numpy(self.data[TEMPERATURE][idx + self.discard_first]).float()
         velx = torch.from_numpy(self.data[VELX][idx + self.discard_first]).float()
         vely = torch.from_numpy(self.data[VELY][idx + self.discard_first]).float()
@@ -62,7 +63,7 @@ class SimpleLoaderBubbleML(Dataset):
             velx = self.normalize(velx, self.min_vel, self.max_vel)
             vely = self.normalize(vely, self.min_vel, self.max_vel)
         
-        return torch.stack((temp, velx, vely), dim=0)
+        return torch.stack((coords, temp, velx, vely), dim=0)
     
     def __getitem__(self, idx):
         
@@ -104,3 +105,11 @@ class SimpleLoaderBubbleML(Dataset):
         velx_min = self.data[VELX][self.discard_first:].min()
         vely_min = self.data[VELY][self.discard_first:].min()
         return min(velx_min, vely_min)
+    def _get_coords(self, timestep):
+        with h5py.File(self.files[0], 'r') as data:
+            x = torch.from_numpy(data['x'][self.discard_first:+timestep]).float()
+            x /= x.max()
+            y = torch.from_numpy(data['y'][self.discard_first+timestep]).float()
+            y /= y.max()
+        coords = torch.stack([x, y], dim=0)
+        return coords

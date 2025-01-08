@@ -16,4 +16,4 @@ training:
 
 validation:
   files: ["Twall-100.hdf5"]
-  gif_length: 50
+  gif_length: 80

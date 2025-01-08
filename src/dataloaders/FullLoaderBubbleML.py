@@ -1,5 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, SequentialSampler, RandomSampler, BatchSampler
+from torch.utils.data.distributed import DistributedSampler
+
 import h5py
 
 TEMPERATURE = 'temperature'
@@ -22,12 +24,30 @@ def get_datasets(train_files, val_files, discard_first, norm):
 
     return train_dataset, val_dataset
 
-def get_dataloaders(train_dataset, val_dataset, train_batch_size, train_shuffle=False):
-    print(train_batch_size)
+def get_dataloaders(train_dataset, val_dataset, train_batch_size, train_shuffle=False, distributed=True):
+    '''
     train_sampler = RandomSampler(train_dataset, replacement=True, num_samples=train_batch_size)
     train_batch_sampler = BatchSampler(train_sampler, batch_size=train_batch_size, drop_last=False)
     train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
+    return train_loader, val_loader
+    '''
+    
+    train_sampler = RandomSampler(train_dataset) if train_shuffle else SequentialSampler(train_dataset)
+    val_sampler = SequentialSampler(val_dataset)
+
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=train_batch_size, 
+        sampler=train_sampler, 
+        drop_last=False
+    )
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=train_batch_size, 
+        sampler=val_sampler, 
+        drop_last=False
+    )
     return train_loader, val_loader
 
 class FullLoaderBubbleML(Dataset):
@@ -38,11 +58,14 @@ class FullLoaderBubbleML(Dataset):
         self.max_temp = None
         self.min_vel = None
         self.max_vel = None
+        self.tlen = self.get_time_length()
 
     def __len__(self):
-        return len(self.files) - self.discard_first
+        #print(len(self.files))
+        return len(self.files) #* (self.tlen - self.discard_first)
 
     def __getitem__(self, idx):
+        #print(f"Loading file {idx}")
         file = self.files[idx]
         with h5py.File(file, 'r') as filedata:
             temp = torch.from_numpy(filedata[TEMPERATURE][self.discard_first:]).float()
@@ -109,3 +132,11 @@ class FullLoaderBubbleML(Dataset):
                 vely_min = data[VELY][self.discard_first:].min()
                 min_vel = min(min_vel, velx_min, vely_min)
         return min_vel
+    def _get_coords(self, timestep):
+        with h5py.File(self.files[0], 'r') as data:
+            x = torch.from_numpy(data['x'][self.discard_first:]).float()
+            x /= x.max()
+            y = torch.from_numpy(data['y'][self.discard_first:]).float()
+            y /= y.max()
+        coords = torch.stack([x, y], dim=0)
+        return coords
