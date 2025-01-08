@@ -41,8 +41,8 @@ class PFTrainer:
             return yaml.safe_load(file)
 
     def _initialize_model(self):
-        if self.model_name == "UNet_Classic":
-            from modelComp.UNetplusplus import UNet2DTest
+        if self.model_name == "UNet_classic":
+            from modelComp.UNet import UNet2DTest
             #self.model = UNet2D(in_channels=self.tw * 3, out_channels=self.tw * 3).to(self.device)
             self.model = UNet2DTest(n_class=3 * self.tw).to(self.device)
         elif self.model_name == "UNet_plusplus":
