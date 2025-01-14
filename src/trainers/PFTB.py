@@ -34,6 +34,7 @@ class PFTBTrainer:
         self.makeplot_val = self.config['validation']['makeplot_val'] in ["True", 1]
         self.makeplot_train = self.config['validation']['makeplot_train'] in ["True", 1]
         self.use_coords = self.config['model']['use_coords'] in ["True", 1]
+        self.makegif_vertical = self.config['validation']['makegif_vertical'] in ["True", 1]
         #torch.set_printoptions(precision=6, sci_mode=False)
 
         print(self.model_name)
