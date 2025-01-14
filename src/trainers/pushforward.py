@@ -67,6 +67,7 @@ class PFTrainer:
         unrolling_choices = list(range(max_unrolling + 1))
         epoch_losses = []
         #print(len(self.train_loader))
+        
 
         for i in range(self.tres):
             print(f"{i / self.tres:.2f}", end='\r')

@@ -40,19 +40,19 @@ class UNet2D(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.GELU(),
+            nn.ReLU(),
         )
 
 class UNet2DTest(nn.Module):
-    def __init__(self, n_class):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
 
         # Encoder
         # Input: 572x572x3
-        self.e11 = nn.Conv2d(n_class, 64, kernel_size=3, padding=1)  # Output: 570x570x64
+        self.e11 = nn.Conv2d(in_channels, 64, kernel_size=3, padding=1)  # Output: 570x570x64
         self.e12 = nn.Conv2d(64, 64, kernel_size=3, padding=1)       # Output: 568x568x64
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)           # Output: 284x284x64
 
@@ -75,7 +75,7 @@ class UNet2DTest(nn.Module):
         self.d22 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
 
         # Output layer
-        self.outconv = nn.Conv2d(64, n_class, kernel_size=1)
+        self.outconv = nn.Conv2d(64, out_channels, kernel_size=1)
 
     def forward(self, x):
         # Encoder
