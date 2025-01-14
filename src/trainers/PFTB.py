@@ -118,7 +118,7 @@ class PFTBTrainer:
         coords_input, temp_input, vel_input = self._index_push(0, coords, temp, vel)
         with torch.no_grad():
             for idx in range(push_forward_steps - 1):
-                print('pf', end='_')
+                #print('pf', end='_')
                 temp_input, vel_input = self._forward_int(coords_input, temp_input, vel_input)
         temp_pred, vel_pred = self._forward_int(coords_input, temp_input, vel_input)
         return temp_pred, vel_pred
@@ -128,7 +128,7 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, temp_label, vel_label) in enumerate(self.train_loader):
             # print how far we are in the epoch
-            print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
+            #print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
             coords, temp, vel = coords.to(self.device), temp.to(self.device), vel.to(self.device)
 
             
@@ -210,7 +210,7 @@ class PFTBTrainer:
         stacked_pred = torch.cat(preds, dim=1).squeeze(0)
         #print(stacked_true.shape, stacked_pred.shape)
 
-        create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=True)
+        create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=self.makegif_vertical)
     
     def make_plot(self, output_path, on_val=True):
         if on_val:
