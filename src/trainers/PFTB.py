@@ -62,7 +62,7 @@ class PFTBTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, min_lr=1e-6)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -310,7 +310,7 @@ class PFTBTrainer:
                     wandb.log({
                         "epoch": self.epoch,
                         "train_loss_mean": torch.mean(train_losses),
-                        "val_loss_timestep": torch.mean(val_loss_timestep),
+                        #"val_loss_timestep": torch.mean(val_loss_timestep),
                         #"val_loss_unrolled": val_loss_unrolled.item(),
                         "elapsed_time": time.time() - start_time,
                         "learning_rate": self.optimizer.param_groups[0]['lr']
