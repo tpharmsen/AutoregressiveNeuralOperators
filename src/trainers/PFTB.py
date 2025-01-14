@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from datetime import datetime
 import time
 import wandb
@@ -22,22 +22,19 @@ class PFTBTrainer:
         self.epochs = self.config['training']['epochs']
         self.batch_size = self.config['batch_size']
         self.max_unrolling = self.config['training']['max_unrolling']
-        self.tw = self.config['tw']
+        self.tw = self.config['model']['tw']
         self.learning_rate = self.config['training']['learning_rate']
         self.wandb_enabled = self.config['wandb'] in ["True", 1]
-        self.model_name = self.config['modelname']
+        self.model_name = self.config['model']['name']
         self.discard_first = self.config['discard_first']
         self.gif_length = self.config['validation']['gif_length']
         self.tres = None
-        self.makegif_val = False
-        self.makegif_train = False
-        self.makeplot_val = False
-        self.makeplot_train = False
-
-        self.epochs = 100
-        self.wandb_enabled = False
-        self.use_coords = True
-        self.max_unrolling = 3
+        self.makegif_val = self.config['validation']['makegif_val'] in ["True", 1]
+        self.makegif_train = self.config['validation']['makegif_train'] in ["True", 1]
+        self.makeplot_val = self.config['validation']['makeplot_val'] in ["True", 1]
+        self.makeplot_train = self.config['validation']['makeplot_train'] in ["True", 1]
+        self.use_coords = self.config['model']['use_coords'] in ["True", 1]
+        #torch.set_printoptions(precision=6, sci_mode=False)
 
         print(self.model_name)
 
@@ -55,15 +52,16 @@ class PFTBTrainer:
             from neuralop.models import FNO
             print('using standard UNet2DTest with in_channels =', self.in_channels, 'and out_channels =', self.out_channels)
             #self.model = UNetPlusPlus(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
-            #self.model = UNet2DTest(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
+            self.model = UNet2DTest(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
             #self.model = FNO2d(in_channels=self.in_channels, out_channels=self.out_channels, modes1=8, modes2=8, width=6).to(self.device)
-            self.model = FNO(n_modes=(32, 32), hidden_channels=128, in_channels=self.in_channels, out_channels = self.out_channels).to(self.device)
+            #self.model = FNO(n_modes=(16, 16), hidden_channels=64, in_channels=self.in_channels, out_channels = self.out_channels).to(self.device)
             print('Amount of parameters in model:', self.nparams(self.model))
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.learning_rate, weight_decay=1e-5)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss(reduction='mean')
-        self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
+        #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -71,11 +69,11 @@ class PFTBTrainer:
     def prepare_dataloader(self):
         train_files = [self.config['data_path'] + file for file in self.config['training']['files']]
         val_files = [self.config['data_path'] + file for file in self.config['validation']['files']]
-        print(len(train_files), len(val_files)) 
+        #print(len(train_files), len(val_files)) 
 
         self.train_dataset = HDF5ConcatDataset([PFLoader(file, 
                                                     discard_first=self.discard_first, 
-                                                    use_coords=True, 
+                                                    use_coords=self.use_coords, 
                                                     time_window = self.tw, 
                                                     push_forward_steps=self.max_unrolling) for file in train_files])
         self.train_max_temp = self.train_dataset.normalize_temp_()
@@ -83,7 +81,7 @@ class PFTBTrainer:
 
         self.val_dataset = HDF5ConcatDataset([PFLoader(file, 
                                                     discard_first=self.discard_first, 
-                                                    use_coords=True, 
+                                                    use_coords=self.use_coords, 
                                                     time_window = self.tw, 
                                                     push_forward_steps=self.max_unrolling) for file in val_files])
         self.val_dataset.normalize_temp_(self.train_max_temp)
@@ -134,7 +132,7 @@ class PFTBTrainer:
 
             
             
-            push_forward_steps = random.choice(range(0,2))
+            push_forward_steps = random.choice(range(1,3))
             #print('push_forward_steps', push_forward_steps)
             
 
@@ -161,6 +159,7 @@ class PFTBTrainer:
         val_loss_timestep = self._validate_timestep()
         #val_loss_unrolled = self._validate_unrolled()
         val_loss_unrolled = -1
+        
         return val_loss_timestep, val_loss_unrolled
 
     def _validate_timestep(self):
@@ -170,8 +169,6 @@ class PFTBTrainer:
             if idx == 0:
                 with torch.no_grad():
                     temp_pred, vel_pred = self._forward_int(coords[:, 0], temp[:, 0], vel[:, 0])
-                    print("avg temp", temp_pred.mean())
-                    print("avg vel", vel_pred.mean())
 
             # val doesn't apply push-forward
             temp_label = temp_label[:, 0].to(self.device)
@@ -210,10 +207,45 @@ class PFTBTrainer:
                 temp_input, vel_input = self._forward_int(coords_input, temp_input, vel_input)
                 preds.append(temp_input)
         stacked_pred = torch.cat(preds, dim=1).squeeze(0)
-        print(stacked_true.shape, stacked_pred.shape)
+        #print(stacked_true.shape, stacked_pred.shape)
 
         create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=True)
     
+    def make_plot(self, output_path, on_val=True):
+        if on_val:
+            for coords, temp, vel, temp_label, vel_label in self.val_loader:
+                break
+            coords, temp, vel = coords[0].unsqueeze(0), temp[0].unsqueeze(0), vel[0].unsqueeze(0)
+            coords, temp, vel = coords.to(self.device), temp.to(self.device), vel.to(self.device)
+            
+        else:
+            for coords, temp, vel, temp_label, vel_label in self.train_loader:
+                break
+            coords, temp, vel = coords[0].unsqueeze(0), temp[0].unsqueeze(0), vel[0].unsqueeze(0)
+            coords, temp, vel = coords.to(self.device), temp.to(self.device), vel.to(self.device)
+            
+        with torch.no_grad():
+            coords_input, temp_input, vel_input = self._index_push(0, coords, temp, vel)
+            temp_pred, vel_pred = self._forward_int(coords_input, temp_input, vel_input)
+
+        temp_label = temp_label[0, 0].unsqueeze(0).to(self.device)
+        
+
+        fig, ax = plt.subplots(3, self.tw, figsize=(9, 3*self.tw))
+        fig.suptitle(f"Epoch {self.epoch}")
+        ax = ax.flatten()
+        for i in range(self.tw):
+            ax[i].imshow(temp_input[0, i, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"input")
+        for i in range(self.tw,2*self.tw):
+            ax[i].imshow(temp_pred[0, i-self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"pred")
+        for i in range(2*self.tw,3*self.tw):
+            ax[i].imshow(temp_label[0, i-2*self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].set_title(f"labels")
+        
+        plt.savefig(output_path)
+        plt.close()
 
     def train(self):
         self.prepare_dataloader()
@@ -225,6 +257,7 @@ class PFTBTrainer:
 
         best_val_loss_timestep = float('inf')
         best_val_loss_unrolled = float('inf')
+        best_train_loss = float('inf')
 
         start_time = time.time()
 
@@ -237,53 +270,56 @@ class PFTBTrainer:
             if self.epoch % 10 == 0:
                 self.model.eval()
                 val_loss_timestep, val_loss_unrolled = self.validate()
-                self.make_gif("output/tempgif.gif", on_val=True)
-                self.make_gif("output/tempgif_train.gif", on_val=False)
-
-            self.scheduler.step()
-            '''
-            if self.epoch % 5 == 0:
                 if self.makegif_val:
-                    self.make_gif("output/wandb_temp_rollout_val.gif", on_val=True)
+                    self.make_gif("output/tempgif.gif", on_val=True)
                 if self.makegif_train:
-                    self.make_gif("output/wandb_temp_rollout_train.gif", on_val=False)
-
+                    self.make_gif("output/tempgif_train.gif", on_val=False)
                 if self.makeplot_val:
-                    self.make_plot("output/wandb_temp_plot_val.png", on_val=True)
+                    self.make_plot("output/tempplot.png", on_val=True)
                 if self.makeplot_train:
-                    self.make_plot("output/wandb_temp_plot_train.png", on_val=False)
+                    self.make_plot("output/tempplot_train.png", on_val=False)
 
-                if val_loss_timestep < best_val_loss_timestep:
-                    best_val_loss_timestep = val_loss_timestep
-                    torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}.pth")
+                #print(val_loss_timestep[0])
+                #print(val_loss_timestep)
+                #print()
+                #print(val_loss_timestep.dtype)
+                if torch.mean(val_loss_timestep) < best_val_loss_timestep:
+                    best_val_loss_timestep = torch.mean(val_loss_timestep)
+                    
+                    torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}_2.pth")
+                if torch.mean(train_losses) < best_train_loss:
+                    best_train_loss = torch.mean(train_losses)
+                    torch.save(self.model.state_dict(), f"models/best_train_loss_{self.model_name}_E{self.epoch}_2.pth")
 
-                if val_loss_unrolled < best_val_loss_unrolled:
-                    best_val_loss_unrolled = val_loss_unrolled
-                    torch.save(self.model.state_dict(), f"models/best_val_loss_unrolled_{self.model_name}_E{self.epoch}.pth")
-            '''
-            if self.wandb_enabled:
-                wandb.log({
-                    "epoch": self.epoch,
-                    "train_loss_mean": sum(train_losses) / len(train_losses),
-                    "val_loss_timestep": val_loss_timestep.item(),
-                    "val_loss_unrolled": val_loss_unrolled.item(),
-                    "elapsed_time": time.time() - start_time,
-                    "rollout_val_gif": wandb.Video('output/wandb_temp_rollout.gif', fps=5, format="gif"),
-                    "learning_rate": self.optimizer.param_groups[0]['lr']
-                })
-                for train_loss_elem in train_losses:
-                    wandb.log({"train_loss": train_loss_elem})
+                if self.wandb_enabled:
+                    wandb.log({
+                        "epoch": self.epoch,
+                        "train_loss_mean": torch.mean(train_losses),
+                        "val_loss_timestep": torch.mean(val_loss_timestep),
+                        #"val_loss_unrolled": val_loss_unrolled.item(),
+                        "elapsed_time": time.time() - start_time,
+                        "rollout_val_gif": wandb.Video('output/tempgif.gif', fps=5, format="gif"),
+                        "rollout_train_gif": wandb.Video('output/tempgif_train.gif', fps=5, format="gif"),
+                        "rollout_val_plot": wandb.Image('output/tempplot.png'),
+                        "rollout_train_plot": wandb.Image('output/tempplot_train.png'),
+                        "learning_rate": self.optimizer.param_groups[0]['lr']
+                    })
+            else:
+                if self.wandb_enabled:
+                    wandb.log({
+                        "epoch": self.epoch,
+                        "train_loss_mean": torch.mean(train_losses),
+                        "val_loss_timestep": torch.mean(val_loss_timestep),
+                        #"val_loss_unrolled": val_loss_unrolled.item(),
+                        "elapsed_time": time.time() - start_time,
+                        "learning_rate": self.optimizer.param_groups[0]['lr']
+                    })
 
+            self.scheduler.step(torch.mean(train_losses))
+                
             print(f"Epoch {self.epoch}: Train Loss Mean = {torch.mean(train_losses):.8f}, "
-                  f"Val Loss Timestep = {torch.mean(val_loss_timestep):.8f}, Val Loss Unrolled = {val_loss_unrolled:.8f}, lr={self.optimizer.param_groups[0]['lr']}")
+                    f"Val Loss Timestep = {torch.mean(val_loss_timestep):.8f}, "
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.2e}")
 
         if self.wandb_enabled:
             wandb.finish()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--conf", type=str, default="conf/example.yaml")
-    args = parser.parse_args()
-    trainer = PFTBTrainer(args.conf)
-    trainer.train()
