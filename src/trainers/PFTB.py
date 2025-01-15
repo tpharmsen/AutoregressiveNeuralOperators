@@ -11,6 +11,7 @@ import argparse
 import yaml
 import random
 import matplotlib.pyplot as plt
+import numpy as np
 
 from dataloaders.PFLoader import PFLoader, HDF5ConcatDataset
 from trainers.utils import rollout_temp, create_gif2
@@ -36,6 +37,8 @@ class PFTBTrainer:
         self.use_coords = self.config['model']['use_coords'] in ["True", 1]
         self.makegif_vertical = self.config['validation']['makegif_vertical'] in ["True", 1]
         #torch.set_printoptions(precision=6, sci_mode=False)
+        self.modelprop = self.config['model']['prop']
+
 
         print(self.model_name)
 
@@ -48,21 +51,26 @@ class PFTBTrainer:
     def _initialize_model(self):
         if self.model_name:
             from modelComp.UNetplusplus import UNetPlusPlus
-            from modelComp.UNet import UNet2DTest
+            from modelComp.UNet import UNet2DTest, UNet2D
             from modelComp.FNO import FNO2d
-            from neuralop.models import FNO
-            print('using standard UNet2DTest with in_channels =', self.in_channels, 'and out_channels =', self.out_channels)
+            #from neuralop.models import FNO
             #self.model = UNetPlusPlus(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
-            self.model = UNet2DTest(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
+            #self.model = UNet2DTest(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
             #self.model = FNO2d(in_channels=self.in_channels, out_channels=self.out_channels, modes1=8, modes2=8, width=6).to(self.device)
             #self.model = FNO(n_modes=(16, 16), hidden_channels=64, in_channels=self.in_channels, out_channels = self.out_channels).to(self.device)
+            self.model = UNet2D(in_channels=self.in_channels,
+                                out_channels=self.out_channels, 
+                                base_filters=self.modelprop[0], 
+                                depth=self.modelprop[1],
+                                activation=self.modelprop[2]
+                                ).to(self.device)
             print('Amount of parameters in model:', self.nparams(self.model))
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-6)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-7)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -95,7 +103,24 @@ class PFTBTrainer:
         self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False)
 
     def push_forward_prob(self, epoch, max_epochs):
-        pass
+        
+        frac = epoch / max_epochs 
+        pfchance = np.random.uniform()
+
+        if frac < 0.33: 
+            return 1
+        elif frac < 0.67:  
+            if pfchance < 0.5: 
+                return 1
+            else:
+                return 2
+        else:  
+            if pfchance < 0.33:  
+                return 1
+            elif pfchance < 0.67: 
+                return 2
+            else:
+                return self.max_unrolling
 
     def _index_push(self, idx, coords, temp, vel):
         return (coords[:, idx], temp[:, idx], vel[:, idx])
@@ -127,16 +152,12 @@ class PFTBTrainer:
         losses = []
 
         for idx, (coords, temp, vel, temp_label, vel_label) in enumerate(self.train_loader):
-            # print how far we are in the epoch
+
             #print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
             coords, temp, vel = coords.to(self.device), temp.to(self.device), vel.to(self.device)
-
             
-            
-            push_forward_steps = random.choice(range(1,3))
+            push_forward_steps = self.push_forward_prob(self.epoch, self.epochs)
             #print('push_forward_steps', push_forward_steps)
-            
-
             temp_pred, vel_pred = self.push_forward_trick(coords, temp, vel, push_forward_steps)
 
             idx = (push_forward_steps - 1)
@@ -150,7 +171,7 @@ class PFTBTrainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            losses.append(loss.detach())
+            losses.append(loss.detach() / self.batch_size)
             
             del temp, vel, temp_label, vel_label
             
@@ -232,7 +253,7 @@ class PFTBTrainer:
         temp_label = temp_label[0, 0].unsqueeze(0).to(self.device)
         
 
-        fig, ax = plt.subplots(3, self.tw, figsize=(9, 3*self.tw))
+        fig, ax = plt.subplots(3, self.tw, figsize=(3*self.tw, 9))
         fig.suptitle(f"Epoch {self.epoch}")
         ax = ax.flatten()
         for i in range(self.tw):
@@ -245,6 +266,7 @@ class PFTBTrainer:
             ax[i].imshow(temp_label[0, i-2*self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"labels")
         
+        plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
 
@@ -268,7 +290,7 @@ class PFTBTrainer:
             train_losses = self.train_one_epoch()
             
             
-            if self.epoch % 10 == 0:
+            if self.epoch % 20 == 0:
                 self.model.eval()
                 val_loss_timestep, val_loss_unrolled = self.validate()
                 if self.makegif_val:
