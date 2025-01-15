@@ -252,13 +252,11 @@ def main(args: argparse):
         for raw_data in val_loader:
             break
         input_rollout, _ = create_data(args, raw_data, [args.tw])
-        print(input_rollout.shape)
         input_rollout = input_rollout.to(args.device)
         #print(input_rollout.shape)
         rollout_data = rollout_temp(model, input_rollout, args.device, args.tw, args.gif_length)
         #print(rollout_data.shape)
         raw_data_temp = raw_data[:, :, 0, :, :].squeeze(0)
-        print(rollout_data.shape, raw_data_temp.shape)  
         create_gif2(raw_data_temp, rollout_data.cpu(), 'output/wandb_log_gif.gif', timesteps=args.gif_length, vertical=False)
 
         if args.wandb:

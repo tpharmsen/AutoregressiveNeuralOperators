@@ -31,11 +31,11 @@ class PFTBTrainer:
         self.gif_length = self.config['validation']['gif_length']
         self.tres = None
         self.makegif_val = self.config['validation']['makegif_val'] in ["True", 1]
-        self.makegif_train = self.config['validation']['makegif_train'] in ["True", 1]
         self.makeplot_val = self.config['validation']['makeplot_val'] in ["True", 1]
         self.makeplot_train = self.config['validation']['makeplot_train'] in ["True", 1]
         self.use_coords = self.config['model']['use_coords'] in ["True", 1]
         self.makegif_vertical = self.config['validation']['makegif_vertical'] in ["True", 1]
+        self.save_on = self.config['save_on'] in ["True", 1]
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
 
@@ -70,7 +70,7 @@ class PFTBTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-7)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -103,24 +103,11 @@ class PFTBTrainer:
         self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False)
 
     def push_forward_prob(self, epoch, max_epochs):
-        
-        frac = epoch / max_epochs 
-        pfchance = np.random.uniform()
 
-        if frac < 0.33: 
+        if epoch < 40: 
             return 1
-        elif frac < 0.67:  
-            if pfchance < 0.5: 
-                return 1
-            else:
-                return 2
         else:  
-            if pfchance < 0.33:  
-                return 1
-            elif pfchance < 0.67: 
-                return 2
-            else:
-                return self.max_unrolling
+            return random.choice(range(1, self.max_unrolling + 1))
 
     def _index_push(self, idx, coords, temp, vel):
         return (coords[:, idx], temp[:, idx], vel[:, idx])
@@ -275,7 +262,7 @@ class PFTBTrainer:
         self._initialize_model()
 
         if self.wandb_enabled:
-            wandb.init(project="BubbleML_DS_PF", name=self.model_name)
+            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_tw' + str(self.tw) + '_pf' + str(self.max_unrolling))
             wandb.config.update(self.config)
 
         best_val_loss_timestep = float('inf')
@@ -288,15 +275,13 @@ class PFTBTrainer:
 
             self.model.train()
             train_losses = self.train_one_epoch()
+            self.model.eval()
+            val_loss_timestep, val_loss_unrolled = self.validate()
             
-            
-            if self.epoch % 20 == 0:
-                self.model.eval()
-                val_loss_timestep, val_loss_unrolled = self.validate()
+            makeviz = self.epoch % 10 == 0
+            if makeviz:
                 if self.makegif_val:
                     self.make_gif("output/tempgif.gif", on_val=True)
-                if self.makegif_train:
-                    self.make_gif("output/tempgif_train.gif", on_val=False)
                 if self.makeplot_val:
                     self.make_plot("output/tempplot.png", on_val=True)
                 if self.makeplot_train:
@@ -306,39 +291,30 @@ class PFTBTrainer:
                 #print(val_loss_timestep)
                 #print()
                 #print(val_loss_timestep.dtype)
-                if torch.mean(val_loss_timestep) < best_val_loss_timestep:
-                    best_val_loss_timestep = torch.mean(val_loss_timestep)
-                    
-                    torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}_2.pth")
-                if torch.mean(train_losses) < best_train_loss:
-                    best_train_loss = torch.mean(train_losses)
-                    torch.save(self.model.state_dict(), f"models/best_train_loss_{self.model_name}_E{self.epoch}_2.pth")
+                if self.save_on:
+                    if torch.mean(val_loss_timestep) < best_val_loss_timestep:
+                        best_val_loss_timestep = torch.mean(val_loss_timestep)
+                        
+                        torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}_3.pth")
+                    if torch.mean(train_losses) < best_train_loss:
+                        best_train_loss = torch.mean(train_losses)
+                        torch.save(self.model.state_dict(), f"models/best_train_loss_{self.model_name}_E{self.epoch}_3.pth")
 
-                if self.wandb_enabled:
-                    wandb.log({
-                        "epoch": self.epoch,
-                        "train_loss_mean": torch.mean(train_losses),
-                        "val_loss_timestep": torch.mean(val_loss_timestep),
-                        #"val_loss_unrolled": val_loss_unrolled.item(),
-                        "elapsed_time": time.time() - start_time,
-                        "rollout_val_gif": wandb.Video('output/tempgif.gif', fps=5, format="gif"),
-                        "rollout_train_gif": wandb.Video('output/tempgif_train.gif', fps=5, format="gif"),
-                        "rollout_val_plot": wandb.Image('output/tempplot.png'),
-                        "rollout_train_plot": wandb.Image('output/tempplot_train.png'),
-                        "learning_rate": self.optimizer.param_groups[0]['lr']
-                    })
-            else:
-                if self.wandb_enabled:
-                    wandb.log({
-                        "epoch": self.epoch,
-                        "train_loss_mean": torch.mean(train_losses),
-                        #"val_loss_timestep": torch.mean(val_loss_timestep),
-                        #"val_loss_unrolled": val_loss_unrolled.item(),
-                        "elapsed_time": time.time() - start_time,
-                        "learning_rate": self.optimizer.param_groups[0]['lr']
-                    })
+            if self.wandb_enabled:
+                wandb.log({
+                    "epoch": self.epoch,
+                    "train_loss_mean": torch.mean(train_losses),
+                    "val_loss_timestep": torch.mean(val_loss_timestep),
+                    #"val_loss_unrolled": val_loss_unrolled.item(),
+                    "elapsed_time": time.time() - start_time,
+                    "rollout_val_gif": wandb.Video('output/tempgif.gif', fps=5, format="gif") if self.makegif_val and makeviz else None,
+                    "rollout_val_plot": wandb.Image('output/tempplot.png') if self.makeplot_val and makeviz else None,
+                    "rollout_train_plot": wandb.Image('output/tempplot_train.png') if self.makeplot_train and makeviz else None,
+                    "learning_rate": self.optimizer.param_groups[0]['lr']
+                })
+            
 
-            self.scheduler.step(torch.mean(train_losses))
+            self.scheduler.step(torch.mean(val_loss_timestep))
                 
             print(f"Epoch {self.epoch}: Train Loss Mean = {torch.mean(train_losses):.8f}, "
                     f"Val Loss Timestep = {torch.mean(val_loss_timestep):.8f}, "

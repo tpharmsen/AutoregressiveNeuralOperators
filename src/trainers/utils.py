@@ -149,7 +149,7 @@ def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertic
 
         fig.suptitle(f"Step {i + 1}/{timesteps}")
 
-    ani = animation.FuncAnimation(fig, update_frame, frames=timesteps, interval=50)
+    ani = animation.FuncAnimation(fig, update_frame, frames=timesteps, interval=1)
     if output_path is not None:
         ani.save(output_path, writer='ffmpeg', fps=30)
     plt.close()

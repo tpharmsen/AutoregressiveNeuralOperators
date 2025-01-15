@@ -21,7 +21,6 @@ validation:
   files: ["Twall-100.hdf5"]
   gif_length: 60
   makegif_val: True
-  makegif_train: True
   makeplot_val: True
   makeplot_train: True
   makegif_vertical: False
