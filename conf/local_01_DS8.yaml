@@ -13,7 +13,7 @@ model:
   prop: [64, 3, 'gelu']
 
 training:
-  files: ["Twall-79.hdf5", "Twall-81.hdf5", "Twall-85.hdf5", "Twall-88.hdf5", "Twall-90.hdf5", "Twall-92.hdf5", "Twall-95.hdf5", "Twall-97.hdf5", "Twall-98.hdf5", "Twall-103.hdf5", "Twall-106.hdf5", "Twall-108.hdf5", "Twall-110.hdf5"]
+  files: ["Twall-79.hdf5", "Twall-81.hdf5", "Twall-85.hdf5", "Twall-88.hdf5", "Twall-90.hdf5", "Twall-92.hdf5", "Twall-95.hdf5", "Twall-97.hdf5", "Twall-98.hdf5", "Twall-102.hdf5", "Twall-103.hdf5", "Twall-106.hdf5", "Twall-108.hdf5", "Twall-110.hdf5"]
   epochs: 300
   learning_rate: 0.001
   max_unrolling: 3
