@@ -39,10 +39,17 @@ class PFTBTrainer:
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
 
-
-        print(self.model_name)
-
-        #self._initialize_model()
+        self.wandb_config = {}
+        prefix = ''
+        for key, value in self.config.items():
+            full_key = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                prefix = key
+                for key, value in self.config.items():
+                    full_key = f"{prefix}.{key}" if prefix else key
+                    self.wandb_config[key] = value
+            else:
+                self.wandb_config[key] = value
 
     def load_config(self, path):
         with open(path) as file:
@@ -104,11 +111,9 @@ class PFTBTrainer:
 
     def push_forward_prob(self, epoch, max_epochs):
 
-        if epoch < 40: 
-            return 1
-        else:  
-            return random.choice(range(1, self.max_unrolling + 1))
-
+        steps = epoch // 10
+        return random.choice(range(1, max(steps + 1, self.max_unrolling + 1)))
+        
     def _index_push(self, idx, coords, temp, vel):
         return (coords[:, idx], temp[:, idx], vel[:, idx])
 
@@ -262,7 +267,7 @@ class PFTBTrainer:
         self._initialize_model()
 
         if self.wandb_enabled:
-            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_tw' + str(self.tw) + '_pf' + str(self.max_unrolling))
+            wandb.init(project="BubbleML_DS_PF", name=self.model_name + datetime.now().strftime("_%Y-%m-%d_%H-%M"), config=self.wandb_config)
             wandb.config.update(self.config)
 
         best_val_loss_timestep = float('inf')
