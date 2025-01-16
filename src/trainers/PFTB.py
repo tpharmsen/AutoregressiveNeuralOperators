@@ -109,10 +109,15 @@ class PFTBTrainer:
         self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
         self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False)
 
-    def push_forward_prob(self, epoch, max_epochs):
+    def push_forward_prob(self):
 
-        steps = epoch // 10
-        return random.choice(range(1, max(steps + 1, self.max_unrolling + 1)))
+        steps = self.epoch // 10
+        if steps == 0:
+            #print('pf: 1')
+            return 1
+        else:
+            #print('pf:', random.choice(range(1, min(steps + 1, self.max_unrolling + 1))))
+            return random.choice(range(1, min(steps + 1, self.max_unrolling + 1)))
         
     def _index_push(self, idx, coords, temp, vel):
         return (coords[:, idx], temp[:, idx], vel[:, idx])
@@ -148,7 +153,7 @@ class PFTBTrainer:
             #print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
             coords, temp, vel = coords.to(self.device), temp.to(self.device), vel.to(self.device)
             
-            push_forward_steps = self.push_forward_prob(self.epoch, self.epochs)
+            push_forward_steps = self.push_forward_prob()
             #print('push_forward_steps', push_forward_steps)
             temp_pred, vel_pred = self.push_forward_trick(coords, temp, vel, push_forward_steps)
 
