@@ -41,6 +41,7 @@ class PFTBTrainer:
         self.save_on = self.config['save_on'] in ["True", 1]
         self.path_gif = self.config['validation']['path_gif']
         self.path_plot = self.config['validation']['path_plot']
+        self.pushforward_step = self.config['training']['pushforward_step']
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
 
@@ -83,7 +84,7 @@ class PFTBTrainer:
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.init_learning_rate, weight_decay=self.weight_decay)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=25, min_lr=1e-6)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=30, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -127,7 +128,7 @@ class PFTBTrainer:
 
     def push_forward_prob(self):
 
-        steps = self.epoch // 10
+        steps = self.epoch // self.pushforward_step
         if steps == 0:
             #print('pf: 1')
             return 1
