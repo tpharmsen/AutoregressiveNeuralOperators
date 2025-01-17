@@ -21,15 +21,18 @@ class PFTBTrainer:
         self.config = self.load_config(config_path)
         self.device = torch.device(self.config['device'])
         self.epochs = self.config['training']['epochs']
-        self.batch_size = self.config['batch_size']
+        self.batch_size = self.config['loader']['batch_size']
         self.max_unrolling = self.config['training']['max_unrolling']
         self.tw = self.config['model']['tw']
-        self.learning_rate = self.config['training']['learning_rate']
+        self.init_learning_rate = float(self.config['training']['init_learning_rate'])
+        self.weight_decay = float(self.config['training']['weight_decay'])
         self.wandb_enabled = self.config['wandb'] in ["True", 1]
         self.model_name = self.config['model']['name']
-        self.discard_first = self.config['discard_first']
+        self.discard_first = self.config['loader']['discard_first']
         self.gif_length = self.config['validation']['gif_length']
-        self.tres = None
+        self.pin_memory = self.config['loader']['pin_memory'] in ["True", 1]
+        self.prefetch_factor = self.config['loader']['prefetch_factor']
+        self.num_workers = self.config['loader']['num_workers']
         self.makegif_val = self.config['validation']['makegif_val'] in ["True", 1]
         self.makeplot_val = self.config['validation']['makeplot_val'] in ["True", 1]
         self.makeplot_train = self.config['validation']['makeplot_train'] in ["True", 1]
@@ -52,14 +55,15 @@ class PFTBTrainer:
                 self.wandb_config[key] = value
 
     def load_config(self, path):
-        with open(path) as file:
-            return yaml.safe_load(file)
+        with open(path, 'r') as file:
+            data = yaml.safe_load(file)
+        return data
 
     def _initialize_model(self):
-        if self.model_name:
-            from modelComp.UNetplusplus import UNetPlusPlus
-            from modelComp.UNet import UNet2DTest, UNet2D
-            from modelComp.FNO import FNO2d
+        if self.model_name == 'UNet_classic':
+            #from modelComp.UNetplusplus import UNetPlusPlus
+            from modelComp.UNet import UNet2D
+            #from modelComp.FNO import FNO2d
             #from neuralop.models import FNO
             #self.model = UNetPlusPlus(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
             #self.model = UNet2DTest(in_channels=self.in_channels, out_channels=self.out_channels).to(self.device)
@@ -74,10 +78,10 @@ class PFTBTrainer:
             print('Amount of parameters in model:', self.nparams(self.model))
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.init_learning_rate, weight_decay=self.weight_decay)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-6)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=25, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -106,8 +110,18 @@ class PFTBTrainer:
         self.in_channels = self.train_dataset.datasets[0].in_channels
         self.out_channels = self.train_dataset.datasets[0].out_channels
 
-        self.train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
-        self.val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False)
+        self.train_loader = DataLoader(self.train_dataset,
+                                       batch_size=self.batch_size,
+                                       shuffle=True,
+                                       num_workers=self.num_workers,
+                                       pin_memory=self.pin_memory,
+                                       prefetch_factor=self.prefetch_factor)
+        self.val_loader = DataLoader(self.val_dataset, 
+                                     batch_size=self.batch_size, 
+                                     shuffle=False,
+                                     num_workers=self.num_workers,
+                                     pin_memory=self.pin_memory,
+                                     prefetch_factor=self.prefetch_factor)
 
     def push_forward_prob(self):
 
