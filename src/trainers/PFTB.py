@@ -39,6 +39,8 @@ class PFTBTrainer:
         self.use_coords = self.config['model']['use_coords'] in ["True", 1]
         self.makegif_vertical = self.config['validation']['makegif_vertical'] in ["True", 1]
         self.save_on = self.config['save_on'] in ["True", 1]
+        self.path_gif = self.config['validation']['path_gif']
+        self.path_plot = self.config['validation']['path_plot']
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
 
@@ -305,11 +307,11 @@ class PFTBTrainer:
             makeviz = self.epoch % 10 == 0
             if makeviz:
                 if self.makegif_val:
-                    self.make_gif("output/tempgif.gif", on_val=True)
+                    self.make_gif(self.path_gif, on_val=True)
                 if self.makeplot_val:
-                    self.make_plot("output/tempplot.png", on_val=True)
+                    self.make_plot("output/tempplot_val.png", on_val=True)
                 if self.makeplot_train:
-                    self.make_plot("output/tempplot_train.png", on_val=False)
+                    self.make_plot(self.path_plot, on_val=False)
 
                 #print(val_loss_timestep[0])
                 #print(val_loss_timestep)

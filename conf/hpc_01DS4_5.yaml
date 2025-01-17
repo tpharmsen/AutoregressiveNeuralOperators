@@ -5,7 +5,7 @@ save_on: 0
 wandb: 1 #"True"
 
 loader:
-  num_workers: 2
+  num_workers: 8
   pin_memory: True
   prefetch_factor: 6
   discard_first: 200
@@ -28,6 +28,8 @@ validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
   makegif_val: True
-  makeplot_val: True
+  path_gif: "output/temp_gif5.gif"
+  makeplot_val: False
   makeplot_train: True
+  path_plot: "output/temp_plot5.png"
   makegif_vertical: False
