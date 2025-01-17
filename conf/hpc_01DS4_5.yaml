@@ -5,9 +5,9 @@ save_on: 0
 wandb: 1 #"True"
 
 loader:
-  num_workers: 8
+  num_workers: 2
   pin_memory: True
-  prefetch_factor: 4
+  prefetch_factor: 6
   discard_first: 200
   batch_size: 8
 

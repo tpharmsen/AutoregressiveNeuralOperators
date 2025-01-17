@@ -5,7 +5,7 @@ save_on: 0
 wandb: 1 #"True"
 
 loader:
-  num_workers: 8
+  num_workers: 4
   pin_memory: True
   prefetch_factor: 2
   discard_first: 200
@@ -22,7 +22,7 @@ training:
   epochs: 300
   init_learning_rate: 1e-3
   weight_decay: 1e-2
-  max_unrolling: 2
+  max_unrolling: 3
 
 validation:
   files: ["Twall-100.hdf5"]
