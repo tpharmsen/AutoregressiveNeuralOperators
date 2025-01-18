@@ -19,8 +19,8 @@ class HDF5ConcatDataset(ConcatDataset):
     def absmax_phase(self):
         return max(d.absmax_phase() for d in self.datasets)
     
-    def _get_full(self, num):
-        return self.datasets[num]._data['temp'], self.datasets[num]._data['velx'], self.datasets[num]._data['vely']
+    def _get_temp_full(self, num):
+        return self.datasets[num]._data['temp']
 
     def normalize_temp_(self, absmax_temp=None):
         if not absmax_temp:
