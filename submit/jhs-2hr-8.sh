@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=jhs2hr-8
+#SBATCH --job-name=jhs2hr8
 #SBATCH --partition=gpu_mig
 #SBATCH --time=02:00:00
 #SBATCH --nodes=1
