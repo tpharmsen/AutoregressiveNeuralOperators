@@ -4,7 +4,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a model on the BubbleML dataset')
     parser.add_argument("--conf", type=str, default="conf/example.yaml")
-    parser.add_argument("--trainer", type=str, default="PF")
+    parser.add_argument("--trainer", type=str, default="PFTB")
     args = parser.parse_args()
     if args.trainer == "simple":
         from trainers.simple import SimpleTrainer

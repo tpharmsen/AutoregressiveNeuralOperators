@@ -23,11 +23,15 @@ training:
   init_learning_rate: 1e-3
   weight_decay: 1e-2
   max_unrolling: 3
+  pushforward_step: 10
 
 validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
   makegif_val: True
-  makeplot_val: True
+  path_gif: "output/temp_gif1.gif"
+  makeplot_val: False
   makeplot_train: True
+  path_plot: "output/temp_plot1.png"
   makegif_vertical: False
+  rollout_length: 200

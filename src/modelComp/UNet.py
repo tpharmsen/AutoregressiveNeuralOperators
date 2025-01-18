@@ -13,7 +13,6 @@ class UNet2D(nn.Module):
             self.activation = nn.GELU()
         else:
             raise ValueError('Activation function not supported')
-        print(self.activation)
 
         self.depth = depth
         self.encoders = nn.ModuleList()
