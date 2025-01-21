@@ -8,4 +8,4 @@ python src/train.py --conf conf/example.yaml --trainer PFTB
 single run:
 sbatch submit/simple-reservation-short.sh
 multiple runs:
-for i in {1..10}; do sbatch submit/jhs2hr-$i.sh; done
+for i in {1..10}; do sbatch submit/jhs-2hr-$i.sh; done
