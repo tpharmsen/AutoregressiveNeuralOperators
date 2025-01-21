@@ -25,6 +25,7 @@ training:
   max_unrolling: 2
   pushforward_step: 10
 
+
 validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
@@ -34,4 +35,4 @@ validation:
   makeplot_train: True
   path_plot: "output/temp_plot6.png"
   makegif_vertical: False
-  rollout_length: 200
+  rollout_length: 300
