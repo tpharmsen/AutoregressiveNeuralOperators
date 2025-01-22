@@ -34,4 +34,4 @@ validation:
   makeplot_train: True
   path_plot: "output/temp_plot9.png"
   makegif_vertical: False
-  rollout_length: 300
+  rollout_length: 150
