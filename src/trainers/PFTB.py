@@ -454,13 +454,13 @@ class PFTBTrainer:
                 })
             
 
-            self.scheduler.step(torch.mean(val_loss_timestep))
+            self.scheduler.step(torch.mean(val_loss_timestep[0]))
                 
             print(f"Epoch {self.epoch}: "
-                    f"Train Loss = {train_losses:.8f}, "
-                    f"Val Loss Timestep = {val_loss_timestep:.8f}, "
-                    f"Val Loss Pushforward = {val_loss_pushforward:.8f}, "
-                    f"Val Loss Unrolled = {val_loss_unrolled:.8f}, "
+                    f"Train Loss = {train_losses[0]:.8f}, "
+                    f"Val Loss Timestep = {val_loss_timestep[0]:.8f}, "
+                    f"Val Loss Pushforward = {val_loss_pushforward[0]:.8f}, "
+                    f"Val Loss Unrolled = {val_loss_unrolled[0]:.8f}, "
                     f"LR: {self.optimizer.param_groups[0]['lr']:.1e}")
 
         if self.wandb_enabled:
