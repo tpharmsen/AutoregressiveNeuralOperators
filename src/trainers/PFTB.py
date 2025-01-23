@@ -200,7 +200,11 @@ class PFTBTrainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            if idx == 0:
+                print(torch.cuda.memory_summary(device='cuda'))
             del temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+            if idx == 0:
+                print(torch.cuda.memory_summary(device='cuda'))
             torch.cuda.empty_cache()
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())

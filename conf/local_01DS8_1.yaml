@@ -2,7 +2,7 @@ data_path: "data/PoolBoiling-SubCooled-FC72-2D-0.1/redim_DS8/"
 device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 0
-wandb: 1
+wandb: 0
 wandb_name: "lalablabla"
 
 loader:
