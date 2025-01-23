@@ -200,8 +200,8 @@ class PFTBTrainer:
             
             loss.backward()
             self.optimizer.step()
-            if idx == 0:
-                print(torch.cuda.memory_summary(device='cuda'))
+            #if idx == 0:
+            #    print(torch.cuda.memory_summary(device='cuda'))
             
             #torch.cuda.empty_cache()
             losses.append(loss.detach().item())
