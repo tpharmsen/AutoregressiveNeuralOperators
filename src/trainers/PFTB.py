@@ -200,8 +200,8 @@ class PFTBTrainer:
             
             loss.backward()
             self.optimizer.step()
-            if idx == 0:
-                print(torch.cuda.memory_summary(device='cuda'))
+            #if idx == 0:
+            #    print(torch.cuda.memory_summary(device='cuda'))
             
             #torch.cuda.empty_cache()
             losses.append(loss.detach().item())
@@ -459,7 +459,7 @@ class PFTBTrainer:
                 })
             
 
-            self.scheduler.step(torch.mean(val_loss_timestep[0]))
+            self.scheduler.step(val_loss_timestep[0])
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses[0]:.8f}, "
