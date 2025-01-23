@@ -18,6 +18,7 @@ from trainers.utils import rollout_temp, create_gif2
 
 class PFTBTrainer:
     def __init__(self, config_path):
+        self.config_path = config_path
         self.config = self.load_config(config_path)
         self.device = torch.device(self.config['device'])
         self.epochs = self.config['training']['epochs']
@@ -43,6 +44,10 @@ class PFTBTrainer:
         self.path_plot = self.config['validation']['path_plot']
         self.pushforward_step = self.config['training']['pushforward_step']
         self.val_rollout_length = self.config['validation']['rollout_length']
+        self.pushforward_val = self.config['validation']['pushforward_val']
+        self.viz_step = self.config['validation']['viz_step']
+        self.transform = self.config['training']['transform'] in ["True", 1]
+        self.wandb_name = self.config['wandb_name']
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
 
@@ -99,7 +104,8 @@ class PFTBTrainer:
                                                     discard_first=self.discard_first, 
                                                     use_coords=self.use_coords, 
                                                     time_window = self.tw, 
-                                                    push_forward_steps=self.max_unrolling) for file in train_files])
+                                                    push_forward_steps=self.max_unrolling,
+                                                    transform=self.transform) for file in train_files])
         self.train_max_temp = self.train_dataset.normalize_temp_()
         self.train_max_vel = self.train_dataset.normalize_vel_()
         self.train_max_phase = self.train_dataset.normalize_phase_()
@@ -108,7 +114,8 @@ class PFTBTrainer:
                                                     discard_first=self.discard_first, 
                                                     use_coords=self.use_coords, 
                                                     time_window = self.tw, 
-                                                    push_forward_steps=1) for file in val_files])
+                                                    push_forward_steps=self.pushforward_val,
+                                                    transform=False) for file in val_files])
         self.val_dataset.normalize_temp_(self.train_max_temp)
         self.val_dataset.normalize_vel_(self.train_max_vel)
         self.val_dataset.normalize_phase_(self.train_max_phase)
@@ -192,15 +199,16 @@ class PFTBTrainer:
             self.optimizer.step()
             losses.append(loss.detach())
             
-            del temp, vel, phase, temp_label, vel_label, phase_label
+            #del temp, vel, phase, temp_label, vel_label, phase_label
             
         return torch.mean(torch.stack(losses))
     
     def validate(self):
         val_loss_timestep = self._validate_timestep()
+        val_loss_pushforward = self._validate_pushforward()
         dataset = self.val_dataset.get_validation_stacks(0)
         val_loss_unrolled = self._validate_unrolled(dataset)
-        return val_loss_timestep, val_loss_unrolled
+        return val_loss_timestep, val_loss_pushforward, val_loss_unrolled
 
     def _validate_timestep(self):
         losses = []
@@ -215,17 +223,43 @@ class PFTBTrainer:
             #print(torch.mean(coords), torch.std(coords))
 
             with torch.no_grad():
+                coords_input, temp_pred, vel_pred, phase_pred = self._index_push(0, coords, temp, vel, phase)
                 #print(coords[:, 0].shape, temp[:, 0].shape, vel[:, 0].shape)    
-                temp_pred, vel_pred, phase_pred = self._forward_int(coords[:, 0], temp[:, 0], vel[:, 0], phase[:, 0])
+                temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_pred, vel_pred, phase_pred)
                 temp_loss = self.criterion(temp_pred, temp_label)
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
             
             losses.append(loss.detach())
-            del temp, vel, phase, temp_label, vel_label, phase_label
+        #del temp, vel, phase, temp_label, vel_label, phase_label
         return torch.mean(torch.stack(losses))
     
+    def _validate_pushforward(self):
+        losses = []
+        for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
+            coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
+
+            idx = (self.pushforward_val - 1)
+            temp_label = temp_label[:, idx].to(self.device)
+            vel_label = vel_label[:, idx].to(self.device)
+            phase_label = phase_label[:, idx].to(self.device)
+
+            with torch.no_grad():
+                coords_input, temp_pred, vel_pred, phase_pred = self._index_push(0, coords, temp, vel, phase)
+                for _ in range(self.pushforward_val):
+                    temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_pred, vel_pred, phase_pred)
+                #print(coords[:, 0].shape, temp[:, 0].shape, vel[:, 0].shape)    
+                
+                temp_loss = self.criterion(temp_pred, temp_label)
+                vel_loss = self.criterion(vel_pred, vel_label)
+                phase_loss = self.criterion(phase_pred, phase_label)
+                loss = (temp_loss + vel_loss + phase_loss) / 3
+            
+            losses.append(loss.detach())
+        #del temp, vel, phase, temp_label, vel_label, phase_label
+        return torch.mean(torch.stack(losses))
+
     def _validate_unrolled(self, dataset):
         
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
@@ -234,33 +268,29 @@ class PFTBTrainer:
             break
 
         losses = []
-        list_temp_pred, list_vel_pred, list_phase_pred = [], [], []
-
         temp_true, vel_true, phase_true = dataset
         temp_true, vel_true, phase_true = temp_true.to(self.device), vel_true.to(self.device), phase_true.to(self.device)
-        #print(temp_true.shape, vel_true.shape)
-        #temp_pred, velx_pred, vely_pred = temp_true[:, 0], velx_true[:, 0], vely_true[:, :, 0]
-        temp_pred, vel_pred, phase_pred = temp_true[:, :self.tw], vel_true[:, :2*self.tw], phase_true[:, :self.tw]
-        #print(temp_pred.shape, vel_pred.shape, coords.shape)
-        for t in range(0, self.val_rollout_length, self.tw):
-            with torch.no_grad():
-                #print('test')
-                temp_pred, vel_pred, phase_pred = self._forward_int(coords, temp_pred, vel_pred, phase_pred)
-                #print('prediction')    
-                list_temp_pred.append(temp_pred)
-                list_vel_pred.append(vel_pred)
-                list_phase_pred.append(phase_pred)
-        #print(len(list_temp_pred), len(list_vel_pred))
-        #print('now stacking preds')
-        temp_preds = torch.cat(list_temp_pred, dim=1)
-        vel_preds = torch.cat(list_vel_pred, dim=1)    
-        phase_preds = torch.cat(list_phase_pred, dim=1)
-        #print(temp_preds.shape, vel_preds.shape)
-        temp_loss = self.criterion(temp_preds, temp_true[:, :self.val_rollout_length])
-        vel_loss = self.criterion(vel_preds, vel_true[:, :2*self.val_rollout_length])
-        phase_loss = self.criterion(phase_preds, phase_true[:, :self.val_rollout_length])
-        loss = (temp_loss + vel_loss + phase_loss) / 3
-        losses.append(loss.detach())
+        
+        for i in range(0, temp_true.shape[1] // self.val_rollout_length):
+            list_temp_pred, list_vel_pred, list_phase_pred = [], [], []
+            temp_pred, vel_pred, phase_pred = temp_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw], vel_true[:, 2*i*self.val_rollout_length: 2*i*self.val_rollout_length + 2*self.tw], phase_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw]
+            for t in range(0, self.val_rollout_length, self.tw):
+                with torch.no_grad():
+                    #print(temp_pred.shape, vel_pred.shape, phase_pred.shape)
+                    temp_pred, vel_pred, phase_pred = self._forward_int(coords, temp_pred, vel_pred, phase_pred)
+                    list_temp_pred.append(temp_pred)
+                    list_vel_pred.append(vel_pred)
+                    list_phase_pred.append(phase_pred)
+    
+            temp_preds = torch.cat(list_temp_pred, dim=1)
+            vel_preds = torch.cat(list_vel_pred, dim=1)    
+            phase_preds = torch.cat(list_phase_pred, dim=1)
+            
+            temp_loss = self.criterion(temp_preds, temp_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
+            vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
+            phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
+            loss = (temp_loss + vel_loss + phase_loss) / 3
+            losses.append(loss.detach())
 
         return torch.mean(torch.stack(losses))
     
@@ -290,7 +320,7 @@ class PFTBTrainer:
 
         create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=self.makegif_vertical)
     
-    def make_plot(self, output_path, on_val=True):
+    def make_plot(self, output_path, mode='temp', on_val=True):
         if on_val:
             for coords, temp, vel, phase, temp_label, vel_label, phase_label in self.val_loader:
                 break           
@@ -303,8 +333,17 @@ class PFTBTrainer:
         with torch.no_grad():
             coords_input, temp_input, vel_input, phase_input = self._index_push(0, coords, temp, vel, phase)
             temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_input, vel_input, phase_input)
-
-        temp_label = temp_label[0, 0].unsqueeze(0).to(self.device)
+        if mode == 'temp':
+            input = temp_input
+            pred = temp_pred
+            label = temp_label[0, 0].unsqueeze(0).to(self.device)
+        elif mode == 'phase':
+            input = phase_input
+            pred = phase_pred
+            label = phase_label[0,0].unsqueeze(0).to(self.device)
+        else:
+            raise ValueError('Mode not recognized')
+        #temp_label = temp_label[0, 0].unsqueeze(0).to(self.device)
         #vel_label = vel_label[0, 0].unsqueeze(0).to(self.device)
         #phase_label = phase_label[0, 0].unsqueeze(0).to(self.device)
 
@@ -312,15 +351,15 @@ class PFTBTrainer:
         fig.suptitle(f"Epoch {self.epoch}")
         ax = ax.flatten()
         for i in range(self.tw):
-            ax[i].imshow(temp_input[0, i, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].imshow(input[0, i, :, :].detach().cpu())#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_input[0, 2* i, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"input")
         for i in range(self.tw,2*self.tw):
-            ax[i].imshow(temp_pred[0, i-self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].imshow(pred[0, i-self.tw, :, :].detach().cpu())#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_pred[0, i-self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"pred")
         for i in range(2*self.tw,3*self.tw):
-            ax[i].imshow(temp_label[0, i-2*self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
+            ax[i].imshow(label[0, i-2*self.tw, :, :].detach().cpu())#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_label[0, i-2*self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"labels")
         
@@ -334,39 +373,29 @@ class PFTBTrainer:
 
         if self.wandb_enabled:
             #wandb.init(project="BubbleML_DS_PF", name=self.model_name + datetime.now().strftime("_%Y-%m-%d_%H-%M"), config=self.wandb_config)
-            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_wd=' + str(self.weight_decay) + '_maxpf=' + str(self.max_unrolling) + '_bs=' + str(self.batch_size) + '_pfst=' + str(self.pushforward_step) + '_dp=' + str(self.modelprop[1]), config=self.wandb_config)
+            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_' + self.wandb_name, config=self.wandb_config)
             wandb.config.update(self.config)
 
         best_val_loss_timestep = float('inf')
-        best_val_loss_unrolled = float('inf')
+        #best_val_loss_unrolled = float('inf')
         best_train_loss = float('inf')
 
         start_time = time.time()
 
         for self.epoch in range(self.epochs):
-            train_start_time = time.time()
             self.model.train()
             train_losses = self.train_one_epoch()
-            #train_losses = -1
-            val_start_time = time.time()
             self.model.eval()
-            val_loss_timestep, val_loss_unrolled = self.validate()
-            val_end_time = time.time()
+            val_loss_timestep, val_loss_pushforward, val_loss_unrolled = self.validate()
 
-            makeviz = self.epoch % 10 == 0
+            makeviz = self.epoch % self.viz_step == 0
             if makeviz:
-                viz_start_time = time.time()
                 if self.makegif_val:
                     self.make_gif(self.path_gif, on_val=True)
                 if self.makeplot_val:
-                    self.make_plot("output/tempplot_val.png", on_val=True)
+                    self.make_plot("output/tempplot_val.png", mode='temp', on_val=True)
                 if self.makeplot_train:
-                    self.make_plot(self.path_plot, on_val=False)
-                viz_end_time = time.time()
-                #print(val_loss_timestep[0])
-                #print(val_loss_timestep)
-                #print()
-                #print(val_loss_timestep.dtype)
+                    self.make_plot(self.path_plot, mode='phase', on_val=False)
                 if self.save_on:
                     if val_loss_timestep < best_val_loss_timestep:
                         best_val_loss_timestep = val_loss_timestep
@@ -379,13 +408,11 @@ class PFTBTrainer:
             if self.wandb_enabled:
                 wandb.log({
                     "epoch": self.epoch,
-                    "train_loss_mean": torch.mean(train_losses),
-                    "val_loss_timestep": torch.mean(val_loss_timestep),
-                    "val_loss_unrolled": val_loss_unrolled.item(),
+                    "train_loss_mean": train_losses,
+                    "val_loss_timestep": val_loss_timestep,
+                    "val_loss_pushforward": val_loss_pushforward,
+                    "val_loss_unrolled": val_loss_unrolled,
                     "elapsed_time": time.time() - start_time,
-                    "train_time": val_start_time - train_start_time,
-                    "val_time": val_end_time - val_start_time,
-                    "viz_time": viz_end_time - viz_start_time if makeviz else None,
                     "rollout_val_gif": wandb.Video(self.path_gif, fps=5, format="gif") if self.makegif_val and makeviz else None,
                     "rollout_val_plot": wandb.Image('output/tempplot_val.png') if self.makeplot_val and makeviz else None,
                     "rollout_train_plot": wandb.Image(self.path_plot) if self.makeplot_train and makeviz else None,
@@ -393,13 +420,14 @@ class PFTBTrainer:
                 })
             
 
-            self.scheduler.step(torch.mean(val_loss_timestep))
+            self.scheduler.step(torch.mean(val_loss_pushforward))
                 
             print(f"Epoch {self.epoch}: "
-                    f"Train Loss Mean = {train_losses:.8f}, "
+                    f"Train Loss = {train_losses:.8f}, "
                     f"Val Loss Timestep = {val_loss_timestep:.8f}, "
+                    f"Val Loss Pushforward = {val_loss_pushforward:.8f}, "
                     f"Val Loss Unrolled = {val_loss_unrolled:.8f}, "
-                    f"LR: {self.optimizer.param_groups[0]['lr']:.2e}")
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e}")
 
         if self.wandb_enabled:
             wandb.finish()

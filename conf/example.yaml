@@ -3,6 +3,7 @@ device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 0
 wandb: 0
+wandb_name: "example_conf"
 
 loader:
   num_workers: 4
@@ -24,14 +25,17 @@ training:
   weight_decay: 1e-2
   max_unrolling: 2
   pushforward_step: 10
+  transform: 1
 
 validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
   makegif_val: False
-  path_gif: "output/temp_gif1.gif"
+  path_gif: "output/temp_gif.gif"
   makeplot_val: False
   makeplot_train: True
-  path_plot: "output/temp_plot1.png"
+  path_plot: "output/temp_plot.png"
   makegif_vertical: False
   rollout_length: 200
+  pushforward_val: 4
+  viz_step: 5

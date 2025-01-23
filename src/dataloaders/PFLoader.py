@@ -1,7 +1,9 @@
 
 import torch
 from torch.utils.data import ConcatDataset, Dataset
+import torchvision
 import h5py
+import random
 
 class HDF5ConcatDataset(ConcatDataset):
     def __init__(self, datasets):
@@ -70,8 +72,10 @@ class HDF5ConcatDataset(ConcatDataset):
         temp_data = temp_data.unsqueeze(0)        
         interleaved_vel = interleaved_vel.unsqueeze(0)  
         phase_data = phase_data.unsqueeze(0)         
-        del velx_data, vely_data
+        #del velx_data, vely_data
         return temp_data, interleaved_vel, phase_data
+    
+    
 
 class PFLoader(Dataset):
     def __init__(self,
@@ -79,7 +83,8 @@ class PFLoader(Dataset):
                  discard_first,
                  use_coords,
                  time_window,
-                 push_forward_steps=0):
+                 push_forward_steps=0,
+                 transform=False):
         #super().__init__()
         self.time_window = time_window
         self.push_forward_steps = push_forward_steps
@@ -100,6 +105,7 @@ class PFLoader(Dataset):
         self.in_channels = self.coords_dim + self.temp_channels + self.vel_channels + self.phase_channels
         self.out_channels = 4 * self.time_window
 
+        self.transform = transform
         self.read_files()
     
     def read_files(self):
@@ -116,6 +122,12 @@ class PFLoader(Dataset):
             self.normalize_temp_(self.temp_scale)
             self.normalize_vel_(self.vel_scale)
             self.normalize_phase_(self.phase_scale)
+
+    def _transform(self, *args):
+        if self.transform:
+            if random.random() > 0.5:
+                args = tuple([torchvision.transforms.functional.hflip(arg) for arg in args])
+        return args
 
     def absmax_temp(self):
         return self._data['temp'].abs().max()
@@ -173,9 +185,11 @@ class PFLoader(Dataset):
         temp_label = torch.stack([self._get_temp(base_time + k) for k in range(self.time_window)], dim=0)
         vel_label = torch.cat([self._get_vel_stack(base_time + k) for k in range(self.time_window)], dim=0)
         phase_label = torch.stack([self._get_phase(base_time + k) for k in range(self.time_window)], dim=0)
-        return coords, temp, vel, phase, temp_label, vel_label, phase_label
+        return self._transform(coords, temp, vel, phase, temp_label, vel_label, phase_label)
 
     def __getitem__(self, timestep):
         
         args = list(zip(*[self._get_timestep(timestep + k * self.time_window) for k in range(self.push_forward_steps)]))
         return tuple([torch.stack(arg, dim=0) for arg in args])
+
+    

@@ -3,19 +3,20 @@ device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 0
 wandb: 1 #"True"
+wandb_name: "hpc_01DS4_5"
 
 loader:
   num_workers: 4
   pin_memory: True
   prefetch_factor: 2
   discard_first: 200
-  batch_size: 64
+  batch_size: 32
 
 model:
   name: "UNet_classic"
-  tw: 3
+  tw: 5
   use_coords: True
-  prop: [64, 3, 'gelu']
+  prop: [128, 2, 'gelu']
 
 training:
   files: ["Twall-79.hdf5", "Twall-81.hdf5", "Twall-85.hdf5", "Twall-88.hdf5", "Twall-90.hdf5", "Twall-92.hdf5", "Twall-95.hdf5", "Twall-97.hdf5", "Twall-98.hdf5", "Twall-102.hdf5", "Twall-103.hdf5", "Twall-106.hdf5", "Twall-108.hdf5", "Twall-110.hdf5"]
@@ -24,7 +25,7 @@ training:
   weight_decay: 1e-3
   max_unrolling: 2
   pushforward_step: 10
-
+  transform: 1
 
 validation:
   files: ["Twall-100.hdf5"]
@@ -36,3 +37,5 @@ validation:
   path_plot: "output/temp_plot5.png"
   makegif_vertical: False
   rollout_length: 150
+  pushforward_val: 4
+  viz_step: 15

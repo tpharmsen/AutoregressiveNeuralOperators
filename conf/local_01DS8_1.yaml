@@ -24,7 +24,8 @@ training:
   weight_decay: 1e-2
   max_unrolling: 3
   pushforward_step: 10
-
+  transform: 1
+  
 validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
@@ -35,3 +36,5 @@ validation:
   path_plot: "output/temp_plot1.png"
   makegif_vertical: False
   rollout_length: 200
+  pushforward_val: 5
+  viz_step: 1
