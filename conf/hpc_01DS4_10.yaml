@@ -25,7 +25,7 @@ training:
   weight_decay: 1e-3
   max_unrolling: 4
   pushforward_step: 10
-  transform: 1
+  transform: 0
 
 validation:
   files: ["Twall-100.hdf5"]
