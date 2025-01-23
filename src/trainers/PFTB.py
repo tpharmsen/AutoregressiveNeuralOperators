@@ -408,7 +408,7 @@ class PFTBTrainer:
             if self.wandb_enabled:
                 wandb.log({
                     "epoch": self.epoch,
-                    "train_loss_mean": train_losses,
+                    "train_loss": train_losses,
                     "val_loss_timestep": val_loss_timestep,
                     "val_loss_pushforward": val_loss_pushforward,
                     "val_loss_unrolled": val_loss_unrolled,
@@ -420,7 +420,7 @@ class PFTBTrainer:
                 })
             
 
-            self.scheduler.step(torch.mean(val_loss_pushforward))
+            self.scheduler.step(torch.mean(val_loss_timestep))
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses:.8f}, "

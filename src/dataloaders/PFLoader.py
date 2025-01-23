@@ -123,11 +123,22 @@ class PFLoader(Dataset):
             self.normalize_vel_(self.vel_scale)
             self.normalize_phase_(self.phase_scale)
 
-    def _transform(self, *args):
+    def _transform(self, coords, temp, vel, phase, temp_label, vel_label, phase_label):
         if self.transform:
             if random.random() > 0.5:
-                args = tuple([torchvision.transforms.functional.hflip(arg) for arg in args])
-        return args
+                # Apply horizontal flip
+                #coords = torchvision.transforms.functional.hflip(coords)
+                temp = torchvision.transforms.functional.hflip(temp)
+                vel = torchvision.transforms.functional.hflip(vel)
+                phase = torchvision.transforms.functional.hflip(phase)
+                temp_label = torchvision.transforms.functional.hflip(temp_label)
+                vel_label = torchvision.transforms.functional.hflip(vel_label)
+                phase_label = torchvision.transforms.functional.hflip(phase_label)
+                
+                # Flip x-velocity (even indices of the interleaved velocity tensor)
+                vel[0::2] *= -1  # Assuming interleaved_vel layout
+                vel_label[0::2] *= -1  # Assuming interleaved_vel layout
+        return (coords, temp, vel, phase, temp_label, vel_label, phase_label)
 
     def absmax_temp(self):
         return self._data['temp'].abs().max()
@@ -168,6 +179,9 @@ class PFLoader(Dataset):
         x /= x.max()
         y = self._data['y'][timestep]
         y /= y.max()
+        #print('x:', x.shape, x[0], x[-1], x.min(), x.max(), x.mean())
+        #print()
+        #print('y:', y.shape, y[0], y[-1], y.min(), y.max(), y.mean())
         coords = torch.stack([x, y], dim=0)
         return coords
 
