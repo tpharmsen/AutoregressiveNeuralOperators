@@ -202,17 +202,15 @@ class PFTBTrainer:
             self.optimizer.step()
             if idx == 0:
                 print(torch.cuda.memory_summary(device='cuda'))
-            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-            if idx == 0:
-                print(torch.cuda.memory_summary(device='cuda'))
+            
             #torch.cuda.empty_cache()
-            losses.append(loss.detach())
-            losses_temp.append(temp_loss.detach())
-            losses_vel.append(vel_loss.detach())
-            losses_phase.append(phase_loss.detach())
+            losses.append(loss.detach().item())
+            losses_temp.append(temp_loss.detach().item())
+            losses_vel.append(vel_loss.detach().item())
+            losses_phase.append(phase_loss.detach().item())
             
-            
-        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
+        del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
     
     def validate(self):
         val_loss_timestep = self._validate_timestep()
@@ -227,17 +225,14 @@ class PFTBTrainer:
         losses_vel = []
         losses_phase = []
         losses = []
-        for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
-            coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
-            #if idx==0:
-            #    print(temp.shape, vel.shape)
-            temp_label = temp_label[:, 0].to(self.device)
-            vel_label = vel_label[:, 0].to(self.device)
-            phase_label = phase_label[:, 0].to(self.device)
+        with torch.no_grad():
+            for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
+                coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
 
-            #print(torch.mean(coords), torch.std(coords))
-
-            with torch.no_grad():
+                temp_label = temp_label[:, 0].to(self.device)
+                vel_label = vel_label[:, 0].to(self.device)
+                phase_label = phase_label[:, 0].to(self.device)
+                
                 coords_input, temp_pred, vel_pred, phase_pred = self._index_push(0, coords, temp, vel, phase)
                 #print(coords[:, 0].shape, temp[:, 0].shape, vel[:, 0].shape)    
                 temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_pred, vel_pred, phase_pred)
@@ -245,28 +240,27 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-            losses.append(loss.detach())
-            losses_temp.append(temp_loss.detach())
-            losses_vel.append(vel_loss.detach())
-            losses_phase.append(phase_loss.detach())
-        #del temp, vel, phase, temp_label, vel_label, phase_label
-        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
+            losses.append(loss.detach().item())
+            losses_temp.append(temp_loss.detach().item())
+            losses_vel.append(vel_loss.detach().item())
+            losses_phase.append(phase_loss.detach().item())
+        del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
     
     def _validate_pushforward(self):
         losses_temp = []
         losses_vel = []
         losses_phase = []
         losses = []
-        for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
-            coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
+        with torch.no_grad():
+            for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
+                coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
 
-            idx = (self.pushforward_val - 1)
-            temp_label = temp_label[:, idx].to(self.device)
-            vel_label = vel_label[:, idx].to(self.device)
-            phase_label = phase_label[:, idx].to(self.device)
+                idx = (self.pushforward_val - 1)
+                temp_label = temp_label[:, idx].to(self.device)
+                vel_label = vel_label[:, idx].to(self.device)
+                phase_label = phase_label[:, idx].to(self.device)
 
-            with torch.no_grad():
                 coords_input, temp_pred, vel_pred, phase_pred = self._index_push(0, coords, temp, vel, phase)
                 for _ in range(self.pushforward_val):
                     temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_pred, vel_pred, phase_pred)
@@ -276,13 +270,14 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-            losses.append(loss.detach())
-            losses_temp.append(temp_loss.detach())
-            losses_vel.append(vel_loss.detach())
-            losses_phase.append(phase_loss.detach())
-        #del temp, vel, phase, temp_label, vel_label, phase_label
-        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
+                
+                losses.append(loss.detach().item())
+                losses_temp.append(temp_loss.detach().item())
+                losses_vel.append(vel_loss.detach().item())
+                losses_phase.append(phase_loss.detach().item())
+
+        del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
 
     def _validate_unrolled(self, dataset):
         
@@ -309,21 +304,21 @@ class PFTBTrainer:
                     list_vel_pred.append(vel_pred)
                     list_phase_pred.append(phase_pred)
     
-            temp_preds = torch.cat(list_temp_pred, dim=1)
-            vel_preds = torch.cat(list_vel_pred, dim=1)    
-            phase_preds = torch.cat(list_phase_pred, dim=1)
+                temp_preds = torch.cat(list_temp_pred, dim=1)
+                vel_preds = torch.cat(list_vel_pred, dim=1)    
+                phase_preds = torch.cat(list_phase_pred, dim=1)
+                
+                temp_loss = self.criterion(temp_preds, temp_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
+                vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
+                phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
+                loss = (temp_loss + vel_loss + phase_loss) / 3
             
-            temp_loss = self.criterion(temp_preds, temp_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
-            vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
-            phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
-            loss = (temp_loss + vel_loss + phase_loss) / 3
-        del coords,temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
-        losses.append(loss.detach())
-        losses_temp.append(temp_loss.detach())
-        losses_vel.append(vel_loss.detach())
-        losses_phase.append(phase_loss.detach())
-
-        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
+                losses.append(loss.detach().item())
+                losses_temp.append(temp_loss.detach().item())
+                losses_vel.append(vel_loss.detach().item())
+                losses_phase.append(phase_loss.detach().item())
+        del coords, temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
+        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
     
     def make_gif(self, output_path, on_val=True):
         if on_val:
