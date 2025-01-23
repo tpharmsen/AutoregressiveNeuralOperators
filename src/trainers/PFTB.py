@@ -200,8 +200,8 @@ class PFTBTrainer:
             
             loss.backward()
             self.optimizer.step()
-            #if idx == 0:
-            #    print(torch.cuda.memory_summary(device='cuda'))
+            if idx == 0:
+                print(torch.cuda.memory_summary(device='cuda'))
             
             #torch.cuda.empty_cache()
             losses.append(loss.detach().item())
@@ -210,7 +210,7 @@ class PFTBTrainer:
             losses_phase.append(phase_loss.detach().item())
             
         del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
+        return np.mean(losses), np.mean(losses_temp), np.mean(losses_vel), np.mean(losses_phase)
     
     def validate(self):
         val_loss_timestep = self._validate_timestep()
@@ -245,7 +245,7 @@ class PFTBTrainer:
             losses_vel.append(vel_loss.detach().item())
             losses_phase.append(phase_loss.detach().item())
         del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
+        return np.mean(losses), np.mean(losses_temp), np.mean(losses_vel), np.mean(losses_phase)
     
     def _validate_pushforward(self):
         losses_temp = []
@@ -277,7 +277,7 @@ class PFTBTrainer:
                 losses_phase.append(phase_loss.detach().item())
 
         del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
-        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
+        return np.mean(losses), np.mean(losses_temp), np.mean(losses_vel), np.mean(losses_phase)
 
     def _validate_unrolled(self, dataset):
         
@@ -318,7 +318,7 @@ class PFTBTrainer:
                 losses_vel.append(vel_loss.detach().item())
                 losses_phase.append(phase_loss.detach().item())
         del coords, temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
-        return losses.mean(), losses_temp.mean(), losses_vel.mean(), losses_phase.mean()
+        return np.mean(losses), np.mean(losses_temp), np.mean(losses_vel), np.mean(losses_phase)
     
     def make_gif(self, output_path, on_val=True):
         if on_val:
