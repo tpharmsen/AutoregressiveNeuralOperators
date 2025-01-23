@@ -200,7 +200,8 @@ class PFTBTrainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            del temp, vel, phase, temp_label, vel_label, phase_label
+            del temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+            torch.cuda.empty_cache()
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
