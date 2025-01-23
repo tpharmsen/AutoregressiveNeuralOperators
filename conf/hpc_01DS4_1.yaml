@@ -10,7 +10,7 @@ loader:
   pin_memory: True
   prefetch_factor: 2
   discard_first: 200
-  batch_size: 16
+  batch_size: 64
   
 model:
   name: "UNet_classic"
