@@ -178,7 +178,7 @@ class PFTBTrainer:
         losses = []
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
-            
+            self.optimizer.zero_grad()
             #print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
             coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
             #print(torch.min(phase), torch.max(phase))
@@ -197,12 +197,12 @@ class PFTBTrainer:
             vel_loss = self.criterion(vel_pred, vel_label)
             phase_loss = self.criterion(phase_pred, phase_label)
             loss = (temp_loss + vel_loss + phase_loss) / 3
-            self.optimizer.zero_grad()
+            
             loss.backward()
             self.optimizer.step()
             if idx == 0:
                 print(torch.cuda.memory_summary(device='cuda'))
-            del temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
+            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
             if idx == 0:
                 print(torch.cuda.memory_summary(device='cuda'))
             torch.cuda.empty_cache()
@@ -219,6 +219,7 @@ class PFTBTrainer:
         val_loss_pushforward = self._validate_pushforward()
         dataset = self.val_dataset.get_validation_stacks(0)
         val_loss_unrolled = self._validate_unrolled(dataset)
+        del dataset
         return val_loss_timestep, val_loss_pushforward, val_loss_unrolled
 
     def _validate_timestep(self):
@@ -244,7 +245,7 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            del temp, vel, phase, temp_label, vel_label, phase_label
+            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
@@ -275,7 +276,7 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            del temp, vel, phase, temp_label, vel_label, phase_label
+            del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
@@ -316,7 +317,7 @@ class PFTBTrainer:
             vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
             phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
             loss = (temp_loss + vel_loss + phase_loss) / 3
-        del temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label
+        del coords, temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
         losses.append(loss.detach())
         losses_temp.append(temp_loss.detach())
         losses_vel.append(vel_loss.detach())
@@ -348,7 +349,8 @@ class PFTBTrainer:
         stacked_pred = torch.cat(preds, dim=1).squeeze(0)
         #print(stacked_true.shape, stacked_pred.shape)
 
-        create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=self.makegif_vertical)
+        anim = create_gif2(stacked_true.cpu(), stacked_pred.cpu(), output_path, timesteps=self.gif_length, vertical=self.makegif_vertical)
+        del stacked_true, stacked_pred, anim, temp, vel, phase, temp_label, vel_label, phase_label, temp_input, vel_input, phase_input
     
     def make_plot(self, output_path, mode='temp', on_val=True):
         if on_val:
