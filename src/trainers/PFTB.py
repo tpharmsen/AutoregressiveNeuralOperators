@@ -205,7 +205,7 @@ class PFTBTrainer:
             del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
             if idx == 0:
                 print(torch.cuda.memory_summary(device='cuda'))
-            torch.cuda.empty_cache()
+            #torch.cuda.empty_cache()
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
@@ -317,7 +317,7 @@ class PFTBTrainer:
             vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
             phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
             loss = (temp_loss + vel_loss + phase_loss) / 3
-        del coords, temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
+        del coords,temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred, temp_preds, vel_preds, phase_preds
         losses.append(loss.detach())
         losses_temp.append(temp_loss.detach())
         losses_vel.append(vel_loss.detach())
