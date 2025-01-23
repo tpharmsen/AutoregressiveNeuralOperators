@@ -3,14 +3,14 @@ device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 0
 wandb: 1 #"True"
-wandb_name: "hpc_01DS4_9"
+wandb_name: "hpc_01DS4_10"
 
 loader:
   num_workers: 4
   pin_memory: True
   prefetch_factor: 2
   discard_first: 200
-  batch_size: 16
+  batch_size: 64
 
 model:
   name: "UNet_classic"
@@ -25,7 +25,7 @@ training:
   weight_decay: 1e-3
   max_unrolling: 4
   pushforward_step: 10
-  transform: 0
+  transform: 1
 
 validation:
   files: ["Twall-100.hdf5"]

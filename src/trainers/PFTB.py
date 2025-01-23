@@ -200,11 +200,12 @@ class PFTBTrainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            del temp, vel, phase, temp_label, vel_label, phase_label
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
             losses_phase.append(phase_loss.detach())
-            #del temp, vel, phase, temp_label, vel_label, phase_label
+            
             
         return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
     
@@ -238,6 +239,7 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
+            del temp, vel, phase, temp_label, vel_label, phase_label
             losses.append(loss.detach())
             losses_temp.append(temp_loss.detach())
             losses_vel.append(vel_loss.detach())
@@ -268,11 +270,11 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-
-        losses.append(loss.detach())
-        losses_temp.append(temp_loss.detach())
-        losses_vel.append(vel_loss.detach())
-        losses_phase.append(phase_loss.detach())
+            del temp, vel, phase, temp_label, vel_label, phase_label
+            losses.append(loss.detach())
+            losses_temp.append(temp_loss.detach())
+            losses_vel.append(vel_loss.detach())
+            losses_phase.append(phase_loss.detach())
         #del temp, vel, phase, temp_label, vel_label, phase_label
         return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
 
@@ -309,6 +311,7 @@ class PFTBTrainer:
             vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
             phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
             loss = (temp_loss + vel_loss + phase_loss) / 3
+        del temp_true, vel_true, phase_true, temp, vel, phase, temp_label, vel_label, phase_label
         losses.append(loss.detach())
         losses_temp.append(temp_loss.detach())
         losses_vel.append(vel_loss.detach())
@@ -435,9 +438,9 @@ class PFTBTrainer:
                     "train_loss_vel": train_losses[2],
                     "train_loss_phase": train_losses[3],
                     "val_loss_timestep_total": val_loss_timestep[0],
-                    "val_loss_temp": val_loss_timestep[1],
-                    "val_loss_vel": val_loss_timestep[2],
-                    "val_loss_phase": val_loss_timestep[3],
+                    "val_loss_timestep_temp": val_loss_timestep[1],
+                    "val_loss_timestep_vel": val_loss_timestep[2],
+                    "val_loss_timestep_phase": val_loss_timestep[3],
                     "val_loss_pushforward_total": val_loss_pushforward[0],
                     "val_loss_pushforward_temp": val_loss_pushforward[1],
                     "val_loss_pushforward_vel": val_loss_pushforward[2],
