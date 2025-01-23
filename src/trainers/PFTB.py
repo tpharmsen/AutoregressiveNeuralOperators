@@ -90,7 +90,7 @@ class PFTBTrainer:
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.init_learning_rate, weight_decay=self.weight_decay)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=25, min_lr=1e-6)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -172,6 +172,9 @@ class PFTBTrainer:
         return temp_pred, vel_pred, phase_pred
 
     def train_one_epoch(self):
+        losses_temp = []
+        losses_vel = []
+        losses_phase = []
         losses = []
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
@@ -198,10 +201,12 @@ class PFTBTrainer:
             loss.backward()
             self.optimizer.step()
             losses.append(loss.detach())
-            
+            losses_temp.append(temp_loss.detach())
+            losses_vel.append(vel_loss.detach())
+            losses_phase.append(phase_loss.detach())
             #del temp, vel, phase, temp_label, vel_label, phase_label
             
-        return torch.mean(torch.stack(losses))
+        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
     
     def validate(self):
         val_loss_timestep = self._validate_timestep()
@@ -211,6 +216,9 @@ class PFTBTrainer:
         return val_loss_timestep, val_loss_pushforward, val_loss_unrolled
 
     def _validate_timestep(self):
+        losses_temp = []
+        losses_vel = []
+        losses_phase = []
         losses = []
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
             coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
@@ -230,12 +238,17 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            
             losses.append(loss.detach())
+            losses_temp.append(temp_loss.detach())
+            losses_vel.append(vel_loss.detach())
+            losses_phase.append(phase_loss.detach())
         #del temp, vel, phase, temp_label, vel_label, phase_label
-        return torch.mean(torch.stack(losses))
+        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
     
     def _validate_pushforward(self):
+        losses_temp = []
+        losses_vel = []
+        losses_phase = []
         losses = []
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.val_loader):
             coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
@@ -255,10 +268,13 @@ class PFTBTrainer:
                 vel_loss = self.criterion(vel_pred, vel_label)
                 phase_loss = self.criterion(phase_pred, phase_label)
                 loss = (temp_loss + vel_loss + phase_loss) / 3
-            
-            losses.append(loss.detach())
+
+        losses.append(loss.detach())
+        losses_temp.append(temp_loss.detach())
+        losses_vel.append(vel_loss.detach())
+        losses_phase.append(phase_loss.detach())
         #del temp, vel, phase, temp_label, vel_label, phase_label
-        return torch.mean(torch.stack(losses))
+        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
 
     def _validate_unrolled(self, dataset):
         
@@ -267,15 +283,18 @@ class PFTBTrainer:
             coords = coords[0, 0].unsqueeze(0).to(self.device)
             break
 
+        losses_temp = []
+        losses_vel = []
+        losses_phase = []
         losses = []
         temp_true, vel_true, phase_true = dataset
         temp_true, vel_true, phase_true = temp_true.to(self.device), vel_true.to(self.device), phase_true.to(self.device)
-        
-        for i in range(0, temp_true.shape[1] // self.val_rollout_length):
-            list_temp_pred, list_vel_pred, list_phase_pred = [], [], []
-            temp_pred, vel_pred, phase_pred = temp_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw], vel_true[:, 2*i*self.val_rollout_length: 2*i*self.val_rollout_length + 2*self.tw], phase_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw]
-            for t in range(0, self.val_rollout_length, self.tw):
-                with torch.no_grad():
+        with torch.no_grad():
+            for i in range(0, temp_true.shape[1] // self.val_rollout_length):
+                list_temp_pred, list_vel_pred, list_phase_pred = [], [], []
+                temp_pred, vel_pred, phase_pred = temp_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw], vel_true[:, 2*i*self.val_rollout_length: 2*i*self.val_rollout_length + 2*self.tw], phase_true[:, i*self.val_rollout_length: i*self.val_rollout_length + self.tw]
+                for t in range(0, self.val_rollout_length, self.tw):
+                    
                     #print(temp_pred.shape, vel_pred.shape, phase_pred.shape)
                     temp_pred, vel_pred, phase_pred = self._forward_int(coords, temp_pred, vel_pred, phase_pred)
                     list_temp_pred.append(temp_pred)
@@ -290,9 +309,12 @@ class PFTBTrainer:
             vel_loss = self.criterion(vel_preds, vel_true[:, 2*i*self.val_rollout_length:2*(i+1)*self.val_rollout_length])
             phase_loss = self.criterion(phase_preds, phase_true[:, i*self.val_rollout_length:(i+1)*self.val_rollout_length])
             loss = (temp_loss + vel_loss + phase_loss) / 3
-            losses.append(loss.detach())
+        losses.append(loss.detach())
+        losses_temp.append(temp_loss.detach())
+        losses_vel.append(vel_loss.detach())
+        losses_phase.append(phase_loss.detach())
 
-        return torch.mean(torch.stack(losses))
+        return torch.mean(torch.stack(losses)), torch.mean(torch.stack(losses_temp)), torch.mean(torch.stack(losses_vel)), torch.mean(torch.stack(losses_phase))
     
     def make_gif(self, output_path, on_val=True):
         if on_val:
@@ -397,21 +419,33 @@ class PFTBTrainer:
                 if self.makeplot_train:
                     self.make_plot(self.path_plot, mode='phase', on_val=False)
                 if self.save_on:
-                    if val_loss_timestep < best_val_loss_timestep:
-                        best_val_loss_timestep = val_loss_timestep
+                    if val_loss_timestep[0] < best_val_loss_timestep:
+                        best_val_loss_timestep = val_loss_timestep[0]
                         
                         torch.save(self.model.state_dict(), f"models/best_val_loss_timestep_{self.model_name}_E{self.epoch}_3.pth")
-                    if train_losses < best_train_loss:
-                        best_train_loss = train_losses
+                    if train_losses[0] < best_train_loss:
+                        best_train_loss = train_losses[0]
                         torch.save(self.model.state_dict(), f"models/best_train_loss_{self.model_name}_E{self.epoch}_3.pth")
 
             if self.wandb_enabled:
                 wandb.log({
                     "epoch": self.epoch,
-                    "train_loss": train_losses,
-                    "val_loss_timestep": val_loss_timestep,
-                    "val_loss_pushforward": val_loss_pushforward,
-                    "val_loss_unrolled": val_loss_unrolled,
+                    "train_loss_total": train_losses[0],
+                    "train_loss_temp": train_losses[1],
+                    "train_loss_vel": train_losses[2],
+                    "train_loss_phase": train_losses[3],
+                    "val_loss_timestep_total": val_loss_timestep[0],
+                    "val_loss_temp": val_loss_timestep[1],
+                    "val_loss_vel": val_loss_timestep[2],
+                    "val_loss_phase": val_loss_timestep[3],
+                    "val_loss_pushforward_total": val_loss_pushforward[0],
+                    "val_loss_pushforward_temp": val_loss_pushforward[1],
+                    "val_loss_pushforward_vel": val_loss_pushforward[2],
+                    "val_loss_pushforward_phase": val_loss_pushforward[3],
+                    "val_loss_unrolled_total": val_loss_unrolled[0],
+                    "val_loss_unrolled_temp": val_loss_unrolled[1],
+                    "val_loss_unrolled_vel": val_loss_unrolled[2],
+                    "val_loss_unrolled_phase": val_loss_unrolled[3],
                     "elapsed_time": time.time() - start_time,
                     "rollout_val_gif": wandb.Video(self.path_gif, fps=5, format="gif") if self.makegif_val and makeviz else None,
                     "rollout_val_plot": wandb.Image('output/tempplot_val.png') if self.makeplot_val and makeviz else None,
