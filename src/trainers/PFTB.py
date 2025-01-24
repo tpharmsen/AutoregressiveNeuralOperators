@@ -411,7 +411,7 @@ class PFTBTrainer:
 
         if self.wandb_enabled:
             #wandb.init(project="BubbleML_DS_PF", name=self.model_name + datetime.now().strftime("_%Y-%m-%d_%H-%M"), config=self.wandb_config)
-            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_' + self.wandb_name, config=self.wandb_config)
+            wandb.init(project="BubbleML_DS_PF", name=self.model_name + '_' + self.wandb_name, config=self.wandb_config)    
             wandb.config.update(self.config)
 
         best_val_loss_timestep = float('inf')
