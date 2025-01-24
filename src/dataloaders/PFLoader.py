@@ -167,7 +167,7 @@ class PFLoader(Dataset):
         return self._data['temp'][timestep]
     
     def _get_phase(self, timestep):
-        return torch.heaviside(self._data['dfun'][timestep], values=torch.Tensor([0]))  # pass phase as 0 to 1 values
+        return torch.heaviside(self._data['dfun'][timestep], values=torch.Tensor([1]))  # pass phase as 0 to 1 values
 
     def _get_vel_stack(self, timestep):
         return torch.stack([

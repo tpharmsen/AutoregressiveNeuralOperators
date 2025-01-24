@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, CosineAnnealingLR, SequentialLR, ConstantLR
 from datetime import datetime
 import time
 import wandb
@@ -90,7 +90,14 @@ class PFTBTrainer:
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.init_learning_rate, weight_decay=self.weight_decay)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-6)
+        #self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=20, min_lr=1e-6)
+        #self.scheduler = CosineAnnealingLR(self.optimizer, T_max=70, eta_min=1e-6)
+        scheduler_milestone = 70
+        cosine_scheduler = CosineAnnealingLR(self.optimizer, T_max=scheduler_milestone, eta_min=1e-6)
+        constant_scheduler = ConstantLR(self.optimizer, factor=1e-6, total_iters=500)
+
+        self.scheduler = SequentialLR(self.optimizer, schedulers=[cosine_scheduler, constant_scheduler], milestones=[scheduler_milestone])
+
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -397,6 +404,10 @@ class PFTBTrainer:
     def train(self):
         self.prepare_dataloader()
         self._initialize_model()
+        #for i in range(100):
+        #    self.scheduler.step()
+        #    
+        #    print(i, self.optimizer.param_groups[0]['lr'])
 
         if self.wandb_enabled:
             #wandb.init(project="BubbleML_DS_PF", name=self.model_name + datetime.now().strftime("_%Y-%m-%d_%H-%M"), config=self.wandb_config)
@@ -459,7 +470,8 @@ class PFTBTrainer:
                 })
             
 
-            self.scheduler.step(val_loss_timestep[0])
+            #self.scheduler.step(val_loss_unrolled[0])
+            self.scheduler.step()
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses[0]:.8f}, "
