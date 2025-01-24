@@ -385,15 +385,15 @@ class PFTBTrainer:
         fig.suptitle(f"Epoch {self.epoch}")
         ax = ax.flatten()
         for i in range(self.tw):
-            ax[i].imshow(input[0, i, :, :].detach().cpu())#, vmin=-1, vmax=1)
+            ax[i].imshow(input[0, i, :, :].detach().cpu(), cmap='RdBu_r')#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_input[0, 2* i, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"input")
         for i in range(self.tw,2*self.tw):
-            ax[i].imshow(pred[0, i-self.tw, :, :].detach().cpu())#, vmin=-1, vmax=1)
+            ax[i].imshow(pred[0, i-self.tw, :, :].detach().cpu(), cmap='RdBu_r')#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_pred[0, i-self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"pred")
         for i in range(2*self.tw,3*self.tw):
-            ax[i].imshow(label[0, i-2*self.tw, :, :].detach().cpu())#, vmin=-1, vmax=1)
+            ax[i].imshow(label[0, i-2*self.tw, :, :].detach().cpu(), cmap='RdBu_r')#, vmin=-1, vmax=1)
             #ax[i].imshow(vel_label[0, i-2*self.tw, :, :].detach().cpu(), vmin=-1, vmax=1)
             ax[i].set_title(f"labels")
         

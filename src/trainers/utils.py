@@ -139,11 +139,11 @@ def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertic
         imgtrue = imgtrue_stacked[i, :, :]
         imgpred = imgpred_stacked[i, :, :]
 
-        ax[0].imshow(imgtrue, cmap='jet', vmin=-1, vmax=1)
+        ax[0].imshow(imgtrue, cmap='RdBu_r', vmin=-1, vmax=1)
         ax[0].set_title("True")
         ax[0].axis('off')
 
-        ax[1].imshow(imgpred, cmap='jet', vmin=-1, vmax=1)
+        ax[1].imshow(imgpred, cmap='RdBu_r', vmin=-1, vmax=1)
         ax[1].set_title("Prediction")
         ax[1].axis('off')
 
