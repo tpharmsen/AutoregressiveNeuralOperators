@@ -2,10 +2,10 @@
 #SBATCH --job-name=sbu2hr1
 #SBATCH --partition=gpu_a100
 #SBATCH --time=00:15:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gres=gpu:1
+#SBATCH -N 1
+#SBATCH --cpus-per-task 1
+
 
 module load 2022
 module load Anaconda3/2022.05
