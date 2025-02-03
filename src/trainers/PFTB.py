@@ -186,7 +186,7 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-            #print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
+            print(f"{idx/len(self.train_loader):2f}, {idx}, {coords.shape[0]}", end='\r')
             coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
             #print(torch.min(phase), torch.max(phase))
             push_forward_steps = self.push_forward_prob()
@@ -403,7 +403,9 @@ class PFTBTrainer:
 
     def train(self):
         self.prepare_dataloader()
+        print('dataloader ready')
         self._initialize_model()
+        print('model initialized')
         #for i in range(100):
         #    self.scheduler.step()
         #    
@@ -420,6 +422,7 @@ class PFTBTrainer:
 
         start_time = time.time()
 
+        print('start training')
         for self.epoch in range(self.epochs):
             self.model.train()
             train_losses = self.train_one_epoch()
