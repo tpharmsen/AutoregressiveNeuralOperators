@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=sbu2hr1
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
