@@ -3,10 +3,9 @@
 #SBATCH --partition=gpu_a100
 #SBATCH --time=00:15:00
 #SBATCH --gres=gpu:1
-#SBATCH -N 1
-#SBATCH --cpus-per-task 1
+#SBATCH --cpus-per-task=4
 
-
+# #SBATCH -N 1
 module load 2022
 module load Anaconda3/2022.05
 . "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/etc/profile.d/conda.sh"
