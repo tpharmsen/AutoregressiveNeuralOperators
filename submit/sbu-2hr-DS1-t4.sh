@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=t3a100
 #SBATCH --partition=gpu_a100
-#SBATCH --time=00:02:00
+#SBATCH --time=00:06:00
 #SBATCH --gres=gpu:1
 # #SBATCH --cpus-per-task=4
 
@@ -13,3 +13,4 @@ conda activate grad311_hpc2023
 cd AutoregressiveNeuralOperators
 
 python -c "import torch; print('cuda available: ', torch.cuda.is_available())"
+python src/train.py --conf conf/hpc_01DS1_1.yaml --trainer PFTB
