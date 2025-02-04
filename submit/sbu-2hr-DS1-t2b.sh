@@ -12,4 +12,4 @@ module load Anaconda3/2024.06-1
 conda activate grad312
 cd AutoregressiveNeuralOperators
 
-python src/train.py --conf conf/hpc_01DS1_1.yaml --trainer PFTB
+python src/train.py --conf conf/hpc_01DS1_2.yaml --trainer PFTB
