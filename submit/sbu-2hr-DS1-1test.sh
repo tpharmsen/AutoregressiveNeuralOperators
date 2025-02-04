@@ -6,9 +6,9 @@
 #SBATCH --cpus-per-task=4
 
 # #SBATCH -N 1
-module load 2022
-module load Anaconda3/2022.05
-. "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/etc/profile.d/conda.sh"
+module load 2024
+module load Anaconda3/2024.06-1
+. "/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/etc/profile.d/conda.sh"
 conda activate grad312
 cd AutoregressiveNeuralOperators
 
