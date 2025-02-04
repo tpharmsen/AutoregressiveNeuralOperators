@@ -3,7 +3,7 @@ device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 1
 wandb: 1 #"True"
-wandb_name: "hpc_01DS1_1"
+wandb_name: "hpc_01DS1_2"
 
 loader:
   num_workers: 16
