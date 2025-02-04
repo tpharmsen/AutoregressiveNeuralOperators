@@ -186,10 +186,10 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-            print(f"{idx/len(self.train_loader):2f}")#, end='\r')
+            #print(f"{idx/len(self.train_loader):2f}")#, end='\r')
             # show memory usage
-            if idx % 20 == 0:
-                print(torch.cuda.memory_summary(device='cuda'))
+            #if idx % 20 == 0:
+            #    print(torch.cuda.memory_summary(device='cuda'))
             coords, temp, vel, phase = coords.to(self.device), temp.to(self.device), vel.to(self.device), phase.to(self.device)
             #print(torch.min(phase), torch.max(phase))
             push_forward_steps = self.push_forward_prob()
