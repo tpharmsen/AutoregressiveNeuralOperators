@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=5G
+#SBATCH --mem-per-cpu=10G
 
 # #SBATCH -N 1
 module load 2023
