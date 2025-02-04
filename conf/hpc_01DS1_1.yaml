@@ -37,5 +37,5 @@ validation:
   path_plot: "output/temp_plot1.png"
   makegif_vertical: False
   rollout_length: 150
-  pushforward_val: 4
+  pushforward_val: 3
   viz_step: 10
