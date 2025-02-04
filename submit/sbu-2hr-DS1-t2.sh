@@ -3,7 +3,7 @@
 #SBATCH --partition=gpu_h100
 #SBATCH --time=00:20:00
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
+# #SBATCH --cpus-per-task=4
 
 # #SBATCH -N 1
 module load 2024
