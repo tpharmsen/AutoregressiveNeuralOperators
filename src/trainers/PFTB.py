@@ -84,9 +84,21 @@ class PFTBTrainer:
                                 depth=self.modelprop[1],
                                 activation=self.modelprop[2]
                                 ).to(self.device)
-            print('Amount of parameters in model:', self.nparams(self.model))
+        elif self.model_name == 'UNet_mod1':
+            from modelComp.UNetMod1 import UNet2D
+            self.model = UNet2D(in_channels=self.in_channels,
+                                out_channels=self.out_channels, 
+                                base_filters=self.modelprop[0], 
+                                depth=self.modelprop[1],
+                                activation=self.modelprop[2]
+                                ).to(self.device)
+        elif self.model_name == 'ViT_basic':
+            from modelComp.ViT import ViT
+            self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
+        
+        print('Amount of parameters in model:', self.nparams(self.model))
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.init_learning_rate, weight_decay=self.weight_decay)
         self.criterion = nn.MSELoss(reduction='mean')
         #self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
@@ -186,7 +198,7 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-            #print(f"{idx/len(self.train_loader):2f}")#, end='\r')
+            print(f"{idx/len(self.train_loader):2f}")#, end='\r')
             # show memory usage
             #if idx % 20 == 0:
             #    print(torch.cuda.memory_summary(device='cuda'))
@@ -408,7 +420,7 @@ class PFTBTrainer:
         self.prepare_dataloader()
         print('dataloader ready')
         self._initialize_model()
-        print('model initialized')
+        print(str(self.model_name) + ' initialized')
         #for i in range(100):
         #    self.scheduler.step()
         #    
