@@ -2,32 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class SelfAttention(nn.Module):
-    def __init__(self, in_channels):
-        super().__init__()
-        self.query = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
-        self.key = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
-        self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))  # Scaling parameter
-
-    def forward(self, x):
-        batch, channels, height, width = x.shape
-        query = self.query(x).view(batch, -1, height * width).permute(0, 2, 1)  # (B, H*W, C//8)
-        key = self.key(x).view(batch, -1, height * width)  # (B, C//8, H*W)
-        attn_map = torch.softmax(torch.bmm(query, key), dim=-1)  # (B, H*W, H*W)
-
-        value = self.value(x).view(batch, -1, height * width)  # (B, C, H*W)
-        attn_output = torch.bmm(value, attn_map.permute(0, 2, 1))  # (B, C, H*W)
-        attn_output = attn_output.view(batch, channels, height, width)  # Reshape
-
-        return self.gamma * attn_output + x  # Skip connection with learned scaling
-
-
 class UNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, depth=4, base_filters=64, activation='relu'):
         super().__init__()
-
-        # Define activation function
         if activation == 'relu':
             self.activation = nn.ReLU(inplace=True)
         elif activation == 'leaky_relu':
@@ -42,7 +19,18 @@ class UNet2D(nn.Module):
         self.pools = nn.ModuleList()
         self.decoders = nn.ModuleList()
         self.upconvs = nn.ModuleList()
-        self.attention_blocks = nn.ModuleList()  # Self-attention layers for skip connections
+
+        # pre-Encoder 
+        '''
+        self.pre_encoder = nn.Sequential(
+            nn.Conv2d(in_channels, base_filters, kernel_size=1),
+            nn.BatchNorm2d(base_filters),
+            self.activation,
+            nn.Conv2d(base_filters, base_filters, kernel_size=1),
+            nn.BatchNorm2d(base_filters),
+            self.activation
+        )
+        '''
 
         # Encoder
         current_filters = base_filters
@@ -50,14 +38,19 @@ class UNet2D(nn.Module):
             self.encoders.append(
                 nn.Sequential(
                     nn.Conv2d(
-                        in_channels if i == 0 else current_filters // 2,
+                        in_channels if i == 0 else current_filters // 2,#base_filters if i == 0 else current_filters // 2,#in_channels if i == 0 else current_filters,
                         current_filters,
                         kernel_size=3,
                         padding=1
                     ),
                     nn.BatchNorm2d(current_filters),
                     self.activation,
-                    nn.Conv2d(current_filters, current_filters, kernel_size=3, padding=1),
+                    nn.Conv2d(
+                        current_filters,
+                        current_filters,
+                        kernel_size=3,
+                        padding=1
+                    ),
                     nn.BatchNorm2d(current_filters),
                     self.activation
                 )
@@ -74,38 +67,118 @@ class UNet2D(nn.Module):
             )
             self.decoders.append(
                 nn.Sequential(
-                    nn.Conv2d(current_filters * 2, current_filters, kernel_size=3, padding=1),
+                    nn.Conv2d(
+                        current_filters * 2,
+                        current_filters,
+                        kernel_size=3,
+                        padding=1
+                    ),
                     nn.BatchNorm2d(current_filters),
                     self.activation,
-                    nn.Conv2d(current_filters, current_filters, kernel_size=3, padding=1),
+                    nn.Conv2d(
+                        current_filters,
+                        current_filters,
+                        kernel_size=3,
+                        padding=1
+                    ),
                     nn.BatchNorm2d(current_filters),
                     self.activation
                 )
             )
-            self.attention_blocks.append(SelfAttention(current_filters))  # Add attention to skip connection
 
         # Output layer
         self.outconv = nn.Conv2d(base_filters, out_channels, kernel_size=1)
-    
+        #self.outconv2 = nn.Conv2d(base_filters, out_channels, kernel_size=1)
+
     def forward(self, x):
         encoder_outputs = []
-        
+        # pre-Encoder forward
+        #x = self.pre_encoder(x)
+        #print('\npre-encoder\n', x.shape)
         # Encoder forward
         for i, encoder in enumerate(self.encoders):
+            #print(f'encoder {i}', x.shape)
             x = encoder(x)
-            encoder_outputs.append(x)  # Store skip connections
+            #print(f'encoder {i} done', x.shape)
+            encoder_outputs.append(x)
             if i < self.depth - 1:
                 x = self.pools[i](x)
-
+                #print(f'pool {i} done', x.shape)
+        #print('\nhalfway\n')
         # Decoder forward
         for i in range(self.depth - 1):
+            #print(f'decoder {i}', x.shape)
             x = self.upconvs[i](x)
-            
-            # Apply self-attention to the skip connection
+            #print(f'upconv {i} done', x.shape)
             skip_connection = encoder_outputs[-(i + 2)]
-            skip_connection = self.attention_blocks[i](skip_connection)  # Apply attention
-
-            x = torch.cat([x, skip_connection], dim=1)  # Concatenate skip connections
+            x = torch.cat([x, skip_connection], dim=1)
+            #print(f'concat {i} done', x.shape)
             x = self.decoders[i](x)
+            #print(f'decoder {i} done', x.shape)
+        #print('\nend\n')
+        # Output layer
+        
+        x = self.outconv(x)
+        return x
 
-        return self.outconv(x)
+
+
+class UNet2DTest(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        # Encoder
+        # Input: 572x572x3
+        self.e11 = nn.Conv2d(in_channels, 64, kernel_size=3, padding=1)  # Output: 570x570x64
+        self.e12 = nn.Conv2d(64, 64, kernel_size=3, padding=1)       # Output: 568x568x64
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)           # Output: 284x284x64
+
+        # Input: 284x284x64
+        self.e21 = nn.Conv2d(64, 128, kernel_size=3, padding=1)      # Output: 282x282x128
+        self.e22 = nn.Conv2d(128, 128, kernel_size=3, padding=1)     # Output: 280x280x128
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)           # Output: 140x140x128
+
+        # Input: 140x140x128
+        self.e31 = nn.Conv2d(128, 256, kernel_size=3, padding=1)     # Output: 138x138x256
+        self.e32 = nn.Conv2d(256, 256, kernel_size=3, padding=1)     # Output: 136x136x256
+
+        # Decoder
+        self.upconv1 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.d11 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
+        self.d12 = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+
+        self.upconv2 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.d21 = nn.Conv2d(128, 64, kernel_size=3, padding=1)
+        self.d22 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+
+        # Output layer
+        self.outconv = nn.Conv2d(64, out_channels, kernel_size=1)
+
+    def forward(self, x):
+        # Encoder
+        xe11 = nn.ReLU()(self.e11(x))
+        xe12 = nn.ReLU()(self.e12(xe11))
+        xp1 = self.pool1(xe12)
+
+        xe21 = nn.ReLU()(self.e21(xp1))
+        xe22 = nn.ReLU()(self.e22(xe21))
+        xp2 = self.pool2(xe22)
+
+        xe31 = nn.ReLU()(self.e31(xp2))
+        xe32 = nn.ReLU()(self.e32(xe31))
+
+        # Decoder
+        xu1 = self.upconv1(xe32)
+        xu11 = torch.cat([xu1, xe22], dim=1)
+        xd11 = nn.ReLU()(self.d11(xu11))
+        xd12 = nn.ReLU()(self.d12(xd11))
+
+        xu2 = self.upconv2(xd12)
+        xu22 = torch.cat([xu2, xe12], dim=1)
+        xd21 = nn.ReLU()(self.d21(xu22))
+        xd22 = nn.ReLU()(self.d22(xd21))
+
+        # Output layer
+        out = self.outconv(xd22)
+
+        return out
