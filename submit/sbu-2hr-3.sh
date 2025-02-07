@@ -7,10 +7,10 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=1
 
-module load 2022
-module load Anaconda3/2022.05
-. "/sw/arch/RHEL8/EB_production/2022/software/Anaconda3/2022.05/etc/profile.d/conda.sh"
-conda activate grad312
+module load 2023
+module load Anaconda3/2023.07-2
+. "/sw/arch/RHEL8/EB_production/2023/software/Anaconda3/2023.07-2/etc/profile.d/conda.sh"
+conda activate grad311_hpc2023
 cd AutoregressiveNeuralOperators
 
 python src/train.py --conf conf/hpc_01DS4_3.yaml --trainer PFTB
