@@ -71,6 +71,7 @@ class PFTBTrainer:
     def _initialize_model(self):
         if self.model_name == 'UNet_classic':
             #from modelComp.UNetplusplus import UNetPlusPlus
+            print('loading UNet_classic')
             from modelComp.UNet import UNet2D
             #from modelComp.FNO import FNO2d
             #from neuralop.models import FNO
@@ -85,6 +86,7 @@ class PFTBTrainer:
                                 activation=self.modelprop[2]
                                 ).to(self.device)
         elif self.model_name == 'UNet_mod1':
+            print('loading UNet_mod1')
             from modelComp.UNetMod1 import UNet2D
             self.model = UNet2D(in_channels=self.in_channels,
                                 out_channels=self.out_channels, 
