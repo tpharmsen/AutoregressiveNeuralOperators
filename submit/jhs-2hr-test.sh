@@ -14,4 +14,4 @@ module load Anaconda3/2023.07-2
 conda activate grad311_hpc2023
 cd AutoregressiveNeuralOperators
 
-python src/train.py --conf conf/hpc_01DS4_1.yaml --trainer PFTB
+python src/train.py --conf conf/hpc_01DS4_2.yaml --trainer PFTB
