@@ -2,26 +2,42 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class SelfAttention(nn.Module):
-    def __init__(self, in_channels):
+class EfficientSelfAttention(nn.Module):
+    def __init__(self, in_channels, reduction_ratio=4):
         super().__init__()
-        self.query = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
-        self.key = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        reduced_channels = max(in_channels // reduction_ratio, 8)  # Ensure minimum feature map size
+        
+        self.query = nn.Conv2d(in_channels, reduced_channels, kernel_size=1)
+        self.key = nn.Conv2d(in_channels, reduced_channels, kernel_size=1)
         self.value = nn.Conv2d(in_channels, in_channels, kernel_size=1)
-        self.gamma = nn.Parameter(torch.zeros(1))  # Scaling parameter
+
+        self.spatial_pool = nn.AvgPool2d(kernel_size=2, stride=2)  # Downsampling for efficiency
+        self.gamma = nn.Parameter(torch.zeros(1))  # Scaling factor
 
     def forward(self, x):
         batch, channels, height, width = x.shape
-        query = self.query(x).view(batch, -1, height * width).permute(0, 2, 1)  # (B, H*W, C//8)
-        key = self.key(x).view(batch, -1, height * width)  # (B, C//8, H*W)
-        attn_map = torch.softmax(torch.bmm(query, key), dim=-1)  # (B, H*W, H*W)
+        
+        # Downsample key and value
+        key = self.spatial_pool(self.key(x))  # (B, C//reduction, H/2, W/2)
+        value = self.spatial_pool(self.value(x))  # (B, C, H/2, W/2)
 
-        value = self.value(x).view(batch, -1, height * width)  # (B, C, H*W)
+        # Compute query on full resolution
+        query = self.query(x)  # (B, C//reduction, H, W)
+        
+        # Flatten spatial dimensions
+        query = query.view(batch, -1, height * width).permute(0, 2, 1)  # (B, H*W, C//reduction)
+        key = key.view(batch, -1, (height // 2) * (width // 2))  # (B, C//reduction, (H/2)*(W/2))
+        value = value.view(batch, -1, (height // 2) * (width // 2))  # (B, C, (H/2)*(W/2))
+
+        # Compute attention
+        attn_map = torch.bmm(query, key) / key.shape[1]  # Normalize
+        attn_map = torch.softmax(attn_map, dim=-1)  # (B, H*W, (H/2)*(W/2))
+
+        # Weighted sum
         attn_output = torch.bmm(value, attn_map.permute(0, 2, 1))  # (B, C, H*W)
-        attn_output = attn_output.view(batch, channels, height, width)  # Reshape
+        attn_output = attn_output.view(batch, channels, height, width)  # Reshape to original
 
-        return self.gamma * attn_output + x  # Skip connection with learned scaling
-
+        return self.gamma * attn_output + x  # Skip connection
 
 class UNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, depth=4, base_filters=64, activation='relu'):
@@ -82,7 +98,7 @@ class UNet2D(nn.Module):
                     self.activation
                 )
             )
-            self.attention_blocks.append(SelfAttention(current_filters))  # Add attention to skip connection
+            self.attention_blocks.append(EfficientSelfAttention(current_filters))  # Add attention to skip connection
 
         # Output layer
         self.outconv = nn.Conv2d(base_filters, out_channels, kernel_size=1)
