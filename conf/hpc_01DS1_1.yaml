@@ -31,10 +31,10 @@ validation:
   files: ["Twall-100.hdf5"]
   gif_length: 300
   makegif_val: True
-  path_gif: "output/temp_gif1.gif"
+  path_gif: "output/temp_gif1b.gif"
   makeplot_val: False
   makeplot_train: True
-  path_plot: "output/temp_plot1.png"
+  path_plot: "output/temp_plot1b.png"
   makegif_vertical: False
   rollout_length: 150
   pushforward_val: 3
