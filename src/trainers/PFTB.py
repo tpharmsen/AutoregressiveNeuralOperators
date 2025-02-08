@@ -83,11 +83,20 @@ class PFTBTrainer:
                                 out_channels=self.out_channels, 
                                 base_filters=self.modelprop[0], 
                                 depth=self.modelprop[1],
-                                activation=self.modelprop[2]
+                                activation=self.modelprop[2], 
+                                multiplier_list=self.modelprop[3],
                                 ).to(self.device)
         elif self.model_name == 'UNet_mod1':
             print('loading UNet_mod1')
             from modelComp.UNetMod1 import UNet2D
+            self.model = UNet2D(in_channels=self.in_channels,
+                                out_channels=self.out_channels, 
+                                base_filters=self.modelprop[0], 
+                                depth=self.modelprop[1],
+                                activation=self.modelprop[2],
+                                ).to(self.device)
+        elif self.model_name == 'UNet_mod2':
+            from modelComp.UNetMod2 import UNet2D
             self.model = UNet2D(in_channels=self.in_channels,
                                 out_channels=self.out_channels, 
                                 base_filters=self.modelprop[0], 
