@@ -233,7 +233,7 @@ class PFTBTrainer:
             losses_vel.append(vel_loss.detach().item())
             losses_phase.append(phase_loss.detach().item())
 
-        print(torch.cuda.memory_summary(device='cuda'))
+        #print(torch.cuda.memory_summary(device='cuda'))
         
         del coords, temp, vel, phase, temp_label, vel_label, phase_label, temp_pred, vel_pred, phase_pred
         return np.mean(losses), np.mean(losses_temp), np.mean(losses_vel), np.mean(losses_phase)
