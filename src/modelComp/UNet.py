@@ -41,7 +41,7 @@ class UNet2D(nn.Module):
         current_filters = base_filters
         for i in range(depth):
             filters = base_filters * multiplier_list[i]
-            print(filters)
+            #print(filters)
             self.encoders.append(self.conv_block(in_channels if i == 0 else prev_filters, filters))
             if i < depth - 1:
                 self.pools.append(nn.MaxPool2d(kernel_size=2, stride=2))
@@ -50,7 +50,7 @@ class UNet2D(nn.Module):
         # Bottleneck
         bottleneck_filters = prev_filters * 2
         self.bottleneck = self.conv_block(prev_filters, bottleneck_filters)
-        print(bottleneck_filters)
+        #print(bottleneck_filters)
 
         # Decoder
         current_filters = bottleneck_filters
