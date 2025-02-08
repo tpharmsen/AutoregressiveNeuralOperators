@@ -1,11 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=jhs30m4
+#SBATCH --job-name=jhs30m1
 #SBATCH --partition=gpu_mig
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
-#SBATCH --reservation=jhs_tue2022
 
 module load 2023
 module load Anaconda3/2023.07-2
@@ -13,4 +12,4 @@ module load Anaconda3/2023.07-2
 conda activate grad311_hpc2023
 cd AutoregressiveNeuralOperators
 
-python src/train.py --conf conf/hpc_01DS4_4.yaml --trainer PFTB
+python src/train.py --conf conf/hpc_01DS4_1.yaml --trainer PFTB
