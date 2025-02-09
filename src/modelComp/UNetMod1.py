@@ -31,24 +31,39 @@ class ConvNeXtBlock(nn.Module):
         self.pointwise_conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=1)
         self.norm2 = nn.LayerNorm(out_channels)  # Normalize over the channel dimension
 
+        self.convRes = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+
     def forward(self, x):
-        res_connect = x
+        res_connect = x  # Store the residual
+        res_connect = self.convRes(res_connect)
+
         # Depthwise convolution
         x = self.depthwise_conv(x)
+
         # Pointwise convolution 1
         x = self.pointwise_conv1(x)
-        # Permute dimensions for LayerNorm: [batch, channels, height, width] -> [batch, height, width, channels]
+
+        # Permute for LayerNorm
         x = x.permute(0, 2, 3, 1)
         x = self.norm1(x)
-        x = x.permute(0, 3, 1, 2)  # Permute back to [batch, channels, height, width]
+        x = x.permute(0, 3, 1, 2)
+
         x = self.activation(x)
+
         # Pointwise convolution 2
         x = self.pointwise_conv2(x)
-        # Permute dimensions for LayerNorm: [batch, channels, height, width] -> [batch, height, width, channels]
+
+        # Permute for LayerNorm
         x = x.permute(0, 2, 3, 1)
         x = self.norm2(x)
-        x = x.permute(0, 3, 1, 2)  # Permute back to [batch, channels, height, width]
+        x = x.permute(0, 3, 1, 2)
+
         x = self.activation(x)
+
+        # Match dimensions for residual connection
+        #if x.shape != res_connect.shape:
+        #    res_connect = self.residual_proj(res_connect)  # 1x1 conv layer
+        #print(x.shape, res_connect.shape)
         return x + res_connect
 
 class UNet2D(nn.Module):
