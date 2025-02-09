@@ -32,6 +32,7 @@ class ConvNeXtBlock(nn.Module):
         self.norm2 = nn.LayerNorm(out_channels)  # Normalize over the channel dimension
 
     def forward(self, x):
+        res_connect = x
         # Depthwise convolution
         x = self.depthwise_conv(x)
         # Pointwise convolution 1
@@ -48,7 +49,7 @@ class ConvNeXtBlock(nn.Module):
         x = self.norm2(x)
         x = x.permute(0, 3, 1, 2)  # Permute back to [batch, channels, height, width]
         x = self.activation(x)
-        return x
+        return x + res_connect
 
 class UNet2D(nn.Module):
     def __init__(self, in_channels, out_channels, depth=4, base_filters=64, activation='gelu', multiplier_list=None):
