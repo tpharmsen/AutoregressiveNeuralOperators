@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=t3a100
-#SBATCH --partition=gpu_h100
-#SBATCH --time=00:20:00
+#SBATCH --partition=gpu_a100
+#SBATCH --time=00:25:00
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
