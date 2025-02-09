@@ -13,7 +13,7 @@ loader:
   batch_size: 8
 
 model:
-  name: "UNet_mod1"
+  name: "UNet_mod2"
   tw: 5
   use_coords: True
   prop: [64, 3, 'gelu', [1,2,2]]
