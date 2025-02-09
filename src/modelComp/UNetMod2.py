@@ -47,8 +47,11 @@ class UNet2D(nn.Module):
             self.upconvs.append(nn.ConvTranspose2d(current_filters, next_filters, kernel_size=2, stride=2))
             self.decoders.append(self.conv_block(next_filters + next_filters, next_filters))
 
-            # Replace Attention Block with MultiheadAttention
-            self.attention_layers.append(nn.MultiheadAttention(embed_dim=next_filters, num_heads=num_heads, batch_first=True))
+            # Add attention layer only if the feature map size is small enough
+            if i >= depth // 2:  # Apply attention only in deeper layers
+                self.attention_layers.append(nn.MultiheadAttention(embed_dim=next_filters, num_heads=num_heads, batch_first=True))
+            else:
+                self.attention_layers.append(None)  # No attention for early layers
 
             current_filters = next_filters
 
@@ -67,6 +70,9 @@ class UNet2D(nn.Module):
 
     def apply_attention(self, x, skip, attention_layer):
         """Applies multihead attention on 2D feature maps."""
+        if attention_layer is None:
+            return skip  # Skip attention if no attention layer is defined
+
         B, C, H, W = skip.shape
         x = x.view(B, C, H * W).permute(0, 2, 1)  # (B, HW, C)
         skip = skip.view(B, C, H * W).permute(0, 2, 1)  # (B, HW, C)
