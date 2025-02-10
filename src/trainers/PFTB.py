@@ -50,6 +50,7 @@ class PFTBTrainer:
         self.wandb_name = self.config['wandb_name']
         #torch.set_printoptions(precision=6, sci_mode=False)
         self.modelprop = self.config['model']['prop']
+        self.inject_noise = self.config['training']['inj_noise'] in ["True", 1]
 
         self.wandb_config = {}
         prefix = ''
@@ -103,6 +104,19 @@ class PFTBTrainer:
                                 depth=self.modelprop[1],
                                 activation=self.modelprop[2]
                                 ).to(self.device)
+        elif self.model_name == 'swinBasic':
+            from modelComp.swinBasic import SwinPDEForecaster
+            self.model = SwinPDEForecaster(
+                img_size=48,  # Adjust based on your data
+                patch_size=4,
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                embed_dim=128,
+                depths=[2, 2],
+                num_heads=[4, 8],
+                window_size=4
+            ).to(self.device)
+            self.model = SwinPDEForecaster()
         elif self.model_name == 'ViT_basic':
             from modelComp.ViT import ViT
             self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
@@ -198,6 +212,11 @@ class PFTBTrainer:
             for idx in range(push_forward_steps - 1):
                 #print('pf', end='_')
                 temp_input, vel_input, phase_input = self._forward_int(coords_input, temp_input, vel_input, phase_input)
+
+        if self.inject_noise and push_forward_steps == 1:
+            temp_input += torch.empty_like(temp_input).normal_(0, 0.01)
+            vel_input += torch.empty_like(vel_input).normal_(0, 0.01)
+            phase_input += torch.empty_like(phase_input).normal_(0, 0.01)
         temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_input, vel_input, phase_input)
         return temp_pred, vel_pred, phase_pred
 

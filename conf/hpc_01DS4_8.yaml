@@ -26,6 +26,7 @@ training:
   max_unrolling: 2
   pushforward_step: 10
   transform: 0
+  inj_noise: False
 
 validation:
   files: ["Twall-100.hdf5"]
