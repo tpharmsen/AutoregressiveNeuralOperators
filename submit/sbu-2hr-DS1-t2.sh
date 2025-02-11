@@ -4,7 +4,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
-# #SBATCH --cpus-per-task=
+
 
 module load 2024
 module load Anaconda3/2024.06-1
