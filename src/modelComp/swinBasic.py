@@ -1,103 +1,98 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from einops import rearrange
-from timm.models.swin_transformer import SwinTransformerBlock
 
-class SwinPDEForecaster(nn.Module):
-    def __init__(self, img_size=48, patch_size=4, in_channels=3, out_channels=3, embed_dim=128, depths=[2, 2], num_heads=[4, 8], window_size=4):
-        """
-        SwinPDEForecaster: A Swin Transformer-based model for autoregressive prediction of 2D PDE systems.
-
-        Args:
-            img_size (int): Size of the input image (assumed to be square).
-            patch_size (int): Size of the patches for patch partitioning.
-            in_channels (int): Number of input channels (e.g., temperature, velocity, phase).
-            out_channels (int): Number of output channels (same as input for autoregressive prediction).
-            embed_dim (int): Embedding dimension for the transformer.
-            depths (list): Number of Swin Transformer blocks in each stage.
-            num_heads (list): Number of attention heads in each stage.
-            window_size (int): Size of the local window for window-based attention.
-        """
+class PatchEmbedding(nn.Module):
+    def __init__(self, in_channels, embed_dim, patch_size):
         super().__init__()
-        self.img_size = img_size
-        self.patch_size = patch_size
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.embed_dim = embed_dim
-        self.num_stages = len(depths)
+        self.proj = nn.Conv2d(in_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
+    
+    def forward(self, x):
+        return self.proj(x)
+    
+class WindowAttention(nn.Module):
+    def __init__(self, dim, num_heads, window_size):
+        super().__init__()
+        self.num_heads = num_heads
+        self.scale = (dim // num_heads) ** -0.5
 
-        # Patch partition and linear embedding
-        self.patch_embed = nn.Conv2d(in_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.pos_drop = nn.Dropout(p=0.1)
+        self.qkv = nn.Linear(dim, dim * 3, bias = False)
+        self.proj = nn.Linear(dim, dim)
 
-        # Swin Transformer stages
-        self.stages = nn.ModuleList()
-        for i in range(self.num_stages):
-            stage = nn.Sequential(
-                *[SwinTransformerBlock(
-                    dim=embed_dim * (2 ** i),
-                    num_heads=num_heads[i],
-                    window_size=window_size,
-                    shift_size=0 if (i % 2 == 0) else window_size // 2,
-                ) for _ in range(depths[i])]
-            )
-            self.stages.append(stage)
+        self.window_size = window_size
+        self.relative_position_bias = nn.Parameter(torch.zeros(
+            (2*window_size-1)*(2*window_size-1), num_heads))
+    
+    def forward(self, x):
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn += self.relative_position_bias.unsqueeze(0)
+        attn = attn.softmax(dim=-1)
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        return self.proj(x)
+    
 
-            # Patch merging (except for the last stage)
-            if i < self.num_stages - 1:
-                self.stages.append(PatchMerging(embed_dim * (2 ** i)))
-
-        # Decoder to reconstruct the output
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(embed_dim * (2 ** (self.num_stages - 1)), out_channels, kernel_size=patch_size, stride=patch_size),
-            nn.Tanh()  # Normalize output to [-1, 1]
+class SwinBlock(nn.Module):
+    def __init__(self, dim, num_heads, window_size=7):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(dim)
+        self.attn = WindowAttention(dim, num_heads, window_size)
+        self.norm2 = nn.LayerNorm(dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(dim, dim * 4),
+            nn.GELU(),
+            nn.Linear(dim * 4, dim)
         )
 
     def forward(self, x):
-        """
-        Forward pass for the SwinPDEForecaster.
-
-        Args:
-            x (torch.Tensor): Input tensor of shape (B, C, H, W).
-
-        Returns:
-            torch.Tensor: Output tensor of shape (B, C, H, W).
-        """
-        # Patch embedding
-        x = self.patch_embed(x)  # (B, embed_dim, H/patch_size, W/patch_size)
-        x = self.pos_drop(x)
-
-        # Swin Transformer stages
-        for stage in self.stages:
-            x = stage(x)
-
-        # Decoder to reconstruct the output
-        x = self.decoder(x)  # (B, out_channels, H, W)
+        x = x + self.attn(self.norm1(x))
+        x = x + self.mlp(self.norm2(x))
         return x
 
 
 class PatchMerging(nn.Module):
-    """
-    Patch Merging layer for downsampling in Swin Transformer.
-    """
     def __init__(self, dim):
         super().__init__()
+        self.reduction = nn.Linear(4 * dim, dim)
         self.norm = nn.LayerNorm(4 * dim)
-        self.reduction = nn.Linear(4 * dim, 2 * dim, bias=False)
-
+    
     def forward(self, x):
-        """
-        Forward pass for PatchMerging.
-
-        Args:
-            x (torch.Tensor): Input tensor of shape (B, C, H, W).
-
-        Returns:
-            torch.Tensor: Output tensor of shape (B, 2*C, H/2, W/2).
-        """
-        B, C, H, W = x.shape
-        x = rearrange(x, 'b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=2, p2=2)  # (B, H/2 * W/2, 4*C)
+        B, H, W, C = x.shape
+        x = rearrange(x, 'b (h p1) (w p2) c -> b h w (p1 p2 c)', p1=2, p2=2)
         x = self.norm(x)
-        x = self.reduction(x)  # (B, H/2 * W/2, 2*C)
-        x = rearrange(x, 'b (h w) c -> b c h w', h=H//2, w=W//2)  # (B, 2*C, H/2, W/2)
+        return self.reduction(x)
+
+class SwinTransformer(nn.Module):
+    def __init__(self, img_size=48, in_channels=1, embed_dim=96, depths=[2, 2], num_heads=[3, 6], window_size=7):
+        super().__init__()
+        self.patch_embed = PatchEmbedding(in_channels, embed_dim)
+        self.layers = nn.ModuleList()
+        dim = embed_dim
+        for i in range(len(depths)):
+            blocks = [SwinBlock(dim, num_heads[i], window_size) for _ in range(depths[i])]
+            self.layers.append(nn.Sequential(*blocks))
+            if i < len(depths) - 1:
+                self.layers.append(PatchMerging(dim))
+                dim *= 2
+        self.norm = nn.LayerNorm(dim)
+        self.head = nn.Linear(dim, in_channels * img_size * img_size // 16)
+    
+    def forward(self, x):
+        x = self.patch_embed(x)
+        B, C, H, W = x.shape
+        x = x.flatten(2).transpose(1, 2)
+        for layer in self.layers:
+            x = layer(x)
+        x = self.norm(x)
+        x = self.head(x)
+        x = x.view(B, 1, H * 4, W * 4)  # Upsampling back to original resolution
         return x
+
+# Example Usage
+model = SwinTransformer()
+x = torch.randn(1, 1, 48, 48)
+out = model(x)
+print(out.shape)  # Expected output: (1, 1, 48, 48)
