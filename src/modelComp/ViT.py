@@ -46,7 +46,7 @@ class PositionalEncoding2D(nn.Module):
         self.register_buffer('pe', pe.view(num_patches_h * num_patches_w, d_model).unsqueeze(0))
 
     def forward(self, x):
-        print(x.shape, self.pe.shape)
+        #print(x.shape, self.pe.shape)
         return x + self.pe 
 
 class AttentionHead(nn.Module):

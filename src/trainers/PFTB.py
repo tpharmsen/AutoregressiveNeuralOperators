@@ -120,7 +120,7 @@ class PFTBTrainer:
         elif self.model_name == 'ViT_basic':
             from modelComp.ViT import VisionTransformer
             #self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
-            self.model = VisionTransformer(d_model=128, img_size=(48,48), patch_size=(8,8), in_channels=4, n_heads=4, n_layers=2, out_channels=3, dec_size=512)
+            self.model = VisionTransformer(d_model=128, img_size=(48,48), patch_size=(8,8), in_channels=self.in_channels, n_heads=8, n_layers=6, out_channels=self.out_channels, dec_size=512).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
