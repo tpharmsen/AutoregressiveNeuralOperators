@@ -134,7 +134,7 @@ class PFTBTrainer:
         #constant_scheduler = ConstantLR(self.optimizer, factor=1e-6, total_iters=500)
 
         #self.scheduler = SequentialLR(self.optimizer, schedulers=[cosine_scheduler, constant_scheduler], milestones=[scheduler_milestone])
-        self.scheduler = StepLR(self.optimizer, step_size=20, gamma=0.1)
+        self.scheduler = StepLR(self.optimizer, step_size=15, gamma=0.1)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
