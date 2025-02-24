@@ -118,8 +118,9 @@ class PFTBTrainer:
             ).to(self.device)
             self.model = SwinPDEForecaster()
         elif self.model_name == 'ViT_basic':
-            from modelComp.ViT import ViT
-            self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
+            from modelComp.ViT import VisionTransformer
+            #self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
+            self.model = VisionTransformer(d_model=128, img_size=(48,48), patch_size=(8,8), in_channels=4, n_heads=4, n_layers=2, out_channels=3, dec_size=512)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
