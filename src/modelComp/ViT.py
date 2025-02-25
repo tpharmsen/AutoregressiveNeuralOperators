@@ -24,7 +24,7 @@ class PatchEmbedding(nn.Module):
         x = self.flatten(x).transpose(1, 2)  # (B, C, H*W) -> (B, N_patches, C)
         x = self.positional_encoding(x) 
         return x
-
+"""
 class PositionalEncoding2D(nn.Module):
     def __init__(self, d_model, num_patches_h, num_patches_w):
         
@@ -47,7 +47,35 @@ class PositionalEncoding2D(nn.Module):
 
     def forward(self, x):
         #print(x.shape, self.pe.shape)
-        return x + self.pe 
+        return x + self.pe
+
+"""
+class PositionalEncoding2D(nn.Module):
+    def __init__(self, d_model, num_patches_h, num_patches_w):
+        super().__init__()
+        self.d_model = d_model
+        self.num_patches_h = num_patches_h
+        self.num_patches_w = num_patches_w
+
+        # Initialize positional encoding matrix
+        pe = torch.zeros(num_patches_h, num_patches_w, d_model)
+
+        # Generate absolute positions for height and width
+        pos_h = torch.arange(num_patches_h).float().unsqueeze(1).unsqueeze(2)
+        pos_w = torch.arange(num_patches_w).float().unsqueeze(0).unsqueeze(2)
+
+        # Apply sine and cosine functions to the positions
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+        
+        pe[:, :, 0::2] = torch.sin(pos_h * div_term)
+        pe[:, :, 1::2] = torch.cos(pos_w * div_term)
+
+        # Register the positional encoding as a buffer
+        self.register_buffer('pe', pe.view(num_patches_h * num_patches_w, d_model).unsqueeze(0))
+
+    def forward(self, x):
+        # Add positional encoding to the input
+        return x + self.pe
 
 class AttentionHead(nn.Module):
   def __init__(self, d_model, head_size):
@@ -117,6 +145,15 @@ class TransformerEncoder(nn.Module):
 
     return out
   
+class SimpleDecoder(nn.Module):
+  def __init__(self):
+    super().__init__()
+
+    self.linear_layer = nn.Linear()
+
+  def forward(self, x):
+    return x
+  
   
 class VisionTransformer(nn.Module):
   def __init__(self, d_model, img_size, patch_size, in_channels, n_heads, n_layers, out_channels, dec_size):
@@ -141,12 +178,13 @@ class VisionTransformer(nn.Module):
     self.patch_embedding = PatchEmbedding(self.img_size, self.patch_size, self.in_channels, self.d_model)
     self.transformer_encoder = nn.Sequential(*[TransformerEncoder(self.d_model, self.n_heads) for _ in range(n_layers)])
 
-    self.decoder = nn.Sequential(
-        nn.Linear(self.d_model, self.dec_size),
-        nn.GELU(),
-        nn.Linear(self.dec_size, self.patch_size[0] * self.patch_size[1] * self.out_channels),
-        #nn.Sigmoid()  # Normalize output between 0 and 1
-    )
+    #self.decoder = nn.Sequential(
+    #    nn.Linear(self.d_model, self.dec_size),
+    #    nn.GELU(),
+    #    nn.Linear(self.dec_size, self.patch_size[0] * self.patch_size[1] * self.out_channels),
+    #    #nn.Sigmoid()  # Normalize output between 0 and 1
+    #)
+    self.decoder = SimpleDecoder()
 
   def forward(self, images):
     x = self.patch_embedding(images)
@@ -154,8 +192,9 @@ class VisionTransformer(nn.Module):
     #x = self.positional_encoding(x)
 
     x = self.transformer_encoder(x)
+    print(x.shape)
     
-    x = self.decoder(x)  # (B, N_patches, Patch_Size*Patch_Size*C)
+    #x = self.decoder(x)  # (B, N_patches, Patch_Size*Patch_Size*C)
 
     # Reshape back into an image
     B = images.shape[0]
