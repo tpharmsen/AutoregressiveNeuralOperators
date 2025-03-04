@@ -472,10 +472,12 @@ class PFTBTrainer:
         device_name = torch.cuda.get_device_name(self.device)
         print('start training using ', device_name)
         for self.epoch in range(self.epochs):
+            self.epoch_time = time.time()
             self.model.train()
             train_losses = self.train_one_epoch()
             self.model.eval()
             val_loss_timestep, val_loss_pushforward, val_loss_unrolled = self.validate()
+            self.epoch_time = time.time() - self.epoch_time
 
             makeviz = self.epoch % self.viz_step == 0
             if makeviz:
@@ -529,7 +531,8 @@ class PFTBTrainer:
                     f"Val Loss Timestep = {val_loss_timestep[0]:.8f}, "
                     f"Val Loss Pushforward = {val_loss_pushforward[0]:.8f}, "
                     f"Val Loss Unrolled = {val_loss_unrolled[0]:.8f}, "
-                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e}")
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e}, "
+                    f"ET: {self.epoch_time:.2f} s")
 
         if self.wandb_enabled:
             wandb.finish()
