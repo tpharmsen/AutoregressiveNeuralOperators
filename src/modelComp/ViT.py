@@ -5,10 +5,12 @@ import numpy as np
 
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, img_size=32, patch_size=4, in_channels=3, embed_dim=128):
+    def __init__(self, mode, img_size=32, patch_size=4, in_channels=3, embed_dim=128):
         super().__init__()
         self.patch_size = patch_size
         self.img_size = img_size
+        self.embed_dim = embed_dim
+        self.mode = mode
         #print(self.patch_size, self.img_size)
         self.num_patches_h = img_size[0] // patch_size[0]
         self.num_patches_w = img_size[1] // patch_size[1]
@@ -16,7 +18,7 @@ class PatchEmbedding(nn.Module):
 
         self.proj = nn.Conv2d(in_channels, embed_dim, kernel_size=patch_size[0], stride=patch_size[0])
         self.flatten = nn.Flatten(2)
-        self.positional_encoding = PositionalEncoding2D(embed_dim, self.num_patches_h, self.num_patches_w)
+        self.positional_encoding = PositionalEncoding2D(mode, self.embed_dim, self.num_patches_h, self.num_patches_w)
 
     def forward(self, x):
         #(self.patch_size, self.img_size)
@@ -24,58 +26,38 @@ class PatchEmbedding(nn.Module):
         x = self.flatten(x).transpose(1, 2)  # (B, C, H*W) -> (B, N_patches, C)
         x = self.positional_encoding(x) 
         return x
-"""
+
 class PositionalEncoding2D(nn.Module):
-    def __init__(self, d_model, num_patches_h, num_patches_w):
+    def __init__(self, mode, d_model, num_patches_h, num_patches_w):
         
         super().__init__()
         self.d_model = d_model
         self.num_patches_h = num_patches_h
         self.num_patches_w = num_patches_w
+        self.mode = mode
 
-        pe = torch.zeros(num_patches_h, num_patches_w, d_model)
+        if self.mode == 'radial':
+           
+          pe = torch.zeros(num_patches_h, num_patches_w, d_model)
 
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
-        
-        pos_h = torch.arange(num_patches_h).float().unsqueeze(1) * div_term
-        pos_w = torch.arange(num_patches_w).float().unsqueeze(1) * div_term
+          div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+          
+          pos_h = torch.arange(num_patches_h).float().unsqueeze(1) * div_term
+          pos_w = torch.arange(num_patches_w).float().unsqueeze(1) * div_term
 
-        pe[:, :, 0::2] = torch.sin(pos_h).unsqueeze(1)  
-        pe[:, :, 1::2] = torch.cos(pos_w).unsqueeze(0) 
+          pe[:, :, 0::2] = torch.sin(pos_h).unsqueeze(1)  
+          pe[:, :, 1::2] = torch.cos(pos_w).unsqueeze(0) 
 
-        self.register_buffer('pe', pe.view(num_patches_h * num_patches_w, d_model).unsqueeze(0))
+          self.register_buffer('pe', pe.view(num_patches_h * num_patches_w, d_model).unsqueeze(0))
+
+        if self.mode == 'learnable':
+            self.pe = nn.Parameter(torch.zeros(1, num_patches_h * num_patches_w, d_model))
 
     def forward(self, x):
         #print(x.shape, self.pe.shape)
         return x + self.pe
 
-"""
-class PositionalEncoding2D(nn.Module):
-    def __init__(self, d_model, num_patches_h, num_patches_w):
-        super().__init__()
-        self.d_model = d_model
-        self.num_patches_h = num_patches_h
-        self.num_patches_w = num_patches_w
 
-        # Initialize positional encoding matrix
-        pe = torch.zeros(num_patches_h, num_patches_w, d_model)
-
-        # Generate absolute positions for height and width
-        pos_h = torch.arange(num_patches_h).float().unsqueeze(1).unsqueeze(2)
-        pos_w = torch.arange(num_patches_w).float().unsqueeze(0).unsqueeze(2)
-
-        # Apply sine and cosine functions to the positions
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
-        
-        pe[:, :, 0::2] = torch.sin(pos_h * div_term)
-        pe[:, :, 1::2] = torch.cos(pos_w * div_term)
-
-        # Register the positional encoding as a buffer
-        self.register_buffer('pe', pe.view(num_patches_h * num_patches_w, d_model).unsqueeze(0))
-
-    def forward(self, x):
-        # Add positional encoding to the input
-        return x + self.pe
 
 class AttentionHead(nn.Module):
   def __init__(self, d_model, head_size):
@@ -188,12 +170,13 @@ class VisionTransformer(nn.Module):
     self.in_channels = in_channels 
     self.n_heads = n_heads 
     self.out_channels = out_channels
+    self.mode = mode
 
     self.num_patches_h = img_size[0] // patch_size[0]
     self.num_patches_w = img_size[1] // patch_size[1]
     self.num_patches = self.num_patches_h * self.num_patches_w
 
-    self.patch_embedding = PatchEmbedding(self.img_size, self.patch_size, self.in_channels, self.d_model)
+    self.patch_embedding = PatchEmbedding(self.mode, self.img_size, self.patch_size, self.in_channels, self.d_model)
     self.transformer_encoder = nn.Sequential(*[TransformerEncoder(self.d_model, self.n_heads) for _ in range(n_layers)])
 
     self.reconstruct = decodeToImage(self.d_model, self.patch_size, self.num_patches_h, self.num_patches_w, self.out_channels)
