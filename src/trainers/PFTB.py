@@ -129,7 +129,8 @@ class PFTBTrainer:
         #constant_scheduler = ConstantLR(self.optimizer, factor=1e-6, total_iters=500)
 
         #self.scheduler = SequentialLR(self.optimizer, schedulers=[cosine_scheduler, constant_scheduler], milestones=[scheduler_milestone])
-        self.scheduler = StepLR(self.optimizer, step_size=15, gamma=0.1)
+        #self.scheduler = StepLR(self.optimizer, step_size=15, gamma=0.1)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, min_lr=1e-6)
 
     def nparams(self, model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -521,7 +522,7 @@ class PFTBTrainer:
             
 
             #self.scheduler.step(val_loss_unrolled[0])
-            self.scheduler.step()
+            self.scheduler.step(val_loss_unrolled[0])
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses[0]:.8f}, "

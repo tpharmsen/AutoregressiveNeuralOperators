@@ -53,6 +53,17 @@ class PositionalEncoding2D(nn.Module):
         if self.mode == 'learnable':
             self.pe = nn.Parameter(torch.zeros(1, num_patches_h * num_patches_w, d_model))
 
+        '''
+        def get_sinusoidal_embeddings(num_patches, embed_dim):
+            position = torch.arange(num_patches).unsqueeze(1)  # (num_patches, 1)
+            div_term = torch.exp(torch.arange(0, embed_dim, 2) * (-math.log(10000.0) / embed_dim))
+            pe = torch.zeros(num_patches, embed_dim)
+            pe[:, 0::2] = torch.sin(position * div_term)
+            pe[:, 1::2] = torch.cos(position * div_term)
+            return pe  # (num_patches, embed_dim)
+
+        '''
+
     def forward(self, x):
         #print(x.shape, self.pe.shape)
         return x + self.pe
