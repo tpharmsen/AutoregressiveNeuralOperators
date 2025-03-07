@@ -104,23 +104,16 @@ class PFTBTrainer:
                                 depth=self.modelprop[1],
                                 activation=self.modelprop[2]
                                 ).to(self.device)
-        elif self.model_name == 'swinBasic':
-            from modelComp.swinBasic import SwinPDEForecaster
-            self.model = SwinPDEForecaster(
-                img_size=48,  # Adjust based on your data
-                patch_size=4,
-                in_channels=self.in_channels,
-                out_channels=self.out_channels,
-                embed_dim=128,
-                depths=[2, 2],
-                num_heads=[4, 8],
-                window_size=4
-            ).to(self.device)
-            self.model = SwinPDEForecaster()
         elif self.model_name == 'ViT_basic':
             from modelComp.ViT import VisionTransformer
-            #self.model = ViT(in_channels=self.in_channels, out_channels=self.out_channels, img_size=48, patch_size=12, embed_dim=256, depth=5, num_heads=8).to(self.device)
-            self.model = VisionTransformer(d_model=256, img_size=(48,48), patch_size=(8,8), in_channels=self.in_channels, n_heads=8, n_layers=6, out_channels=self.out_channels, dec_size=512).to(self.device)
+            self.model = VisionTransformer(d_model=256, 
+                                           img_size=(48,48), 
+                                           patch_size=(8,8), 
+                                           in_channels=self.in_channels, 
+                                           n_heads=8, 
+                                           n_layers=6, 
+                                           out_channels=self.out_channels
+                                           ).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
@@ -451,7 +444,7 @@ class PFTBTrainer:
 
     def train(self):
         self.prepare_dataloader()
-        print('dataloader ready')
+        #print('dataloader ready')
         self._initialize_model()
         print(str(self.model_name) + ' initialized')
         #for i in range(100):
@@ -470,7 +463,10 @@ class PFTBTrainer:
 
         start_time = time.time()
         device_name = torch.cuda.get_device_name(self.device)
-        print('start training using ', device_name)
+        if torch.cuda.is_available():
+            print('using device', device_name)
+        else:
+            print('using cpu???')
         for self.epoch in range(self.epochs):
             self.epoch_time = time.time()
             self.model.train()

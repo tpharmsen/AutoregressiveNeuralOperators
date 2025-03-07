@@ -145,23 +145,42 @@ class TransformerEncoder(nn.Module):
 
     return out
   
-class SimpleDecoder(nn.Module):
-  def __init__(self):
+  
+class decodeToImage(nn.Module):
+  def __init__(self, d_model, patch_size, num_patches_h, num_patches_w, out_channels):
     super().__init__()
+    self.d_model = d_model
+    self.patch_size = patch_size
+    self.num_patches_h = num_patches_h
+    self.num_patches_w = num_patches_w
+    self.out_channels = out_channels
 
-    self.linear_layer = nn.Linear()
+    self.pixelConv = nn.Conv2d(self.d_model, self.out_channels * self.patch_size[0]**2, kernel_size=1)
+    self.pixelShuffle = nn.PixelShuffle(self.patch_size[0])
+
 
   def forward(self, x):
+    B= x.shape[0]
+    x = x.transpose(1,2)
+    #print(x.shape)
+    x = x.view(B, self.d_model, self.num_patches_h, self.num_patches_w)#.contiguous()
+    #print(x.shape)
+
+    x = self.pixelConv(x)
+    #print(x.shape)
+    x = self.pixelShuffle(x)
     return x
+
   
   
 class VisionTransformer(nn.Module):
-  def __init__(self, d_model, img_size, patch_size, in_channels, n_heads, n_layers, out_channels, dec_size):
+  def __init__(self, d_model, img_size, patch_size, in_channels, n_heads, n_layers, out_channels):
     super().__init__()
     #print(img_size, patch_size)
 
     assert img_size[0] % patch_size[0] == 0 and img_size[1] % patch_size[1] == 0, "img_size dimensions must be divisible by patch_size dimensions"
     assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
+    assert patch_size[0] == patch_size[1], "Only square patches are supported for now"
 
     self.d_model = d_model
     self.img_size = img_size 
@@ -169,7 +188,6 @@ class VisionTransformer(nn.Module):
     self.in_channels = in_channels 
     self.n_heads = n_heads 
     self.out_channels = out_channels
-    self.dec_size = dec_size
 
     self.num_patches_h = img_size[0] // patch_size[0]
     self.num_patches_w = img_size[1] // patch_size[1]
@@ -178,13 +196,7 @@ class VisionTransformer(nn.Module):
     self.patch_embedding = PatchEmbedding(self.img_size, self.patch_size, self.in_channels, self.d_model)
     self.transformer_encoder = nn.Sequential(*[TransformerEncoder(self.d_model, self.n_heads) for _ in range(n_layers)])
 
-    #self.decoder = nn.Sequential(
-    #    nn.Linear(self.d_model, self.dec_size),
-    #    nn.GELU(),
-    #    nn.Linear(self.dec_size, self.patch_size[0] * self.patch_size[1] * self.out_channels),
-    #    #nn.Sigmoid()  # Normalize output between 0 and 1
-    #)
-    self.decoder = SimpleDecoder()
+    self.reconstruct = decodeToImage(self.d_model, self.patch_size, self.num_patches_h, self.num_patches_w, self.out_channels)
 
   def forward(self, images):
     x = self.patch_embedding(images)
@@ -192,14 +204,7 @@ class VisionTransformer(nn.Module):
     #x = self.positional_encoding(x)
 
     x = self.transformer_encoder(x)
-    print(x.shape)
-    
-    #x = self.decoder(x)  # (B, N_patches, Patch_Size*Patch_Size*C)
-
-    # Reshape back into an image
-    B = images.shape[0]
-    x = x.view(B, self.num_patches_h, self.num_patches_w, self.patch_size[0], self.patch_size[1], self.out_channels)
-    x = x.permute(0, 5, 1, 3, 2, 4).contiguous()  # Rearrange dimensions to (B, C, H, W)
-    x = x.view(B, self.out_channels, self.img_size[0], self.img_size[1])
+    #print(x.shape)
+    x = self.reconstruct(x)
 
     return x
