@@ -156,7 +156,7 @@ class decodeToImage(nn.Module):
   
   
 class VisionTransformer(nn.Module):
-  def __init__(self, d_model, img_size, patch_size, in_channels, n_heads, n_layers, out_channels):
+  def __init__(self, mode, d_model, img_size, patch_size, in_channels, n_heads, n_layers, out_channels):
     super().__init__()
     #print(img_size, patch_size)
 
