@@ -106,12 +106,12 @@ class PFTBTrainer:
                                 ).to(self.device)
         elif self.model_name == 'ViT_basic':
             from modelComp.ViT import VisionTransformer
-            self.model = VisionTransformer(d_model=256, 
+            self.model = VisionTransformer(d_model=128, 
                                            img_size=(48,48), 
                                            patch_size=(8,8), 
                                            in_channels=self.in_channels, 
                                            n_heads=8, 
-                                           n_layers=6, 
+                                           n_layers=3, 
                                            out_channels=self.out_channels
                                            ).to(self.device)
         else:
