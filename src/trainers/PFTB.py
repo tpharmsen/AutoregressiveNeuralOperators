@@ -482,7 +482,7 @@ class PFTBTrainer:
                 if self.makeplot_val:
                     self.make_plot("output/tempplot_val.png", mode='temp', on_val=True)
                 if self.makeplot_train:
-                    self.make_plot(self.path_plot, mode='phase', on_val=False)
+                    self.make_plot(self.path_plot, mode='temp', on_val=False)
                 if self.save_on:
                     if val_loss_timestep[0] < best_val_loss_timestep:
                         best_val_loss_timestep = val_loss_timestep[0]
