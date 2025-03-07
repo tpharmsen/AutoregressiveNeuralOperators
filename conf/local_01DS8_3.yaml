@@ -39,4 +39,4 @@ validation:
   makegif_vertical: False
   rollout_length: 100
   pushforward_val: 3
-  viz_step: 1
+  viz_step: 5
