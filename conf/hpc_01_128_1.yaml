@@ -1,0 +1,42 @@
+data_path: "data/PoolBoiling-SubCooled-FC72-2D-0.1/DSRD_128x128/"
+device: "cuda"
+save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
+save_on: 0
+wandb: 0
+wandb_name: "hpc_01_128_1"
+
+loader:
+  num_workers: 4
+  pin_memory: True
+  prefetch_factor: 2
+  discard_first: 200
+  batch_size: 64
+
+model:
+  name: "swinT"
+  tw: 10
+  use_coords: True
+  prop: [64, 3, 'gelu', [1,2,2]]
+
+training:
+  files: ["Twall-79.hdf5", "Twall-81.hdf5", "Twall-85.hdf5", "Twall-88.hdf5", "Twall-90.hdf5", "Twall-92.hdf5", "Twall-95.hdf5", "Twall-97.hdf5", "Twall-98.hdf5", "Twall-102.hdf5", "Twall-103.hdf5", "Twall-106.hdf5", "Twall-108.hdf5", "Twall-110.hdf5"]
+  epochs: 300
+  init_learning_rate: 2e-4
+  weight_decay: 1e-5
+  max_unrolling: 1
+  pushforward_step: 10
+  transform: 0
+  inj_noise: False
+  
+validation:
+  files: ["Twall-100.hdf5"]
+  gif_length: 300
+  makegif_val: True
+  path_gif: "output/temp_gif2.gif"
+  makeplot_val: False
+  makeplot_train: True
+  path_plot: "output/temp_plot2.png"
+  makegif_vertical: False
+  rollout_length: 100
+  pushforward_val: 3
+  viz_step: 5
