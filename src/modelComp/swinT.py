@@ -9,7 +9,7 @@ import numpy as np
 class SwinEmbedding(nn.Module):
     def __init__(self, patch_size=4, emb_size=96):
         super().__init__()
-        self.linear_embedding = nn.Conv2d(3, emb_size, kernel_size = patch_size, stride = patch_size)
+        self.linear_embedding = nn.Conv2d(4, emb_size, kernel_size = patch_size, stride = patch_size)
         self.rearrange = Rearrange('b c h w -> b (h w) c')
         
     def forward(self, x):
@@ -139,7 +139,6 @@ class Swin(nn.Module):
         self.Embedding = SwinEmbedding()
         self.PatchMerging = nn.ModuleList()
         emb_size = 96
-        num_class = 5
         for i in range(3):
             self.PatchMerging.append(PatchMerging(emb_size))
             emb_size *= 2
@@ -161,42 +160,31 @@ class Swin(nn.Module):
         
         #self.layer = nn.Linear(768, num_class)
 
-        self.reconstruct = decodeToImage(192, (8, 8), 12, 12, 3)
+        self.reconstruct = decodeToImage(192, (8, 8), 12, 12, 4)
 
     def forward(self, x):
         x = self.Embedding(x)
-        print(x.shape)
+        #print(x.shape)
         x = self.stage1(x)
-        print(x.shape)
+        #print(x.shape)
         x = self.PatchMerging[0](x)
         for stage in self.stage2:
             x = stage(x)
-        print(x.shape)
+        #print(x.shape)
         #x = self.stage2(x)
         #print(x.shape)
         #x = self.PatchMerging[1](x)
-        print(x.shape)
+        #print(x.shape)
         #for stage in self.stage3:
         #    x = stage(x)
-        print(x.shape)
+        #print(x.shape)
         #x = self.PatchMerging[2](x)
-        print(x.shape)
+        #print(x.shape)
         #x = self.stage4(x)
         #print(x.shape)
         #x = self.layer(self.avgpool1d(x.transpose(1, 2)).squeeze(2))
         
         x = self.reconstruct(x)
-        print(x.shape)
+        #print(x.shape)
         return x
     
-if __name__ == '__main__':
-    # Usage Example (assuming num_classes = 5)
-
-    x = torch.rand(1, 3, 96, 96)
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    x = x.type(torch.FloatTensor).to(device)
-    model = Swin().to(device)
-    print(model(x).shape)
-    # print amount of param
-    print(sum(p.numel() for p in model.parameters() if p.requires_grad))

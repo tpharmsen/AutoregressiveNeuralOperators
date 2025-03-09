@@ -115,6 +115,9 @@ class PFTBTrainer:
                                            n_layers=self.modelprop[2], 
                                            out_channels=self.out_channels
                                            ).to(self.device)
+        elif self.model_name == 'swinT':
+            from modelComp.swinT import Swin
+            self.model = Swin().to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
@@ -193,6 +196,7 @@ class PFTBTrainer:
         input = torch.cat((temp, vel, phase), dim=1)
         if self.use_coords:
             input = torch.cat((coords, input), dim=1)
+        
         pred = self.model(input)
 
 
@@ -234,13 +238,15 @@ class PFTBTrainer:
             #print('push_forward_steps', push_forward_steps)
             temp_pred, vel_pred, phase_pred = self.push_forward_trick(coords, temp, vel, phase, push_forward_steps)
 
+
             idx = (push_forward_steps - 1)
             temp_label = temp_label[:, idx].to(self.device)
             #idx = (push_forward_steps - 1)
             vel_label = vel_label[:, idx].to(self.device)
             #idx = (push_forward_steps - 1)
             phase_label = phase_label[:, idx].to(self.device)
-
+            #print(temp_label.shape, vel_label.shape, phase_label.shape)
+            #print(temp_pred.shape, vel_pred.shape, phase_pred.shape)
             temp_loss = self.criterion(temp_pred, temp_label)
             vel_loss = self.criterion(vel_pred, vel_label)
             phase_loss = self.criterion(phase_pred, phase_label)
