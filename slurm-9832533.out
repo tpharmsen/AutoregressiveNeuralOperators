@@ -1,0 +1,80 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/var/spool/slurm/slurmd/job9832533/slurm_script: line 15: cd: AutoregressiveNeuralOperators: No such file or directory
+wandb: Currently logged in as: tpharmsen (tpharmsen-tue) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Tracking run with wandb version 0.19.5
+wandb: Run data is saved locally in /gpfs/home5/tharmsen/AutoregressiveNeuralOperators/wandb/run-20250209_012708-u0ijzg84
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run UNet_mod1_hpc_01DS4_4
+wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF
+wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/u0ijzg84
+dataloader ready
+loading UNet_mod1
+Amount of parameters in model: 11547348
+UNet_mod1 initialized
+start training
+Traceback (most recent call last):
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/train.py", line 20, in <module>
+    trainer.train()
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 456, in train
+    train_losses = self.train_one_epoch()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 220, in train_one_epoch
+    temp_pred, vel_pred, phase_pred = self.push_forward_trick(coords, temp, vel, phase, push_forward_steps)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 201, in push_forward_trick
+    temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_input, vel_input, phase_input)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 186, in _forward_int
+    pred = self.model(input)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/modelComp/UNetMod1.py", line 109, in forward
+    x = encoder(x)
+        ^^^^^^^^^^
+  File "/home/tharmsen/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/modelComp/UNetMod1.py", line 52, in forward
+    return x + res_connect
+           ~~^~~~~~~~~~~~~
+RuntimeError: The size of tensor a (64) must match the size of tensor b (22) at non-singleton dimension 1
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mUNet_mod1_hpc_01DS4_4[0m at: [34mhttps://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/u0ijzg84[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250209_012708-u0ijzg84/logs[0m
+
+JOB STATISTICS
+==============
+Job ID: 9832533
+Cluster: snellius
+User/Group: tharmsen/tharmsen
+State: FAILED (exit code 1)
+Nodes: 1
+Cores per node: 9
+CPU Utilized: 00:00:22
+CPU Efficiency: 7.19% of 00:05:06 core-walltime
+Job Wall-clock time: 00:00:34
+Memory Utilized: 2.09 MB
+Memory Efficiency: 0.00% of 60.00 GB

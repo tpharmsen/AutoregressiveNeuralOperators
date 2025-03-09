@@ -271,9 +271,10 @@ class PFTBTrainer:
     def validate(self):
         val_loss_timestep = self._validate_timestep()
         val_loss_pushforward = self._validate_pushforward()
-        dataset = self.val_dataset.get_validation_stacks(0)
-        val_loss_unrolled = self._validate_unrolled(dataset)
-        del dataset
+        #dataset = self.val_dataset.get_validation_stacks(0)
+        #val_loss_unrolled = self._validate_unrolled(dataset)
+        val_loss_unrolled = [-1, -1, -1, -1]
+        #del dataset
         return val_loss_timestep, val_loss_pushforward, val_loss_unrolled
 
     def _validate_timestep(self):
@@ -528,7 +529,7 @@ class PFTBTrainer:
             
 
             #self.scheduler.step(val_loss_unrolled[0])
-            self.scheduler.step(val_loss_unrolled[0])
+            self.scheduler.step(val_loss_timestep[0])
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses[0]:.8f}, "

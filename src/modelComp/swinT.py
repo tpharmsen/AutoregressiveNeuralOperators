@@ -9,7 +9,7 @@ import numpy as np
 class SwinEmbedding(nn.Module):
     def __init__(self, patch_size=4, emb_size=96):
         super().__init__()
-        self.linear_embedding = nn.Conv2d(4, emb_size, kernel_size = patch_size, stride = patch_size)
+        self.linear_embedding = nn.Conv2d(14, emb_size, kernel_size = patch_size, stride = patch_size)
         self.rearrange = Rearrange('b c h w -> b (h w) c')
         
     def forward(self, x):
@@ -160,7 +160,7 @@ class Swin(nn.Module):
         
         #self.layer = nn.Linear(768, num_class)
 
-        self.reconstruct = decodeToImage(192, (8, 8), 12, 12, 4)
+        self.reconstruct = decodeToImage(192, (8, 8), 12, 12, 12)
 
     def forward(self, x):
         x = self.Embedding(x)

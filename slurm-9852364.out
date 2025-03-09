@@ -1,0 +1,134 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/var/spool/slurm/slurmd/job9852364/slurm_script: line 14: cd: AutoregressiveNeuralOperators: No such file or directory
+wandb: Currently logged in as: tpharmsen (tpharmsen-tue) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Tracking run with wandb version 0.19.5
+wandb: Run data is saved locally in /gpfs/home5/tharmsen/AutoregressiveNeuralOperators/wandb/run-20250210_231933-9xwe8p6n
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run UNet_classic_hpc_01DS4_7
+wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF
+wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/9xwe8p6n
+dataloader ready
+loading UNet_classic
+Amount of parameters in model: 5550676
+UNet_classic initialized
+start training
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 0: Train Loss = 0.01800725, Val Loss Timestep = 0.00221100, Val Loss Pushforward = 0.00784995, Val Loss Unrolled = 0.01341428, LR: 1.0e-03
+Epoch 1: Train Loss = 0.00136290, Val Loss Timestep = 0.00162469, Val Loss Pushforward = 0.00875791, Val Loss Unrolled = 0.00821180, LR: 1.0e-03
+Epoch 2: Train Loss = 0.00113425, Val Loss Timestep = 0.00143301, Val Loss Pushforward = 0.00685612, Val Loss Unrolled = 0.00930515, LR: 1.0e-03
+Epoch 3: Train Loss = 0.00098856, Val Loss Timestep = 0.00120756, Val Loss Pushforward = 0.00567413, Val Loss Unrolled = 0.00958542, LR: 9.9e-04
+Epoch 4: Train Loss = 0.00091872, Val Loss Timestep = 0.00115182, Val Loss Pushforward = 0.00521911, Val Loss Unrolled = 0.00593457, LR: 9.9e-04
+Epoch 5: Train Loss = 0.00085578, Val Loss Timestep = 0.00109149, Val Loss Pushforward = 0.00509059, Val Loss Unrolled = 0.00789877, LR: 9.8e-04
+Epoch 6: Train Loss = 0.00080914, Val Loss Timestep = 0.00109498, Val Loss Pushforward = 0.00518051, Val Loss Unrolled = 0.01100663, LR: 9.8e-04
+Epoch 7: Train Loss = 0.00077305, Val Loss Timestep = 0.00108932, Val Loss Pushforward = 0.00558029, Val Loss Unrolled = 0.01015170, LR: 9.7e-04
+Epoch 8: Train Loss = 0.00074377, Val Loss Timestep = 0.00106474, Val Loss Pushforward = 0.00541277, Val Loss Unrolled = 0.01035586, LR: 9.6e-04
+Epoch 9: Train Loss = 0.00070014, Val Loss Timestep = 0.00103221, Val Loss Pushforward = 0.00515575, Val Loss Unrolled = 0.01384420, LR: 9.5e-04
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 10: Train Loss = 0.00136475, Val Loss Timestep = 0.00118961, Val Loss Pushforward = 0.00461974, Val Loss Unrolled = 0.00781484, LR: 9.4e-04
+Epoch 11: Train Loss = 0.00112372, Val Loss Timestep = 0.00107747, Val Loss Pushforward = 0.00414430, Val Loss Unrolled = 0.00958429, LR: 9.3e-04
+Epoch 12: Train Loss = 0.00103855, Val Loss Timestep = 0.00101547, Val Loss Pushforward = 0.00448006, Val Loss Unrolled = 0.01047196, LR: 9.2e-04
+Epoch 13: Train Loss = 0.00125887, Val Loss Timestep = 0.00105792, Val Loss Pushforward = 0.00388169, Val Loss Unrolled = 0.01105508, LR: 9.0e-04
+Epoch 14: Train Loss = 0.00096559, Val Loss Timestep = 0.00105667, Val Loss Pushforward = 0.00414812, Val Loss Unrolled = 0.00924344, LR: 8.9e-04
+Epoch 15: Train Loss = 0.00093363, Val Loss Timestep = 0.00106466, Val Loss Pushforward = 0.00415993, Val Loss Unrolled = 0.01108794, LR: 8.8e-04
+Epoch 16: Train Loss = 0.00091991, Val Loss Timestep = 0.00106618, Val Loss Pushforward = 0.00424574, Val Loss Unrolled = 0.01270800, LR: 8.6e-04
+Epoch 17: Train Loss = 0.00087100, Val Loss Timestep = 0.00113037, Val Loss Pushforward = 0.00502991, Val Loss Unrolled = 0.02055289, LR: 8.5e-04
+Epoch 18: Train Loss = 0.00081142, Val Loss Timestep = 0.00100857, Val Loss Pushforward = 0.00409841, Val Loss Unrolled = 0.00838289, LR: 8.3e-04
+Epoch 19: Train Loss = 0.00078472, Val Loss Timestep = 0.00105670, Val Loss Pushforward = 0.00427067, Val Loss Unrolled = 0.00788936, LR: 8.1e-04
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 20: Train Loss = 0.00075633, Val Loss Timestep = 0.00101579, Val Loss Pushforward = 0.00399540, Val Loss Unrolled = 0.01026576, LR: 7.9e-04
+Epoch 21: Train Loss = 0.00069914, Val Loss Timestep = 0.00102361, Val Loss Pushforward = 0.00398041, Val Loss Unrolled = 0.00965492, LR: 7.8e-04
+Epoch 22: Train Loss = 0.00070223, Val Loss Timestep = 0.00129045, Val Loss Pushforward = 0.00522130, Val Loss Unrolled = 0.01284102, LR: 7.6e-04
+Epoch 23: Train Loss = 0.00069795, Val Loss Timestep = 0.00100362, Val Loss Pushforward = 0.00465102, Val Loss Unrolled = 0.01270622, LR: 7.4e-04
+Epoch 24: Train Loss = 0.00062935, Val Loss Timestep = 0.00113852, Val Loss Pushforward = 0.00483756, Val Loss Unrolled = 0.00932254, LR: 7.2e-04
+Epoch 25: Train Loss = 0.00061771, Val Loss Timestep = 0.00105654, Val Loss Pushforward = 0.00459576, Val Loss Unrolled = 0.00956580, LR: 7.0e-04
+Epoch 26: Train Loss = 0.00060290, Val Loss Timestep = 0.00105940, Val Loss Pushforward = 0.00433686, Val Loss Unrolled = 0.01090012, LR: 6.8e-04
+Epoch 27: Train Loss = 0.00057861, Val Loss Timestep = 0.00103373, Val Loss Pushforward = 0.00436981, Val Loss Unrolled = 0.00814623, LR: 6.5e-04
+Epoch 28: Train Loss = 0.00056054, Val Loss Timestep = 0.00104429, Val Loss Pushforward = 0.00446254, Val Loss Unrolled = 0.00876278, LR: 6.3e-04
+Epoch 29: Train Loss = 0.00055381, Val Loss Timestep = 0.00115316, Val Loss Pushforward = 0.00507878, Val Loss Unrolled = 0.01179021, LR: 6.1e-04
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 30: Train Loss = 0.00053822, Val Loss Timestep = 0.00107830, Val Loss Pushforward = 0.00490464, Val Loss Unrolled = 0.01227409, LR: 5.9e-04
+Epoch 31: Train Loss = 0.00052245, Val Loss Timestep = 0.00108110, Val Loss Pushforward = 0.00467136, Val Loss Unrolled = 0.01142105, LR: 5.7e-04
+Epoch 32: Train Loss = 0.00049496, Val Loss Timestep = 0.00118515, Val Loss Pushforward = 0.00492006, Val Loss Unrolled = 0.01207083, LR: 5.4e-04
+Epoch 33: Train Loss = 0.00049221, Val Loss Timestep = 0.00188430, Val Loss Pushforward = 0.00858208, Val Loss Unrolled = 0.05765257, LR: 5.2e-04
+Epoch 34: Train Loss = 0.00048126, Val Loss Timestep = 0.00115967, Val Loss Pushforward = 0.00480465, Val Loss Unrolled = 0.00861851, LR: 5.0e-04
+Epoch 35: Train Loss = 0.00046421, Val Loss Timestep = 0.00112376, Val Loss Pushforward = 0.00454611, Val Loss Unrolled = 0.00924790, LR: 4.8e-04
+Epoch 36: Train Loss = 0.00044416, Val Loss Timestep = 0.00108470, Val Loss Pushforward = 0.00456021, Val Loss Unrolled = 0.00763768, LR: 4.6e-04
+Epoch 37: Train Loss = 0.00043241, Val Loss Timestep = 0.00108240, Val Loss Pushforward = 0.00454834, Val Loss Unrolled = 0.00826197, LR: 4.3e-04
+Epoch 38: Train Loss = 0.00042101, Val Loss Timestep = 0.00110948, Val Loss Pushforward = 0.00457841, Val Loss Unrolled = 0.00819067, LR: 4.1e-04
+Epoch 39: Train Loss = 0.00041727, Val Loss Timestep = 0.00113905, Val Loss Pushforward = 0.00463486, Val Loss Unrolled = 0.00812234, LR: 3.9e-04
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 40: Train Loss = 0.00040692, Val Loss Timestep = 0.00113978, Val Loss Pushforward = 0.00466005, Val Loss Unrolled = 0.00851626, LR: 3.7e-04
+Epoch 41: Train Loss = 0.00039941, Val Loss Timestep = 0.00112340, Val Loss Pushforward = 0.00468590, Val Loss Unrolled = 0.01053350, LR: 3.5e-04
+Epoch 42: Train Loss = 0.00038951, Val Loss Timestep = 0.00118559, Val Loss Pushforward = 0.00470788, Val Loss Unrolled = 0.00891571, LR: 3.2e-04
+Epoch 43: Train Loss = 0.00037092, Val Loss Timestep = 0.00115855, Val Loss Pushforward = 0.00483694, Val Loss Unrolled = 0.01088825, LR: 3.0e-04
+Epoch 44: Train Loss = 0.00036121, Val Loss Timestep = 0.00118757, Val Loss Pushforward = 0.00462902, Val Loss Unrolled = 0.00834457, LR: 2.8e-04
+Epoch 45: Train Loss = 0.00035368, Val Loss Timestep = 0.00122867, Val Loss Pushforward = 0.00469589, Val Loss Unrolled = 0.00845015, LR: 2.6e-04
+Epoch 46: Train Loss = 0.00034427, Val Loss Timestep = 0.00121508, Val Loss Pushforward = 0.00473221, Val Loss Unrolled = 0.00875252, LR: 2.4e-04
+Epoch 47: Train Loss = 0.00033850, Val Loss Timestep = 0.00118530, Val Loss Pushforward = 0.00470981, Val Loss Unrolled = 0.00972025, LR: 2.2e-04
+Epoch 48: Train Loss = 0.00033469, Val Loss Timestep = 0.00122703, Val Loss Pushforward = 0.00471839, Val Loss Unrolled = 0.00787684, LR: 2.1e-04
+Epoch 49: Train Loss = 0.00032110, Val Loss Timestep = 0.00123922, Val Loss Pushforward = 0.00475642, Val Loss Unrolled = 0.00910274, LR: 1.9e-04
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 50: Train Loss = 0.00032088, Val Loss Timestep = 0.00123527, Val Loss Pushforward = 0.00476991, Val Loss Unrolled = 0.00880384, LR: 1.7e-04
+Epoch 51: Train Loss = 0.00030535, Val Loss Timestep = 0.00123213, Val Loss Pushforward = 0.00475164, Val Loss Unrolled = 0.00900031, LR: 1.5e-04
+Epoch 52: Train Loss = 0.00029977, Val Loss Timestep = 0.00126175, Val Loss Pushforward = 0.00482762, Val Loss Unrolled = 0.00887063, LR: 1.4e-04
+Epoch 53: Train Loss = 0.00029493, Val Loss Timestep = 0.00126643, Val Loss Pushforward = 0.00479891, Val Loss Unrolled = 0.00856983, LR: 1.2e-04
+Epoch 54: Train Loss = 0.00028755, Val Loss Timestep = 0.00128124, Val Loss Pushforward = 0.00483757, Val Loss Unrolled = 0.00942446, LR: 1.1e-04
+Epoch 55: Train Loss = 0.00028161, Val Loss Timestep = 0.00130084, Val Loss Pushforward = 0.00482663, Val Loss Unrolled = 0.00832140, LR: 9.6e-05
+Epoch 56: Train Loss = 0.00027719, Val Loss Timestep = 0.00129218, Val Loss Pushforward = 0.00488876, Val Loss Unrolled = 0.00929287, LR: 8.3e-05
+Epoch 57: Train Loss = 0.00027256, Val Loss Timestep = 0.00129495, Val Loss Pushforward = 0.00483448, Val Loss Unrolled = 0.00796792, LR: 7.1e-05
+Epoch 58: Train Loss = 0.00027198, Val Loss Timestep = 0.00130646, Val Loss Pushforward = 0.00485024, Val Loss Unrolled = 0.00864872, LR: 6.0e-05
+Epoch 59: Train Loss = 0.00026251, Val Loss Timestep = 0.00130987, Val Loss Pushforward = 0.00484736, Val Loss Unrolled = 0.00825037, LR: 5.0e-05
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 60: Train Loss = 0.00025909, Val Loss Timestep = 0.00132297, Val Loss Pushforward = 0.00486290, Val Loss Unrolled = 0.00819655, LR: 4.0e-05
+Epoch 61: Train Loss = 0.00025541, Val Loss Timestep = 0.00132524, Val Loss Pushforward = 0.00485865, Val Loss Unrolled = 0.00837295, LR: 3.2e-05
+Epoch 62: Train Loss = 0.00025368, Val Loss Timestep = 0.00132208, Val Loss Pushforward = 0.00486550, Val Loss Unrolled = 0.00835491, LR: 2.5e-05
+Epoch 63: Train Loss = 0.00025431, Val Loss Timestep = 0.00133360, Val Loss Pushforward = 0.00490941, Val Loss Unrolled = 0.00805408, LR: 1.8e-05
+Epoch 64: Train Loss = 0.00025218, Val Loss Timestep = 0.00133379, Val Loss Pushforward = 0.00489607, Val Loss Unrolled = 0.00828238, LR: 1.3e-05
+Epoch 65: Train Loss = 0.00024803, Val Loss Timestep = 0.00132736, Val Loss Pushforward = 0.00489196, Val Loss Unrolled = 0.00810744, LR: 8.1e-06
+Epoch 66: Train Loss = 0.00024609, Val Loss Timestep = 0.00133221, Val Loss Pushforward = 0.00489088, Val Loss Unrolled = 0.00813006, LR: 4.6e-06
+Epoch 67: Train Loss = 0.00024798, Val Loss Timestep = 0.00133055, Val Loss Pushforward = 0.00489450, Val Loss Unrolled = 0.00829185, LR: 2.1e-06
+Epoch 68: Train Loss = 0.00024576, Val Loss Timestep = 0.00133006, Val Loss Pushforward = 0.00488948, Val Loss Unrolled = 0.00792718, LR: 6.0e-07
+/home/tharmsen/.local/lib/python3.11/site-packages/torch/optim/lr_scheduler.py:243: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+Epoch 69: Train Loss = 0.00024806, Val Loss Timestep = 0.00133331, Val Loss Pushforward = 0.00488817, Val Loss Unrolled = 0.00807353, LR: 1.0e-09
+wandb: WARNING `fps` argument does not affect the frame rate of the video when providing a file path or raw bytes.
+Epoch 70: Train Loss = 0.00024647, Val Loss Timestep = 0.00133714, Val Loss Pushforward = 0.00490031, Val Loss Unrolled = 0.00809367, LR: 1.0e-09
+Epoch 71: Train Loss = 0.00024635, Val Loss Timestep = 0.00133232, Val Loss Pushforward = 0.00489208, Val Loss Unrolled = 0.00805916, LR: 1.0e-09
+Epoch 72: Train Loss = 0.00024736, Val Loss Timestep = 0.00133632, Val Loss Pushforward = 0.00489651, Val Loss Unrolled = 0.00827141, LR: 1.0e-09
+Epoch 73: Train Loss = 0.00024652, Val Loss Timestep = 0.00133896, Val Loss Pushforward = 0.00490911, Val Loss Unrolled = 0.00822054, LR: 1.0e-09
+Epoch 74: Train Loss = 0.00024667, Val Loss Timestep = 0.00133694, Val Loss Pushforward = 0.00490209, Val Loss Unrolled = 0.00798887, LR: 1.0e-09
+Epoch 75: Train Loss = 0.00024376, Val Loss Timestep = 0.00133522, Val Loss Pushforward = 0.00489833, Val Loss Unrolled = 0.00804875, LR: 1.0e-09
+Epoch 76: Train Loss = 0.00024672, Val Loss Timestep = 0.00133565, Val Loss Pushforward = 0.00489871, Val Loss Unrolled = 0.00819261, LR: 1.0e-09
+Epoch 77: Train Loss = 0.00024723, Val Loss Timestep = 0.00133251, Val Loss Pushforward = 0.00489353, Val Loss Unrolled = 0.00798836, LR: 1.0e-09
+Epoch 78: Train Loss = 0.00024606, Val Loss Timestep = 0.00133693, Val Loss Pushforward = 0.00488881, Val Loss Unrolled = 0.00791853, LR: 1.0e-09
+Epoch 79: Train Loss = 0.00024703, Val Loss Timestep = 0.00133282, Val Loss Pushforward = 0.00489745, Val Loss Unrolled = 0.00797006, LR: 1.0e-09
+slurmstepd: error: *** JOB 9852364 ON gcn5 CANCELLED AT 2025-02-11T01:19:19 DUE TO TIME LIMIT ***
+
+JOB STATISTICS
+==============
+Job ID: 9852364
+Cluster: snellius
+User/Group: tharmsen/tharmsen
+State: TIMEOUT (exit code 0)
+Nodes: 1
+Cores per node: 9
+CPU Utilized: 00:00:09
+CPU Efficiency: 0.01% of 18:03:00 core-walltime
+Job Wall-clock time: 02:00:20
+Memory Utilized: 8.88 GB
+Memory Efficiency: 14.81% of 60.00 GB

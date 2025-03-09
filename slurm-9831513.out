@@ -1,0 +1,79 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/var/spool/slurm/slurmd/job9831513/slurm_script: line 13: cd: AutoregressiveNeuralOperators: No such file or directory
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: W&B API key is configured. Use `wandb login --relogin` to force relogin
+wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: | Waiting for wandb.init()...wandb: / Waiting for wandb.init()...wandb: Tracking run with wandb version 0.19.1
+wandb: Run data is saved locally in /gpfs/home5/tharmsen/AutoregressiveNeuralOperators/wandb/run-20250208_171501-cymaa7na
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run UNet_mod1_hpc_01DS1_2
+wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF
+wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/cymaa7na
+dataloader ready
+loading UNet_mod1
+Amount of parameters in model: 31579384
+UNet_mod1 initialized
+start training
+Traceback (most recent call last):
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/train.py", line 20, in <module>
+    trainer.train()
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 456, in train
+    train_losses = self.train_one_epoch()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 220, in train_one_epoch
+    temp_pred, vel_pred, phase_pred = self.push_forward_trick(coords, temp, vel, phase, push_forward_steps)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 201, in push_forward_trick
+    temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_input, vel_input, phase_input)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 186, in _forward_int
+    pred = self.model(input)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/modelComp/UNetMod1.py", line 122, in forward
+    skip_connection = self.attention_blocks[i](skip_connection)  # Apply attention
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/modelComp/UNetMod1.py", line 33, in forward
+    attn_map = torch.bmm(query, key) / key.shape[1]  # Normalize
+               ^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 81.00 GiB. GPU 0 has a total capacity of 93.12 GiB of which 42.10 GiB is free. Including non-PyTorch memory, this process has 50.97 GiB memory in use. Of the allocated memory 49.46 GiB is allocated by PyTorch, and 868.60 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[1;34mwandb[0m: 🚀 View run [33mUNet_mod1_hpc_01DS1_2[0m at: [34mhttps://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/cymaa7na[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250208_171501-cymaa7na/logs[0m
+
+JOB STATISTICS
+==============
+Job ID: 9831513
+Cluster: snellius
+User/Group: tharmsen/tharmsen
+State: FAILED (exit code 1)
+Nodes: 1
+Cores per node: 16
+CPU Utilized: 00:03:43
+CPU Efficiency: 10.89% of 00:34:08 core-walltime
+Job Wall-clock time: 00:02:08
+Memory Utilized: 82.28 GB
+Memory Efficiency: 45.71% of 180.00 GB
