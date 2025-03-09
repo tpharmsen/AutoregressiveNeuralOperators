@@ -1,0 +1,81 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/var/spool/slurm/slurmd/job9831489/slurm_script: line 13: cd: AutoregressiveNeuralOperators: No such file or directory
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: tpharmsen (tpharmsen-tue). Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.1
+wandb: Run data is saved locally in /gpfs/home5/tharmsen/AutoregressiveNeuralOperators/wandb/run-20250208_170345-2r9jkyjz
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run UNet_mod1_hpc_01DS1_2
+wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF
+wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/BubbleML_DS_PF/runs/2r9jkyjz
+dataloader ready
+loading UNet_mod1
+Amount of parameters in model: 31579384
+UNet_mod1 initialized
+start training
+Traceback (most recent call last):
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1243, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/threading.py", line 359, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/_utils/signal_handling.py", line 73, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 3820594) is killed by signal: Killed. 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/train.py", line 20, in <module>
+    trainer.train()
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 456, in train
+    train_losses = self.train_one_epoch()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/PFTB.py", line 210, in train_one_epoch
+    for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
+                                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1448, in _next_data
+    idx, data = self._get_data()
+                ^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1402, in _get_data
+    success, data = self._try_get_data()
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1256, in _try_get_data
+    raise RuntimeError(
+RuntimeError: DataLoader worker (pid(s) 3820594) exited unexpectedly
+/var/spool/slurm/slurmd/job9831489/slurm_script: line 15: 3818743 Killed                  python src/train.py --conf conf/hpc_01DS1_2.yaml --trainer PFTB
+slurmstepd: error: Detected 8 oom_kill events in StepId=9831489.batch. Some of the step tasks have been OOM Killed.
+
+JOB STATISTICS
+==============
+Job ID: 9831489
+Cluster: snellius
+User/Group: tharmsen/tharmsen
+State: OUT_OF_MEMORY (exit code 0)
+Nodes: 1
+Cores per node: 16
+CPU Utilized: 00:03:14
+CPU Efficiency: 4.12% of 01:18:24 core-walltime
+Job Wall-clock time: 00:04:54
+Memory Utilized: 82.70 GB
+Memory Efficiency: 45.94% of 180.00 GB
