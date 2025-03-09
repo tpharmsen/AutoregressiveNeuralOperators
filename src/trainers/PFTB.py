@@ -529,7 +529,7 @@ class PFTBTrainer:
             
 
             #self.scheduler.step(val_loss_unrolled[0])
-            self.scheduler.step(val_loss_unrolled[0])
+            self.scheduler.step(val_loss_timestep[0])
                 
             print(f"Epoch {self.epoch}: "
                     f"Train Loss = {train_losses[0]:.8f}, "
