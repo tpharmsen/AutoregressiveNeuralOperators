@@ -6,7 +6,7 @@ from einops.layers.torch import Rearrange
 import numpy as np
 
 
-class SwinEmbedding(nn.Module):
+class ConvEmbedding(nn.Module):
     def __init__(self, patch_size=4, emb_size=96):
         super().__init__()
         self.linear_embedding = nn.Conv2d(14, emb_size, kernel_size = patch_size, stride = patch_size)
@@ -28,6 +28,18 @@ class PatchMerging(nn.Module):
         H = W = int(np.sqrt(L)/2)
         x = rearrange(x, 'b (h s1 w s2) c -> b (h w) (s1 s2 c)', s1=2, s2=2, h=H, w=W)
         x = self.linear(x)
+        return x
+    
+class PatchUnMerging(nn.Module):
+    def __init__(self, emb_size):
+        super().__init__()
+        self.linear = nn.Linear(emb_size, 2*emb_size)
+
+    def forward(self, x):
+        B, L, C = x.shape
+        H = W = int(np.sqrt(L))
+        x = self.linear(x)
+        x = rearrange(x, 'b (h w) (s1 s2 c) -> b (h s1 w s2) c', s1=2, s2=2, h=H, w=W)
         return x
     
 class ShiftedWindowMSA(nn.Module):
@@ -136,7 +148,7 @@ class decodeToImage(nn.Module):
 class Swin(nn.Module):
     def __init__(self):
         super().__init__()
-        self.Embedding = SwinEmbedding()
+        self.Embedding = ConvEmbedding()
         self.PatchMerging = nn.ModuleList()
         emb_size = 96
         for i in range(3):

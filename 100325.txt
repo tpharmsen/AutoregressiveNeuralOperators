@@ -1,0 +1,6 @@
+Possible challenges that come to mind:
+- Do we want to embed all the channels (temp, vel, phase, space) into single spatial patches or have each embedding describe a single channel patch?
+- periodic boundary conditions dataset needed for valid shifted window self attention at edges of domain
+- how to handle different channel inputs? Not all datasets have same channels (think about phase, pressure, temperature?). Masking?
+- size symmetry between datasets?
+- 2025 Brandstetter unclear middle layer -> classic bottleneck?
