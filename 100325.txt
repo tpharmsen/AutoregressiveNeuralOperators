@@ -4,3 +4,4 @@ Possible challenges that come to mind:
 - how to handle different channel inputs? Not all datasets have same channels (think about phase, pressure, temperature?). Masking?
 - size symmetry between datasets?
 - 2025 Brandstetter unclear middle layer -> classic bottleneck?
+- shifting window in swin only valid for single dimension data, becomes increasingly nonvalid for higher dimensions?
