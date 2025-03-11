@@ -5,3 +5,16 @@ Possible challenges that come to mind:
 - size symmetry between datasets?
 - 2025 Brandstetter unclear middle layer -> classic bottleneck?
 - shifting window in swin only valid for single dimension data, becomes increasingly nonvalid for higher dimensions?
+- flexible attention?
+- norm first like swinv2?
+- for window partitioning embedding dimension needs to be exactly patch_size**2, use linears to compress to other embedding sizes? nvm...
+
+Idea:
+Combine Unet-Swin model with temporal bundling (BCAT) with strict forward temporal attention
+
+TODO
+- Look at difference flex attention BCAT and logit scaling SwinV2
+- Dropout
+- Validate .transpose(1,2) before projecting
+- Positional embedding (learnable/rotary/...)
+- Normalisation in Embedding layer
