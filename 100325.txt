@@ -1,13 +1,20 @@
 Possible challenges that come to mind:
 - Do we want to embed all the channels (temp, vel, phase, space) into single spatial patches or have each embedding describe a single channel patch?
-- periodic boundary conditions dataset needed for valid shifted window self attention at edges of domain
+- (periodic boundary conditions dataset needed for valid shifted window self attention at edges of domain)
 - how to handle different channel inputs? Not all datasets have same channels (think about phase, pressure, temperature?). Masking?
 - size symmetry between datasets?
 - 2025 Brandstetter unclear middle layer -> classic bottleneck?
 - shifting window in swin only valid for single dimension data, becomes increasingly nonvalid for higher dimensions?
 - flexible attention?
 - norm first like swinv2?
-- for window partitioning embedding dimension needs to be exactly patch_size**2, use linears to compress to other embedding sizes? nvm...
+- self attention wrt temporal axis -> sharp increase in time complexity for higher TB
+- pass grid information with patches? close-to-edge detection
+- Choice of depth/num_heads tradeoff
+- Use ConvNeXt module/Resnet whatever in between shortcuts swinUnet
+- add skip connections around swinstages?
+- adaptive up/downsample layer in front for automatic compatibility between dataset grid sizes?
+
+
 
 Idea:
 Combine Unet-Swin model with temporal bundling (BCAT) with strict forward temporal attention
@@ -18,3 +25,9 @@ TODO
 - Validate .transpose(1,2) before projecting
 - Positional embedding (learnable/rotary/...)
 - Normalisation in Embedding layer
+- LayerNorm vs Conditional LayerNorm
+- pretrained window size adjustability for fine-tuning
+- Dropping paths of full blocks or residual connections in stage layers
+- Checkpointing?
+- MLP ratio 1-4-1 1-8/3-1
+- SwiGLU / SiLU instead of GELU
