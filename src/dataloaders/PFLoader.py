@@ -200,7 +200,7 @@ class PFLoader(Dataset):
         temp_label = torch.stack([self._get_temp(base_time + k) for k in range(self.time_window)], dim=0)
         vel_label = torch.cat([self._get_vel_stack(base_time + k) for k in range(self.time_window)], dim=0)
         phase_label = torch.stack([self._get_phase(base_time + k) for k in range(self.time_window)], dim=0)
-
+        '''
         if self.time_window == 1:
             coords = coords.unsqueeze(0)  # Add the time dimension
             temp = temp.unsqueeze(0)
@@ -209,7 +209,7 @@ class PFLoader(Dataset):
             temp_label = temp_label.unsqueeze(0)
             vel_label = vel_label.unsqueeze(0)
             phase_label = phase_label.unsqueeze(0)
-
+        '''
         return self._transform(coords, temp, vel, phase, temp_label, vel_label, phase_label)
 
     def __getitem__(self, timestep):
