@@ -210,8 +210,13 @@ class PFTBTrainer:
         if self.use_coords:
             input = torch.cat((coords, input), dim=1)
         
+        if self.model_name == 'swinUnet':
+            print(input)
+            input = input.unsqueeze(1)
+            print(input)
         pred = self.model(input)
-
+        if self.model_name == 'swinUnet':
+            pred = pred.squeeze(1)
 
         temp_pred = pred[:, :self.tw]
         vel_pred = pred[:, self.tw:3*self.tw]
