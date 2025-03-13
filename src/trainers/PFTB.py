@@ -120,7 +120,7 @@ class PFTBTrainer:
             self.model = Swin().to(self.device)
         elif self.model_name == "swinUnet":
             from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
-            model = SwinUnet(emb_dim=96,
+            self.model = SwinUnet(emb_dim=96,
                             data_dim=[self.batch_size, self.tw, self.in_channels, 128, 128],
                             patch_size=(8,8),
                             hiddenout_dim=256,
