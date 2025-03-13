@@ -118,6 +118,18 @@ class PFTBTrainer:
         elif self.model_name == 'swinT':
             from modelComp.swinT import Swin
             self.model = Swin().to(self.device)
+        elif self.model_name == "swinUnet":
+            from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
+            model = SwinUnet(emb_dim=96,
+                            data_dim=[self.batch_size, self.tw, self.in_channels, 128, 128],
+                            patch_size=(8,8),
+                            hiddenout_dim=256,
+                            depth=2,
+                            stage_depths=[2, 2, 6, 2, 2],
+                            num_heads=[3, 6, 12, 6, 3],
+                            window_size=4, 
+                            act=nn.GELU,
+                            skip_connect=ConvNeXtBlock).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
