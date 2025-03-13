@@ -211,9 +211,9 @@ class PFTBTrainer:
             input = torch.cat((coords, input), dim=1)
         
         if self.model_name == 'swinUnet':
-            print(input)
+            #print(input)
             input = input.unsqueeze(1)
-            print(input)
+            #print(input)
         pred = self.model(input)
         if self.model_name == 'swinUnet':
             pred = pred.squeeze(1)
