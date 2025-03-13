@@ -211,12 +211,14 @@ class PFTBTrainer:
             input = torch.cat((coords, input), dim=1)
         
         if self.model_name == 'swinUnet':
-            #print(input)
+            print("input before unsq", input.shape)
             input = input.unsqueeze(1)
-            #print(input)
+            print("input after unsq", input.shape)
         pred = self.model(input)
         if self.model_name == 'swinUnet':
+            print("pred before sq", pred.shape)
             pred = pred.squeeze(1)
+            print("pred after sq", pred.shape)
 
         temp_pred = pred[:, :self.tw]
         vel_pred = pred[:, self.tw:3*self.tw]
@@ -246,6 +248,7 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
             self.optimizer.zero_grad()
+            print('temp input', temp.shape)
             #print(f"{idx/len(self.train_loader):2f}")#, end='\r')
             # show memory usage
             #if idx % 20 == 0:
@@ -255,6 +258,7 @@ class PFTBTrainer:
             push_forward_steps = self.push_forward_prob()
             #print('push_forward_steps', push_forward_steps)
             temp_pred, vel_pred, phase_pred = self.push_forward_trick(coords, temp, vel, phase, push_forward_steps)
+            print('temp pred',temp_pred.shape)
 
 
             idx = (push_forward_steps - 1)
