@@ -125,10 +125,10 @@ class ResNetBlock(nn.Module):
 
 class LinearEmbedding(nn.Module):
 
-    def __init__(self, emb_dim = 96, data_dim = (1,5,4,128,128), patch_size = (8,8), hiddenout_dim = 256):
+    def __init__(self, emb_dim = 96, data_dim = (1,4,128,128), patch_size = (8,8), hiddenout_dim = 256):
         super().__init__()
         
-        self.B, self.T, self.C, self.H, self.W = data_dim
+        self.B, self.C, self.H, self.W = data_dim
         self.emb_dim = emb_dim
         self.pH, self.pW = patch_size
         self.hiddenout_dim = hiddenout_dim
@@ -167,11 +167,12 @@ class LinearEmbedding(nn.Module):
 
         B = x.size(0)
         #print(1, x.shape)
-        x = rearrange(x, "b t c h w -> (b t) c h w") #might change to .permute
+        #x = rearrange(x, "b t c h w -> (b t) c h w") #might change to .permute
         #print(2, x.shape)
         x = self.patchify(x)  
         #print(3, x.shape)
-        x = rearrange(x, "(b t) d pp -> b (t pp) d", b=B) # should think about this
+        #x = rearrange(x, "(b t) d pp -> b (t pp) d", b=B) # should think about this
+        x = rearrange(x, "b d pp -> b pp d")
         #print(4, x.shape)
 
         # TODO: add Positional Encoding
@@ -186,10 +187,11 @@ class LinearEmbedding(nn.Module):
             x = self.post_proj(x)  
 
         B = x.size(0)
-        x = rearrange(x, "b (t pp) d -> (b t) d pp", pp=self.patch_grid_res[0]*self.patch_grid_res[1]) #might change to .permute
+        #x = rearrange(x, "b (t pp) d -> (b t) d pp", pp=self.patch_grid_res[0]*self.patch_grid_res[1]) #might change to .permute
+        x = rearrange(x, "b pp d -> b d pp")
         x = self.unpatchify(x)  
         #print(x.shape)
-        x = rearrange(x, "(b t) c h w -> b t c h w", b=B)
+        #x = rearrange(x, "(b t) c h w -> b t c h w", b=B)
 
         return x
     
@@ -237,6 +239,7 @@ class WindowAttention(nn.Module):
         
         if self.use_flex_attn: 
             self.flex_attn = nn.Parameter(torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
+            #self.register_parameter("flex_attn", nn.Parameter(self.flex_attn))
 
         # mlp to generate continuous relative position bias
         self.cpb_mlp = nn.Sequential(nn.Linear(2, 512, bias=True),
@@ -297,7 +300,7 @@ class WindowAttention(nn.Module):
         # cosine attention
         attn = (F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
         if self.use_flex_attn:
-            flex_attn = torch.clamp(self.flex_attn, max=torch.log(torch.tensor(1. / 0.01))).exp()
+            flex_attn = torch.clamp(self.flex_attn, max=torch.log(torch.tensor(1. / 0.01, device=x.device))).exp()
             attn = attn * flex_attn
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
@@ -460,7 +463,7 @@ class SwinUnet(nn.Module):
         self.depth = depth
 
         for i in range(depth):
-            patch_grid_res = (data_dim[3] // (patch_size[0] * 2**i), data_dim[4] // (patch_size[1] * 2**i))
+            patch_grid_res = (data_dim[2] // (patch_size[0] * 2**i), data_dim[3] // (patch_size[1] * 2**i))
             
             #print(emb_dim * 2**i, patch_grid_res, stage_depths[i], num_heads[i], window_size)
             self.blockDown.append(
@@ -485,7 +488,7 @@ class SwinUnet(nn.Module):
         #print(emb_dim * 2**depth, (data_dim[3] // (patch_size[0] * 2**depth), data_dim[4] // (patch_size[1] * 2**depth)))
         self.blockMiddle = SwinStage(
             emb_dim * 2**depth,
-            patch_grid_res=(data_dim[3] // (patch_size[0] * 2**depth), data_dim[4] // (patch_size[1] * 2**depth)),
+            patch_grid_res=(data_dim[2] // (patch_size[0] * 2**depth), data_dim[3] // (patch_size[1] * 2**depth)),
             stage_depth=stage_depths[depth],
             num_heads=num_heads[depth],
             window_size=window_size,
@@ -496,7 +499,7 @@ class SwinUnet(nn.Module):
         )
 
         for i in reversed(range(depth)):
-            patch_grid_res = (data_dim[3] // (patch_size[0] * 2**i), data_dim[4] // (patch_size[1] * 2**i))
+            patch_grid_res = (data_dim[2] // (patch_size[0] * 2**i), data_dim[3] // (patch_size[1] * 2**i))
             #print(emb_dim * 2**i, patch_grid_res, stage_depths[2*depth - i], num_heads[2*depth - i], window_size)
 
             self.blockUp.append(

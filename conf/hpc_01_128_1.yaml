@@ -2,7 +2,7 @@ data_path: "data/prjs1359/PoolBoiling-SubCooled-FC72-2D-0.1/DSRD_128x128/"
 device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D-0.1/"
 save_on: 0
-wandb: 1
+wandb: 0
 wandb_name: "hpc_01_128_1"
 
 loader:

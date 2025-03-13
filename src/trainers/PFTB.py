@@ -121,14 +121,14 @@ class PFTBTrainer:
         elif self.model_name == "swinUnet":
             from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
             self.model = SwinUnet(emb_dim=96,
-                            data_dim=[self.batch_size, self.tw, self.in_channels, 128, 128],
+                            data_dim=[self.batch_size, self.in_channels, 128, 128],
                             patch_size=(8,8),
                             hiddenout_dim=256,
                             depth=2,
                             stage_depths=[2, 2, 6, 2, 2],
                             num_heads=[3, 6, 12, 6, 3],
                             window_size=4,
-                            use_flex_attn=False, # fix device
+                            use_flex_attn=True, # fix device
                             act=nn.GELU,
                             skip_connect=ConvNeXtBlock).to(self.device)
         else:
@@ -205,20 +205,20 @@ class PFTBTrainer:
 
 
     def _forward_int(self, coords, temp, vel, phase):
-
+        #print(temp.shape)
         input = torch.cat((temp, vel, phase), dim=1)
         if self.use_coords:
             input = torch.cat((coords, input), dim=1)
         
-        if self.model_name == 'swinUnet':
-            print("input before unsq", input.shape)
-            input = input.unsqueeze(1)
-            print("input after unsq", input.shape)
+        #if self.model_name == 'swinUnet':
+            #print("input before unsq", input.shape)
+        #    input = input.unsqueeze(1)
+            #print("input after unsq", input.shape)
         pred = self.model(input)
-        if self.model_name == 'swinUnet':
-            print("pred before sq", pred.shape)
-            pred = pred.squeeze(1)
-            print("pred after sq", pred.shape)
+        #if self.model_name == 'swinUnet':
+            #print("pred before sq", pred.shape)
+        #    pred = pred.squeeze(1)
+            #print("pred after sq", pred.shape)
 
         temp_pred = pred[:, :self.tw]
         vel_pred = pred[:, self.tw:3*self.tw]
@@ -227,6 +227,7 @@ class PFTBTrainer:
         return temp_pred, vel_pred, phase_pred
 
     def push_forward_trick(self, coords, temp, vel, phase, push_forward_steps):
+        #print('before index push', temp.shape)
         coords_input, temp_input, vel_input, phase_input = self._index_push(0, coords, temp, vel, phase)
         with torch.no_grad():
             for idx in range(push_forward_steps - 1):
@@ -237,6 +238,7 @@ class PFTBTrainer:
             temp_input += torch.empty_like(temp_input).normal_(0, 0.01)
             vel_input += torch.empty_like(vel_input).normal_(0, 0.01)
             phase_input += torch.empty_like(phase_input).normal_(0, 0.01)
+        #print('before forward int', temp_input.shape)
         temp_pred, vel_pred, phase_pred = self._forward_int(coords_input, temp_input, vel_input, phase_input)
         return temp_pred, vel_pred, phase_pred
 
@@ -248,7 +250,7 @@ class PFTBTrainer:
 
         for idx, (coords, temp, vel, phase, temp_label, vel_label, phase_label) in enumerate(self.train_loader):
             self.optimizer.zero_grad()
-            print('temp input', temp.shape)
+            
             #print(f"{idx/len(self.train_loader):2f}")#, end='\r')
             # show memory usage
             #if idx % 20 == 0:
@@ -257,8 +259,9 @@ class PFTBTrainer:
             #print(torch.min(phase), torch.max(phase))
             push_forward_steps = self.push_forward_prob()
             #print('push_forward_steps', push_forward_steps)
+            #print('temp input', temp.shape)
             temp_pred, vel_pred, phase_pred = self.push_forward_trick(coords, temp, vel, phase, push_forward_steps)
-            print('temp pred',temp_pred.shape)
+            #print('temp pred',temp_pred.shape)
 
 
             idx = (push_forward_steps - 1)
