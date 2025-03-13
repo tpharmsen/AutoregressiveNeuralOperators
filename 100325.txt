@@ -30,4 +30,4 @@ TODO
 - Dropping paths of full blocks or residual connections in stage layers
 - Checkpointing?
 - MLP ratio 1-4-1 1-8/3-1
-- SwiGLU / SiLU instead of GELU
+- SwiGLU / SiLU instead of GELU -> implement act input for model
