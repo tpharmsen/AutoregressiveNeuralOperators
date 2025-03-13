@@ -31,3 +31,5 @@ TODO
 - Checkpointing?
 - MLP ratio 1-4-1 1-8/3-1
 - SwiGLU / SiLU instead of GELU -> implement act input for model
+- fix bug with flex attn <-> torch device
+- fix bug with temporal bundling = 1 automatic squeeze

@@ -127,7 +127,8 @@ class PFTBTrainer:
                             depth=2,
                             stage_depths=[2, 2, 6, 2, 2],
                             num_heads=[3, 6, 12, 6, 3],
-                            window_size=4, 
+                            window_size=4,
+                            use_flex_attn=False, # fix device
                             act=nn.GELU,
                             skip_connect=ConvNeXtBlock).to(self.device)
         else:
