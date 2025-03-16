@@ -18,8 +18,7 @@ tail -n +2 "$CSV_FILE" | nl -v 0 -w 1 -s ',' | while IFS=',' read -r idx _ filen
     for arg in "$@"; do
         if [ "$idx" -eq "$arg" ]; then
             echo "Downloading: $filename"
-            mkdir -p "downloads/$path"
-            wget -c "$url" -O "downloads/$path/$filename"
+            wget -c "$url" -O "data/prjs1359/$path/$filename"
         fi
     done
 done
