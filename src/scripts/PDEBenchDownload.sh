@@ -1,5 +1,5 @@
 
-CSV_FILE="src/scripts/pdebench_data_urls.csv"
+CSV_FILE="../../src/scripts/pdebench_data_urls.csv"
 
 cd data/prjs1359
 mkdir -p PDEBenchSet 
