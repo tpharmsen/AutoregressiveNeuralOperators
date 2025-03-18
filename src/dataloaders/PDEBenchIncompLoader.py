@@ -21,9 +21,6 @@ class PDEBenchDatasetINCOMP(Dataset):
             #print(torch.from_numpy(f['force'][:].astype(np.float32)).shape)
             #print(torch.from_numpy(f['particles'][:].astype(np.float32)).shape)
             #print(torch.from_numpy(f['t'][:].astype(np.float32)).shape)
-            #self.data = torch.from_numpy(
-            #    np.stack((f["Vx"][:], f["Vy"][:]), axis=2).astype(np.float32)
-            #)
             self.traj, self.ts = self.data.shape[0], self.data.shape[1]
                 
 
