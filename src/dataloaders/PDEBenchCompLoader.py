@@ -5,24 +5,32 @@ import numpy as np
 
 
 class PDEBenchCompDataset(Dataset):
-    def __init__(self, filepath):
+    def __init__(self, filepaths):
+        self.data_list = []
+        self.traj_list = []
+        self.ts = None
 
-        with h5py.File(filepath, "r") as f:
-            keys = list(f.keys())
-            print(keys)
-            '''
-            if "density" in keys:
-                self.density = torch.from_numpy(np.array(f["density"], dtype=np.float32))
-            if "pressure" in keys:
-                self.pres = torch.from_numpy(np.array(f['pressure'], dtype=np.float32))
-            '''
-            
-            self.data = torch.from_numpy(
-                np.stack((f["Vx"][:], f["Vy"][:]), axis=2).astype(np.float32)
-            )
-            self.traj, self.ts = self.data.shape[0], self.data.shape[1]
+        for filepath in filepaths:
+            with h5py.File(filepath, "r") as f:
+                keys = list(f.keys())
+                print(f"Keys in {filepath}: {keys}")
                 
-
+                if "Vx" in keys and "Vy" in keys:
+                    data = torch.from_numpy(
+                        np.stack((f["Vx"][:], f["Vy"][:]), axis=2).astype(np.float32)
+                    )
+                    
+                    if self.ts is None:
+                        self.ts = data.shape[1]
+                    elif self.ts != data.shape[1]:
+                        raise ValueError("Mismatch in timestep dimensions across files.")
+                    
+                    self.data_list.append(data)
+                    self.traj_list.append(data.shape[0])
+        
+        self.data = torch.cat(self.data_list, dim=0)
+        self.traj = sum(self.traj_list)
+        
     def __len__(self):
         return self.traj * (self.ts - 1)
 
@@ -30,4 +38,4 @@ class PDEBenchCompDataset(Dataset):
         traj_idx = idx // (self.ts - 1)
         ts_idx = idx % (self.ts - 1)
         
-        return self.data[traj_idx][ts_idx].unsqueeze(0), self.data[traj_idx][ts_idx].unsqueeze(0)
+        return self.data[traj_idx][ts_idx].unsqueeze(0), self.data[traj_idx][ts_idx + 1].unsqueeze(0)
