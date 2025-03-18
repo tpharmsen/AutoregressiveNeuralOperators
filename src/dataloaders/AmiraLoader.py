@@ -18,4 +18,4 @@ class AmiraDataset(Dataset):
         data = self.data[idx]
         label = self.data[idx+1]
         
-        return data.unsqueeze(1), label.unsqueeze(1)
+        return data.unsqueeze(0), label.unsqueeze(0)
