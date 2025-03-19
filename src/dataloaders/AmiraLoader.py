@@ -9,6 +9,7 @@ class AmiraDataset(Dataset):
         self.data_list = []
         self.lengths = []
         
+        
         for filepath in filepaths:
             with h5py.File(filepath, 'r') as f:
                 data = torch.from_numpy(f['velocity'][:])

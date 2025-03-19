@@ -143,7 +143,7 @@ class LinearEmbedding(nn.Module):
         self.patchify = nn.Unfold(kernel_size=patch_size, stride=patch_size)
         self.unpatchify = nn.Fold(output_size=(self.H, self.W), kernel_size=patch_size, stride=patch_size)
 
-        self.patch_position_embeddings = get_embeddings((1, 1, config.patch_num * config.patch_num, self.dim))
+        #self.patch_position_embeddings = get_embeddings((1, 1, config.patch_num * config.patch_num, self.dim))
         # https://github.com/felix-lyx/bcat/blob/main/src/models/attention_utils.py
         #self.time_embed = get_embeddings((1, config.get("max_time_len", 20), 1, self.dim))
 
