@@ -1,4 +1,4 @@
-data_path: "data/PoolBoiling-SubCooled-FC72-2D/DSRD_128x128/"
+data_path: "/DSRD_128x128/"
 device: "cuda"
 save_path: "models/PoolBoiling-SubCooled-FC72-2D/"
 save_on: 0
