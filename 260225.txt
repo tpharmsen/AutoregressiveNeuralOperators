@@ -1,5 +1,0 @@
-reach out to bulgarian guy for info
-warm up lr for transformer stuff?
-https://github.com/huggingface/transformers/blob/v4.35.2/src/transformers/models/swinv2/modeling_swinv2.py#L1129
-for image reconstruction head on top
-no meeting next week
