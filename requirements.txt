@@ -7,3 +7,5 @@ datetime
 argparse
 PyYAML
 h5py
+einops
+python-math
