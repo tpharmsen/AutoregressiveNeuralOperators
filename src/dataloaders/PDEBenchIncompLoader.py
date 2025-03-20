@@ -3,7 +3,7 @@ import h5py
 from torch.utils.data import Dataset
 import numpy as np
 
-class PDEBenchDatasetINCOMP(Dataset):
+class PDEBenchInCompDataset(Dataset):
     def __init__(self, filepaths):
         self.data_list = []
         self.traj_list = []
@@ -37,3 +37,4 @@ class PDEBenchDatasetINCOMP(Dataset):
         ts_idx = idx % (self.ts - 1)
         
         return self.data[traj_idx][ts_idx].unsqueeze(0), self.data[traj_idx][ts_idx + 1].unsqueeze(0)
+

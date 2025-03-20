@@ -3,16 +3,15 @@ from torch.utils.data import Dataset
 import h5py
 from pathlib import Path
 
-
 class AmiraDataset(Dataset):
     def __init__(self, filepaths):
         self.data_list = []
         self.lengths = []
         
-        
         for filepath in filepaths:
             with h5py.File(filepath, 'r') as f:
                 data = torch.from_numpy(f['velocity'][:])
+                data = data.permute(0,3,1,2)
                 self.data_list.append(data)
                 self.lengths.append(len(data) - 1)
         
