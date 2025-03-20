@@ -12,9 +12,10 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Copy your script into the container
-COPY . /home/
+COPY --exclude=data . /home/
 
 # Set the entrypoint to use torchrun for distributed training with correct formatting
 #ENTRYPOINT ["torchrun", "--nproc_per_node=1", "src/train.py", "--epochs", "100", "--batch-size", "16"]
-CMD ["python", "AutoregressiveNeuralOperators/src/train.py", "--conf", "conf/local_128_1.yaml"]
+#CMD ["python", "AutoregressiveNeuralOperators/src/train.py", "--conf", "conf/local_128_1.yaml"]
+CMD ["python", "src/train.py", "--conf", "conf/local_128_1.yaml"]
 
