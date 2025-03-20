@@ -16,5 +16,7 @@ for i in {1..10}; do sbatch submit/jhs-2hr-$i.sh; done
 
 # runcommands docker:
 docker build -t _username_/_imagename_:_version_ .
+
 docker push _username_/_imagename_:_version_
+
 docker run --rm --gpus all --shm-size=6g _username_/_imagename_:_version_
