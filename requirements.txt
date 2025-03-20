@@ -6,3 +6,4 @@ netCDF4
 datetime
 argparse
 PyYAML
+h5py
