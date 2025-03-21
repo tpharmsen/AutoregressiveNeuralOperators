@@ -3,6 +3,11 @@ from torch.utils.data import Dataset
 import h5py
 import numpy as np
 
+def get_dataset(folderPath):
+    dir = Path(folderPath)
+    assert dir.exists(), 'doesnt exist homie'
+    files = list(dir.glob("*.hdf5"))
+    return PDEBenchCompDataset(files)
 
 class PDEBenchCompDataset(Dataset):
     def __init__(self, filepaths):
