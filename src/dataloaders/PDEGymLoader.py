@@ -2,6 +2,12 @@ import torch
 from torch.utils.data import Dataset
 import netCDF4 as nc
 
+def get_dataset(folderPath):
+    dir = Path(folderPath)
+    assert dir.exists(), 'doesnt exist homie'
+    files = list(dir.glob("*.nc"))
+    return PDEBenchCompDataset(files)
+
 class PDEGymDataset(Dataset):
     def __init__(self, filepaths):
         
