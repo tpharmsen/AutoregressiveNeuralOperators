@@ -3,6 +3,12 @@ from torch.utils.data import Dataset
 import h5py
 from pathlib import Path
 
+def get_dataset(folderPath):
+    dir = Path(folderPath)
+    assert dir.exists(), 'doesnt exist homie'
+    files = list(dir.glob("*.h5"))
+    return AmiraDataset(files)
+
 class AmiraDataset(Dataset):
     def __init__(self, filepaths):
         self.data_list = []
