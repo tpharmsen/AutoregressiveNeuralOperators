@@ -1,28 +1,43 @@
 import torch
 
-
 def bicubic_resample(data, target_shape):
+    assert data.shape[-2] == data.shape[-1], 'Only square images supported'
+    assert target_shape[0] == target_shape[1], 'Only square output images supported'
+    assert data.shape[-2] != target_shape[0], 'Image already in target shape'
     return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic')
 
-def fourier_resample(data: torch.Tensor, target_shape: tuple) -> torch.Tensor:
-    B, T, channels, x, y = data.shape
-    new_x, new_y = target_shape
+def fourier_resample(data, target_shape):
+    x, y = data.shape[-2], data.shape[-1]
+    target_x, target_y = target_shape
+    assert x == y, 'Only square images supported'
+    assert target_x == target_y, 'Only square images supported'
+    data = data.to(torch.complex64)
     
-    data_fft = torch.fft.fft2(data, norm='forward')
-    data_fft = torch.fft.fftshift(data_fft, dim=(-2, -1))
-    x_min = (new_x - x) // 2
-    y_min = (new_y - y) // 2
-    
-    if new_x >= x and new_y >= y:
-        # Upsampling: Zero-padding in Fourier domain
-        resampled_fft = torch.zeros((channels, new_x, new_y), dtype=torch.complex64, device=data.device)
-        resampled_fft[:, x_min:x_min + x, y_min:y_min + y] = data_fft
+    pos0 = torch.linspace(0.5, x-0.5, x, dtype=torch.complex64)
+    pos1 = torch.linspace(0.5, target_x-0.5, target_x, dtype=torch.complex64)
+    freq0 = torch.fft.fftfreq(x)
+    freq1 = torch.fft.fftfreq(target_x)
+
+    exp_matrix_0 = torch.exp(-2j * torch.pi * torch.outer(pos0, freq0))
+    freq_coeff = torch.matmul(torch.matmul(exp_matrix_0.H, data), exp_matrix_0) / x**2
+
+    if target_x > x: # upsample
+        scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64)
+        min_idx = (target_x - x) // 2
+        scaled_coeff[min_idx:min_idx+x, min_idx:min_idx+x] = torch.fft.fftshift(freq_coeff)
+        scaled_coeff = torch.fft.ifftshift(scaled_coeff)
+    elif target_x < x: #downsample
+        scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64)
+        min_idx = (x - target_x) // 2
+        scaled_coeff = torch.fft.fftshift(freq_coeff)[min_idx:min_idx+target_x, min_idx:min_idx+target_x]
+
+        scaled_coeff = torch.fft.ifftshift(scaled_coeff)
     else:
-        # Downsampling: Cropping in Fourier domain
-        resampled_fft = data_fft[:, -x_min:new_x - x_min, -y_min:new_y - y_min]
-    resampled_fft = torch.fft.ifftshift(resampled_fft, dim=(-2, -1))
-    resampled_data = torch.fft.ifft2(resampled_fft, norm='forward').real
-    return resampled_data
+        raise ValueError("Image already in target shape")
+    exp_matrix_1 = torch.exp(2j * torch.pi * torch.outer(freq1, pos1))
+    upscaled_signal = torch.matmul(torch.matmul(exp_matrix_1.H, scaled_coeff), exp_matrix_1) 
+    return upscaled_signal.real
+
 
 def spatial_resample(data, target_shape, mode='bicubic'):
     if mode == 'bicubic':
