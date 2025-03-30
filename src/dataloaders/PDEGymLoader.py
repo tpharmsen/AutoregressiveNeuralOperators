@@ -9,13 +9,14 @@ def get_dataset(folderPath):
     return PDEBenchCompDataset(files)
 
 class PDEGymDataset(Dataset):
-    def __init__(self, filepaths):
-        
+    def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=1):
 
         self.data = []
+        self.resample_shape = resample_shape
+        self.resample_mode = resample_mode
         for filepath in filepaths:
             with nc.Dataset(filepath, "r") as f:
-                velocity = torch.from_numpy(f['velocity'][:,:,:2,:,:])  # remove passive tracer
+                velocity = torch.from_numpy(f['velocity'][:,::timesample,:2])  # remove passive tracer
                 self.data.append(velocity)  
 
         self.data = torch.cat(self.data, dim=0) 
@@ -30,4 +31,8 @@ class PDEGymDataset(Dataset):
         traj_idx = idx // (self.ts - 1)
         ts_idx = idx % (self.ts - 1)
 
-        return self.data[traj_idx][ts_idx].unsqueeze(0), self.data[traj_idx][ts_idx + 1].unsqueeze(0)
+        front = self.data[traj_idx][ts_idx]
+        label = self.data[traj_idx][ts_idx + 1]
+        front = spatial_resample(front, self.resample_shape, self.resample_mode)
+        label = spatial_resample(label, self.resample_shape, self.resample_mode)
+        return front.unsqueeze(0), label.unsqueeze(0)

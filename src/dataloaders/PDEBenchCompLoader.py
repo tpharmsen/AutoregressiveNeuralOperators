@@ -12,10 +12,12 @@ def get_dataset(folderPath):
     return PDEBenchCompDataset(files)
 
 class PDEBenchCompDataset(Dataset):
-    def __init__(self, filepaths):
+    def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=1):
         self.data_list = []
         self.traj_list = []
         self.ts = None
+        self.resample_shape = resample_shape
+        self.resample_mode = resample_mode
 
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
@@ -23,10 +25,11 @@ class PDEBenchCompDataset(Dataset):
                 print(f"Keys in {filepath}: {keys}")
                 
                 if "Vx" in keys and "Vy" in keys:
-                    data = torch.from_numpy(
-                        np.stack((f["Vx"][:], f["Vy"][:]), axis=2).astype(np.float32)
-                    )
                     
+                    data = torch.from_numpy(
+                        np.stack((f["Vx"][:,::timesample], f["Vy"][:,::timesample]), axis=2).astype(np.float32)
+                    )
+
                     if self.ts is None:
                         self.ts = data.shape[1]
                     elif self.ts != data.shape[1]:
@@ -44,5 +47,8 @@ class PDEBenchCompDataset(Dataset):
     def __getitem__(self, idx):
         traj_idx = idx // (self.ts - 1)
         ts_idx = idx % (self.ts - 1)
-        
-        return self.data[traj_idx][ts_idx].unsqueeze(0), self.data[traj_idx][ts_idx + 1].unsqueeze(0)
+        front = self.data[traj_idx][ts_idx]
+        label = self.data[traj_idx][ts_idx + 1]
+        front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
+        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
+        return front.unsqueeze(0), label.unsqueeze(0)
