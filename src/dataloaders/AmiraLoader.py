@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import h5py
 from pathlib import Path
+from src.dataloaders.utils import spatial_resample
 
 def get_dataset(folderPath):
     dir = Path(folderPath)
@@ -10,9 +11,11 @@ def get_dataset(folderPath):
     return AmiraDataset(files)
 
 class AmiraDataset(Dataset):
-    def __init__(self, filepaths):
+    def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier'):
         self.data_list = []
         self.lengths = []
+        self.resample_shape = resample_shape
+        self.resample_mode = resample_mode
         
         for filepath in filepaths:
             with h5py.File(filepath, 'r') as f:
@@ -33,5 +36,8 @@ class AmiraDataset(Dataset):
         
         data = self.data_list[file_idx][local_idx]
         label = self.data_list[file_idx][local_idx + 1]
-        
+        #print(data.shape, label.shape)
+        data = spatial_resample(data, self.resample_shape, mode=self.resample_mode)
+        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
         return data.unsqueeze(0), label.unsqueeze(0)
+    
