@@ -1,5 +1,5 @@
 wandb
-data/
+datasets
 output
 models
 __pycache__/
