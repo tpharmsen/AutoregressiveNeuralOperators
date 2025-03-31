@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 import netCDF4 as nc
+from dataloaders.utils import spatial_resample
 
 def get_dataset(folderPath, resample_shape, resample_mode, timesample):
     dir = Path(folderPath)

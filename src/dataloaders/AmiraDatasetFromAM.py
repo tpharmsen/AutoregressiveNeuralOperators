@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import h5py
 from pathlib import Path
-from src.dataloaders.utils import spatial_resample
+from dataloaders.utils import spatial_resample
 import numpy as np
 
 

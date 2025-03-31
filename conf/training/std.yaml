@@ -1,6 +1,9 @@
 epochs: 300
-init_learning_rate: 1e-4
-weight_decay: 1e-3
+batch_size: 16
+init_lr: 1.0e-4
+patience: 10
+weight_decay: 1.0e-3
 max_unrolling: 1
 pushforward_step: 1
 inj_noise: False
+train_ratio: 0.8

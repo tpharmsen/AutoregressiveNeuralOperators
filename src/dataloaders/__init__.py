@@ -12,3 +12,10 @@ __all__ = [
     "PDEBenchIncompDataset",
     "PDEGymDataset"
 ]
+
+DATASET_MAPPER = {"AmiraDatasetFromAM": AmiraDatasetFromAM,
+                  "AmiraDatasetFromH5": AmiraDatasetFromH5,
+                  "PDEBenchCompDataset": PDEBenchCompDataset,
+                  "PDEBenchIncompDataset": PDEBenchIncompDataset,
+                  "PDEGymDataset": PDEGymDataset}
+

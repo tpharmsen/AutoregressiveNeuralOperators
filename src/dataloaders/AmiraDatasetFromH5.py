@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import h5py
 from pathlib import Path
-from src.dataloaders.utils import spatial_resample
+from dataloaders.utils import spatial_resample
 
 class AmiraDatasetFromH5(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=5):

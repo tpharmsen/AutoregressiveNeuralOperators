@@ -1,0 +1,2 @@
+model_name: "swinUnet"
+in_channels: 2

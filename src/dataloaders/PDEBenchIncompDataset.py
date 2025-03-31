@@ -3,7 +3,7 @@ import h5py
 from torch.utils.data import Dataset
 import numpy as np
 from pathlib import Path
-from src.dataloaders.utils import spatial_resample
+from dataloaders.utils import spatial_resample
 
 def get_dataset(folderPath, resample_shape, resample_mode, timesample):
     dir = Path(folderPath)
@@ -27,7 +27,7 @@ class PDEBenchIncompDataset(Dataset):
                 if "velocity" in keys:
                     data = torch.from_numpy(f['velocity'][:,::timesample].astype(np.float32))
                     #print(data.shape)
-                    data = data.permute(0, 1, 4, 2, 3)  # Adjust dimensions
+                    data = data.permute(0, 1, 4, 2, 3)  
                     
                     if self.ts is None:
                         self.ts = data.shape[1]
@@ -42,8 +42,6 @@ class PDEBenchIncompDataset(Dataset):
         
         self.data = torch.cat(self.data_list, dim=0)
         self.traj = sum(self.traj_list)
-        print(self.traj)
-        print(self.ts)
         
     def __len__(self):
         return self.traj * (self.ts - 1)
