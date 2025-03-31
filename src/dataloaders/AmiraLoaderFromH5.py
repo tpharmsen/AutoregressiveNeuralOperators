@@ -4,13 +4,7 @@ import h5py
 from pathlib import Path
 from src.dataloaders.utils import spatial_resample
 
-def get_dataset(folderPath):
-    dir = Path(folderPath)
-    assert dir.exists(), 'doesnt exist homie'
-    files = list(dir.glob("*.h5"))
-    return AmiraDataset(files)
-
-class AmiraDataset(Dataset):
+class AmiraDatasetFromH5(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=5):
         self.data_list = []
         self.traj_list = []
@@ -25,7 +19,7 @@ class AmiraDataset(Dataset):
                 self.data_list.append(data)
                 self.traj_list.append(torch.tensor(1))
                 if self.ts is None:
-                    self.ts = data.shape[1]
+                    self.ts = data.shape[0]
         
         self.data = torch.stack(self.data_list, dim=0)
         self.traj = sum(self.traj_list)

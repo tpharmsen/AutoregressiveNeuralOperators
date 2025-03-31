@@ -1,4 +1,5 @@
 import torch
+from pathlib import Path
 # upscale/downscale with bicubic method or fourier spectral method
 
 def bicubic_resample(data, target_shape):
@@ -58,3 +59,9 @@ def spatial_resample(data, target_shape, mode='bicubic'):
         return fourier_resample(data.squeeze(), target_shape)
     else:
         raise ValueError(f'Unknown mode: {mode}')
+
+def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample):
+    subdir = Path(folderPath)
+    assert subdir.exists(), 'subdir doesnt exist'
+    files = list(subdir.glob("*." + str(file_ext)))
+    return dataset_obj(files, resample_shape, resample_mode, timesample)

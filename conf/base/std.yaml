@@ -1,0 +1,6 @@
+data_path: "data/prjs1359/"
+device: "cuda"
+save_path: "models/"
+save_on: 0
+wandb: 0
+wandb_name: "base"

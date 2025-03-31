@@ -2,11 +2,11 @@ import torch
 from torch.utils.data import Dataset
 import netCDF4 as nc
 
-def get_dataset(folderPath):
+def get_dataset(folderPath, resample_shape, resample_mode, timesample):
     dir = Path(folderPath)
     assert dir.exists(), 'doesnt exist homie'
     files = list(dir.glob("*.nc"))
-    return PDEBenchCompDataset(files)
+    return PDEBenchCompDataset(files, resample_shape, resample_mode, timesample)
 
 class PDEGymDataset(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=1):

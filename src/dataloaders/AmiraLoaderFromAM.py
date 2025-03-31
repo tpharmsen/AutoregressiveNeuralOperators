@@ -4,7 +4,9 @@ import h5py
 from pathlib import Path
 from src.dataloaders.utils import spatial_resample
 
-class AmiraDataset(Dataset):
+
+
+class AmiraDatasetFromAM(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=5):
         self.data_list = []
         self.traj_list = []
@@ -18,25 +20,11 @@ class AmiraDataset(Dataset):
             self.data_list.append(data)
             self.traj_list.append(torch.tensor(1))
             if self.ts is None:
-                self.ts = data.shape[1]
+                self.ts = data.shape[0]
         
         self.data = torch.stack(self.data_list, dim=0)
         print(self.data.shape)
         self.traj = sum(self.traj_list)
-
-    def __len__(self):
-        return self.traj * (self.ts - 1)
-
-    def __getitem__(self, idx):
-        traj_idx = idx // (self.ts - 1)
-        ts_idx = idx % (self.ts - 1)
-        
-        front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + 1]
-        #print(data.shape, label.shape)
-        front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
-        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
-        return front.unsqueeze(0), label.unsqueeze(0)
 
     def read_amira_binary_mesh(self, filename):
         with open(filename, 'rb') as f:
@@ -55,3 +43,19 @@ class AmiraDataset(Dataset):
         float_data = np.frombuffer(binary_data, dtype=np.float32)
         float_data = float_data.reshape(lattice_shape)
         return float_data
+
+    def __len__(self):
+        return self.traj * (self.ts - 1)
+
+    def __getitem__(self, idx):
+        traj_idx = idx // (self.ts - 1)
+        ts_idx = idx % (self.ts - 1)
+        
+        front = self.data[traj_idx][ts_idx]
+        label = self.data[traj_idx][ts_idx + 1]
+        #print(data.shape, label.shape)
+        front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
+        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
+        return front.unsqueeze(0), label.unsqueeze(0)
+
+    
