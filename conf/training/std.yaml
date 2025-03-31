@@ -1,0 +1,6 @@
+epochs: 300
+init_learning_rate: 1e-4
+weight_decay: 1e-3
+max_unrolling: 1
+pushforward_step: 1
+inj_noise: False
