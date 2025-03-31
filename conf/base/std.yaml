@@ -1,4 +1,4 @@
-data_path: "data/prjs1359/"
+data_path: "datasets/prjs1359/"
 device: "cuda"
 save_path: "models/"
 save_on: 0

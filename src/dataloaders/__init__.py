@@ -1,14 +1,14 @@
-from .AmiraLoaderFromAM import AmiraDatasetFromAM
-from .AmiraLoaderFromH5 import AmiraDatasetFromH5
-from .PDEBenchCompLoader import PDEBenchCompDataset
-from .PDEBenchIncompLoader import PDEBenchIncompDataset
-from .PDEGymLoader import PDEGymDataset
+from .AmiraDatasetFromAM import AmiraDatasetFromAM
+from .AmiraDatasetFromH5 import AmiraDatasetFromH5
+from .PDEBenchCompDataset import PDEBenchCompDataset
+from .PDEBenchIncompDataset import PDEBenchIncompDataset
+from .PDEGymDataset import PDEGymDataset
 
 # Optional: Define what gets imported when using `from dataloaders import *`
 __all__ = [
-    "AmiraLoaderFromAM",
-    "AmiraLoaderFromH5",
-    "PDEBenchCompLoader",
-    "PDEBenchIncompLoader",
-    "PDEGymLoader"
+    "AmiraDatasetFromAM",
+    "AmiraDatasetFromH5",
+    "PDEBenchCompDataset",
+    "PDEBenchIncompDataset",
+    "PDEGymDataset"
 ]
