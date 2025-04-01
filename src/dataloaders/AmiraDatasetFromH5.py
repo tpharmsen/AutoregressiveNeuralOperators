@@ -36,4 +36,4 @@ class AmiraDatasetFromH5(Dataset):
 
         front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
         label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
-        return front.unsqueeze(0), label.unsqueeze(0)
+        return front, label #front.unsqueeze(0), label.unsqueeze(0)

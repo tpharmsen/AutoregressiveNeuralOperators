@@ -29,32 +29,32 @@ def load_yaml(file_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--CB", type=str, default="conf/base/std.yaml")
-    parser.add_argument("--CD", type=str, default="conf/data/std.yaml")
-    parser.add_argument("--CM", type=str, default="conf/model/std.yaml")
-    parser.add_argument("--CT", type=str, default="conf/training/std.yaml")
-    parser.add_argument("--CV", type=str, default="conf/validation/std.yaml")
+    parser.add_argument("--CB", type=str, default="std.yaml")
+    parser.add_argument("--CD", type=str, default="std.yaml")
+    parser.add_argument("--CM", type=str, default="std.yaml")
+    parser.add_argument("--CT", type=str, default="std.yaml")
+    parser.add_argument("--CV", type=str, default="std.yaml")
     parser.add_argument("--trainer", type=str, default="STT")
     args = parser.parse_args()
 
-    if os.path.exists(args.CB):
-        cb = load_yaml_as_dotdict(args.CB)
+    if os.path.exists("conf/base/" + args.CB):
+        cb = load_yaml_as_dotdict("conf/base/" + args.CB)
     else:
         raise FileNotFoundError(f"Config file {args.CB} not found.")
-    if os.path.exists(args.CD):
-        cd = load_yaml_as_dotdict(args.CD)
+    if os.path.exists("conf/data/" + args.CD):
+        cd = load_yaml_as_dotdict("conf/data/" + args.CD)
     else:
         raise FileNotFoundError(f"Config file {args.CD} not found.")
-    if os.path.exists(args.CM):
-        cm = load_yaml_as_dotdict(args.CM)
+    if os.path.exists("conf/model/" + args.CM):
+        cm = load_yaml_as_dotdict("conf/model/" + args.CM)
     else:
         raise FileNotFoundError(f"Config file {args.CM} not found.")
-    if os.path.exists(args.CT):
-        ct = load_yaml_as_dotdict(args.CT)
+    if os.path.exists("conf/training/" + args.CT):
+        ct = load_yaml_as_dotdict("conf/training/" + args.CT)
     else:
         raise FileNotFoundError(f"Config file {args.CT} not found.")
-    if os.path.exists(args.CV):
-        cv = load_yaml_as_dotdict(args.CV)
+    if os.path.exists("conf/validation/" + args.CV):
+        cv = load_yaml_as_dotdict("conf/validation/" + args.CV)
     else:
         raise FileNotFoundError(f"Config file {args.CV} not found.")
 

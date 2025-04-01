@@ -24,8 +24,6 @@ class STT:
         self.ct = ct
         self.cv = cv
         self.device = torch.device(self.cb.device)
-        #self._initialize_model()
-        #self.prepare_dataloader()
 
     def _initialize_model(self):
         if self.cm.model_name == "swinUnet":
@@ -45,10 +43,9 @@ class STT:
             raise ValueError('MODEL NOT RECOGNIZED')
         
         print('Amount of parameters in model:', self.nparams(self.model))
-        print(self.ct.init_lr, self.ct.weight_decay)
+        #print(self.ct.init_lr, self.ct.weight_decay)
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.ct.init_lr, weight_decay=self.ct.weight_decay)
         self.criterion = nn.MSELoss()
-        
         self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.ct.patience, min_lr=1e-7)
 
     def nparams(self, model):
@@ -114,9 +111,64 @@ class STT:
         #self.model = self._initialize_model()
         self._initialize_model()
         self.train_loader, self.val_loader = self.prepare_dataloader()
-        for epoch in self.ct.epochs:
-            print('epoch:', epoch)
+        for self.epoch in range(self.ct.epochs):
+            start_time = time.time()
+            #print('epoch:', self.epoch)
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
-            
+            self.make_plot(output_path='output/test.png', on_val=False)
+            self.epoch_time = time.time() - start_time
+            print(f"Epoch {self.epoch}: "
+                    f"Train Loss = {train_loss:.8f}, "
+                    f"Val Loss = {val_loss:.8f}, "
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e}, "
+                    f"ET: {self.epoch_time:.2f} s")
+            self.scheduler.step(val_loss)
         print('finished')
+
+    def make_plot(self, output_path, on_val=True):
+        self.model.eval()
+
+        if on_val:
+            for front, label in self.val_loader:
+                break           
+        else:
+            for front, label in self.train_loader:
+                break  
+        front, label = front.to(self.device), label.to(self.device)
+        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
+
+        with torch.no_grad():
+            pred = self.model(front)
+        
+        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
+        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
+        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
+        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
+
+        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        fig.suptitle(f"Epoch {self.epoch}")
+
+        titles = ["Input", "Prediction", "Target", "Difference"]
+
+        axes[0, 0].imshow(front_x, cmap='viridis')
+        axes[0, 1].imshow(pred_x, cmap='viridis')
+        axes[0, 2].imshow(label_x, cmap='viridis')
+        axes[0, 3].imshow(diff_x, cmap='magma')
+
+        axes[1, 0].imshow(front_y, cmap='viridis')
+        axes[1, 1].imshow(pred_y, cmap='viridis')
+        axes[1, 2].imshow(label_y, cmap='viridis')
+        axes[1, 3].imshow(diff_y, cmap='magma')
+
+        for i in range(4):
+            axes[0, i].set_title(titles[i] + " (x)")
+            axes[1, i].set_title(titles[i] + " (y)")
+            
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
