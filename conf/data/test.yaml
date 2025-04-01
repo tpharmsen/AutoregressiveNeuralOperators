@@ -6,7 +6,7 @@ datasets:
     resample_shape: [256, 256]
     resample_mode: "fourier"
     timesample: 5
-
+    
   - name: "pdebench_incomp"
     path: "PDEBench-Incomp/"
     dataset: "PDEBenchIncompDataset"
@@ -14,3 +14,12 @@ datasets:
     resample_shape: [256, 256]
     resample_mode: "fourier"
     timesample: 10
+
+  - name: "pdegym-gauss"
+    path: "PDEGym-NSGauss"
+    dataset: "PDEGymDataset"
+    file_ext: "nc"
+    resample_shape: [256, 256]
+    resample_mode: "fourier"
+    timesample: 1
+
