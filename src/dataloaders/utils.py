@@ -1,7 +1,22 @@
 import torch
 from pathlib import Path
 import numpy as np
-# upscale/downscale with bicubic method or fourier spectral method
+from torch.utils.data import Sampler
+
+class ZeroShotSampler(Sampler):
+    def __init__(self, dataset, train_ratio=0.8, split="train", seed=227):
+        torch.manual_seed(seed) 
+        num_train = int(dataset.traj * train_ratio)
+        shuffled_trajs = torch.randperm(dataset.traj).tolist() 
+        train_trajs = shuffled_trajs[:num_train]
+        val_trajs = shuffled_trajs[num_train:]
+        train_indices = [t * (dataset.ts - 1) + ts for t in train_trajs for ts in range(dataset.ts - 1)]
+        val_indices = [t * (dataset.ts - 1) + ts for t in val_trajs for ts in range(dataset.ts - 1)]
+        self.indices = train_indices if split == "train" else val_indices
+    def __iter__(self):
+        return iter(self.indices)
+    def __len__(self):
+        return len(self.indices)
 
 def bicubic_resample(data, target_shape):
     assert data.shape[-2] == data.shape[-1], 'Only square images supported'
@@ -67,3 +82,4 @@ def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode
     files = list(subdir.glob("*." + str(file_ext)))
     #print(files)
     return dataset_obj(files, resample_shape, resample_mode, timesample)
+

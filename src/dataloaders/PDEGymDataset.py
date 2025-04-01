@@ -3,11 +3,6 @@ from torch.utils.data import Dataset
 import netCDF4 as nc
 from dataloaders.utils import spatial_resample
 
-def get_dataset(folderPath, resample_shape, resample_mode, timesample):
-    dir = Path(folderPath)
-    assert dir.exists(), 'doesnt exist homie'
-    files = list(dir.glob("*.nc"))
-    return PDEBenchCompDataset(files, resample_shape, resample_mode, timesample)
 
 class PDEGymDataset(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=1):
@@ -23,7 +18,7 @@ class PDEGymDataset(Dataset):
         self.data = torch.cat(self.data, dim=0) 
         self.traj = self.data.shape[0]
         self.ts = self.data.shape[1]
-        print(self.ts)
+        #print(self.ts)
 
     def __len__(self):
         return self.traj * (self.ts - 1)

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, ConcatDataset, random_split
+from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, CosineAnnealingLR, SequentialLR, ConstantLR
 from datetime import datetime
 import time
@@ -14,7 +14,7 @@ import numpy as np
 
 from dataloaders import *
 from dataloaders import DATASET_MAPPER
-from dataloaders.utils import get_dataset
+from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 
 class STT:
     def __init__(self, cb, cd, cm, ct, cv):
@@ -54,7 +54,7 @@ class STT:
     def prepare_dataloader(self):
         train_datasets = []
         val_datasets = []
-        
+
         for item in self.cd.datasets:
             dataset = get_dataset(
                 dataset_obj=DATASET_MAPPER[item['dataset']], 
@@ -64,21 +64,40 @@ class STT:
                 resample_mode=item["resample_mode"], 
                 timesample=item["timesample"]
             )
-            
-            train_ratio = self.ct.train_ratio
-            train_size = int(len(dataset) * train_ratio)
-            val_size = len(dataset) - train_size
 
-            train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-            
-            train_datasets.append(train_dataset)
-            val_datasets.append(val_dataset)
+            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
+            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
 
-        train_dataset = ConcatDataset(train_datasets)
-        val_dataset = ConcatDataset(val_datasets)
+            #train_datasets.append((dataset, train_sampler))
+            #val_datasets.append((dataset, val_sampler))
 
-        train_loader = DataLoader(train_dataset, batch_size=self.ct.batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=self.ct.batch_size, shuffle=False)
+            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
+            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
+            #print(len(train_sampler.indices))
+            train_datasets.append(Subset(dataset, train_sampler.indices))
+            val_datasets.append(Subset(dataset, val_sampler.indices))
+        
+        train_loader = DataLoader(
+            ConcatDataset(train_datasets),
+            batch_size=self.ct.batch_size,
+            shuffle=True)
+        val_loader = DataLoader(
+            ConcatDataset(val_datasets),
+            batch_size=self.ct.batch_size,
+            shuffle=True) # simply set to true to provide random sampling for image plotting function
+
+        #train_loader = DataLoader(
+        #    ConcatDataset([dataset for dataset, _ in train_datasets]),
+        #    batch_size=self.ct.batch_size,
+        #    sampler=ConcatDataset([sampler for _, sampler in train_datasets])
+        #)
+
+        #val_loader = DataLoader(
+        #    ConcatDataset([d for d, _ in val_datasets]),
+        #    batch_size=self.ct.batch_size,
+        #    sampler=ConcatDataset([s for _, s in val_datasets])
+        #)
+
         return train_loader, val_loader
             
     def train_one_epoch(self):
@@ -116,13 +135,16 @@ class STT:
             #print('epoch:', self.epoch)
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
-            self.make_plot(output_path='output/test.png', on_val=False)
-            self.epoch_time = time.time() - start_time
-            print(f"Epoch {self.epoch}: "
-                    f"Train Loss = {train_loss:.8f}, "
-                    f"Val Loss = {val_loss:.8f}, "
-                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e}, "
-                    f"ET: {self.epoch_time:.2f} s")
+            epoch_time = time.time() - start_time
+            self.make_plot(output_path='output/test_train.png', on_val=False)
+            self.make_plot(output_path='output/test_val.png', on_val=True)
+            plot_time = time.time() - epoch_time
+            print(f"Epoch {self.epoch}:  "
+                    f"Train Loss = {train_loss:.8f} - "
+                    f"Val Loss = {val_loss:.8f} - "
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.1e} - "
+                    f"ET: {epoch_time:.2f} s - "
+                    f"PT: {plot_time:.2f} s")
             self.scheduler.step(val_loss)
         print('finished')
 

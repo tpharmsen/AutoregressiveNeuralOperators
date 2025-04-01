@@ -5,11 +5,6 @@ import numpy as np
 from pathlib import Path
 from dataloaders.utils import spatial_resample
 
-def get_dataset(folderPath, resample_shape, resample_mode, timesample):
-    dir = Path(folderPath)
-    assert dir.exists(), 'doesnt exist homie'
-    files = list(dir.glob("*.hdf5"))
-    return PDEBenchCompDataset(files, resample_shape, resample_mode, timesample)
 
 class PDEBenchCompDataset(Dataset):
     def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=1):
