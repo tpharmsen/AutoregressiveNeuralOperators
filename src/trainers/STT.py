@@ -162,8 +162,11 @@ class STT:
         axes[1, 3].imshow(diff_y, cmap='magma')
 
         for i in range(4):
-            axes[0, i].set_title(titles[i] + " (x)")
-            axes[1, i].set_title(titles[i] + " (y)")
+            axes[0, i].set_title(titles[i])
+            axes[1, i].set_title(titles[i])
+        
+        axes[0, 0].set_ylabel("X")
+        axes[1, 0].set_ylabel("Y")
             
         for ax in axes.flat:
             ax.set_xticks([])
