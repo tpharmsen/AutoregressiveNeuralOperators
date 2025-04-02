@@ -12,11 +12,13 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
+import os
 
 from dataloaders import *
 from dataloaders import DATASET_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
-from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
+#from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
+from trainers.utils import animate_rollout, magnitude_vel, rollout
 
 class STT:
     def __init__(self, cb, cd, cm, ct, cv):
@@ -67,7 +69,7 @@ class STT:
                 resample_mode=item["resample_mode"], 
                 timesample=item["timesample"]
             )
-            dataset.name = item['name']
+            dataset.name = "test12345" #item['name']
 
             train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
@@ -118,18 +120,16 @@ class STT:
         #self.model = self._initialize_model()
         self._initialize_model()
         self.train_loader, self.val_loader = self.prepare_dataloader()
-        print('test')
-        self.make_anim()
-        print('test done')
+        print('booting up...')
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
             #print('epoch:', self.epoch)
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
             epoch_time = time.time() - start_time
-            make_plot(output_path='output/test_train.png', on_val=False)
-            make_plot(output_path='output/test_val.png', on_val=True)
-            
+            self.make_plot(self.cv.plottrain_out, False)
+            self.make_plot(self.cv.plotval_out, True)
+            self.make_anim()
             plot_time = time.time() - epoch_time
             print(f"Epoch {self.epoch}:  "
                     f"Train Loss = {train_loss:.8f} - "
@@ -142,12 +142,67 @@ class STT:
 
     def make_anim(self):
         output_path = self.cv.anim_out
-        print(self.val_datasets)
+        print(output_path)
+        #print(self.val_datasets)
         dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()
         traj_idx = self.val_samplers[dataset_idx].random_val_traj()
-        val_traj = self.val_datasets[dataset_idx].dataset.get_full_traj(traj_idx)
-        print(val_traj.shape)
+        val_traj = self.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
+        #print(val_traj.shape)
         front = val_traj[0].unsqueeze(0)	
+        front = front.to(self.device)
         stacked_pred = rollout(front, self.model, len(val_traj))
         stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
+        animate_rollout(stacked_pred, stacked_true, output_path)
         
+    
+    def make_plot(self, output_path="output/out.png", on_val=True):
+        self.model.eval()
+
+        if on_val:
+            for front, label in self.val_loader:
+                break           
+        else:
+            for front, label in self.train_loader:
+                break  
+        front, label = front.to(self.device), label.to(self.device)
+        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
+
+        with torch.no_grad():
+            pred = self.model(front)
+        
+        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
+        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
+        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
+        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
+
+        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        fig.suptitle(f"Epoch {self.epoch}")
+
+        titles = ["Input", "Prediction", "Target", "Difference"]
+
+        axes[0, 0].imshow(front_x, cmap='viridis')
+        axes[0, 1].imshow(pred_x, cmap='viridis')
+        axes[0, 2].imshow(label_x, cmap='viridis')
+        axes[0, 3].imshow(diff_x, cmap='magma')
+
+        axes[1, 0].imshow(front_y, cmap='viridis')
+        axes[1, 1].imshow(pred_y, cmap='viridis')
+        axes[1, 2].imshow(label_y, cmap='viridis')
+        axes[1, 3].imshow(diff_y, cmap='magma')
+
+        for i in range(4):
+            axes[0, i].set_title(titles[i])
+            axes[1, i].set_title(titles[i])
+        
+        axes[0, 0].set_ylabel("X")
+        axes[1, 0].set_ylabel("Y")
+            
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
+    
+    
