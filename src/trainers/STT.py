@@ -11,6 +11,7 @@ import yaml
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.animation as animation
 
 from dataloaders import *
 from dataloaders import DATASET_MAPPER
@@ -53,7 +54,7 @@ class STT:
 
     def prepare_dataloader(self):
         train_datasets = []
-        val_datasets = []
+        self.val_datasets = []
 
         for item in self.cd.datasets:
             dataset = get_dataset(
@@ -75,14 +76,14 @@ class STT:
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
             #print(len(train_sampler.indices))
             train_datasets.append(Subset(dataset, train_sampler.indices))
-            val_datasets.append(Subset(dataset, val_sampler.indices))
+            self.val_datasets.append(Subset(dataset, val_sampler.indices))
         
         train_loader = DataLoader(
             ConcatDataset(train_datasets),
             batch_size=self.ct.batch_size,
             shuffle=True)
         val_loader = DataLoader(
-            ConcatDataset(val_datasets),
+            ConcatDataset(self.val_datasets),
             batch_size=self.ct.batch_size,
             shuffle=True) # simply set to true to provide random sampling for image plotting function
 

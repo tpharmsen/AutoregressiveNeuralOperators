@@ -32,3 +32,8 @@ class PDEGymDataset(Dataset):
         front = spatial_resample(front, self.resample_shape, self.resample_mode)
         label = spatial_resample(label, self.resample_shape, self.resample_mode)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
+        
+    def get_single_traj(self, idx):
+        full = self.data[idx]
+        full = spatial_resample(full, self.resample_shape, self.resample_mode)
+        return full
