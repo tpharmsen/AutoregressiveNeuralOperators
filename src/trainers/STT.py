@@ -145,9 +145,9 @@ class STT:
         print(self.val_datasets)
         dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()
         traj_idx = self.val_samplers[dataset_idx].random_val_traj()
-        val_traj = self.val_datasets[dataset_idx].get_full_traj(traj_idx)
+        val_traj = self.val_datasets[dataset_idx].dataset.get_full_traj(traj_idx)
         print(val_traj.shape)
         front = val_traj[0].unsqueeze(0)	
-        stacked_pred = rollout(front)
+        stacked_pred = rollout(front, self.model, len(val_traj))
         stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
-        anim
+        
