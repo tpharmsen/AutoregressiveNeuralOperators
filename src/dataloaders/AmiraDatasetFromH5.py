@@ -11,6 +11,7 @@ class AmiraDatasetFromH5(Dataset):
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
+        self.name = None
         
         for filepath in filepaths:
             with h5py.File(filepath, 'r') as f:

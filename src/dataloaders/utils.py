@@ -27,54 +27,64 @@ def bicubic_resample(data, target_shape):
     return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False)
 
 def fourier_resample(data, target_shape):
-    c, x, y = data.shape[-3], data.shape[-2], data.shape[-1]
+    assert data.dim() in (3, 4)
+    
+    four_dim = data.dim() == 4
+    if four_dim:
+        batch_size, c, x, y = data.shape
+    else:
+        c, x, y = data.shape
+        batch_size = 1
+        data = data.unsqueeze(0)
+
     target_x, target_y = target_shape
     assert x == y, 'Only square images supported'
     assert target_x == target_y, 'Only square images supported'
-    #if x == target_x:
-    #    return data
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    if x == target_x:
+        return data if four_dim else data.squeeze(0) 
+
+    device = data.device
     sampled_data = []
 
-    for i in range(c):
+    for b in range(batch_size):
+        batch_samples = []
+        for i in range(c):
+            signal = data[b, i].to(dtype=torch.complex64, device=device)
 
-        signal = data[i].to(dtype=torch.complex64, device=device)
-        
-        pos0 = torch.linspace(0.5, x-0.5, x, device=device)
-        pos1 = torch.linspace(0.5, target_x-0.5, target_x, device=device)
-        freq0 = torch.fft.fftfreq(x, device=device)
-        freq1 = torch.fft.fftfreq(target_x, device=device)
+            pos0 = torch.linspace(0.5, x - 0.5, x, device=device)
+            pos1 = torch.linspace(0.5, target_x - 0.5, target_x, device=device)
+            freq0 = torch.fft.fftfreq(x, device=device)
+            freq1 = torch.fft.fftfreq(target_x, device=device)
 
-        exp_matrix_0 = torch.exp(-2j * torch.pi * torch.outer(pos0, freq0))
+            exp_matrix_0 = torch.exp(-2j * torch.pi * torch.outer(pos0, freq0))
 
+            freq_coeff = torch.matmul(torch.matmul(exp_matrix_0.H, signal), exp_matrix_0) / x**2
+            scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64, device=device)
 
-        freq_coeff = torch.matmul(torch.matmul(exp_matrix_0.H, signal), exp_matrix_0) / x**2
-        scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64, device=device)
+            if target_x > x:  # Upsample
+                min_idx = (target_x - x) // 2
+                scaled_coeff[min_idx:min_idx + x, min_idx:min_idx + x] = torch.fft.fftshift(freq_coeff)
+                scaled_coeff = torch.fft.ifftshift(scaled_coeff)
+            else:  # Downsample
+                min_idx = (x - target_x) // 2
+                scaled_coeff = torch.fft.fftshift(freq_coeff)[min_idx:min_idx + target_x, min_idx:min_idx + target_x]
+                scaled_coeff = torch.fft.ifftshift(scaled_coeff)
 
-        if target_x > x: # upsample
-            min_idx = (target_x - x) // 2
-            scaled_coeff[min_idx:min_idx+x, min_idx:min_idx+x] = torch.fft.fftshift(freq_coeff)
-            scaled_coeff = torch.fft.ifftshift(scaled_coeff)
-        elif target_x < x: #downsample
-            min_idx = (x - target_x) // 2
-            scaled_coeff = torch.fft.fftshift(freq_coeff)[min_idx:min_idx+target_x, min_idx:min_idx+target_x]   
-            scaled_coeff = torch.fft.ifftshift(scaled_coeff)
-        else:
-            raise ValueError("Image already in target shape")
-        #print(freq1.shape, pos1.shape, scaled_coeff.shape)
-        exp_matrix_1 = torch.exp(2j * torch.pi * torch.outer(freq1, pos1))
-        scaled_signal = torch.matmul(torch.matmul(exp_matrix_1.H, scaled_coeff), exp_matrix_1) 
-        sampled_data.append(scaled_signal)
+            exp_matrix_1 = torch.exp(2j * torch.pi * torch.outer(freq1, pos1))
+            scaled_signal = torch.matmul(torch.matmul(exp_matrix_1.H, scaled_coeff), exp_matrix_1)
+            batch_samples.append(scaled_signal.real)
+
+        sampled_data.append(torch.stack(batch_samples, dim=0))
 
     scaled_signal = torch.stack(sampled_data, dim=0)
-    return scaled_signal.real.cpu()
+    return scaled_signal if four_dim else scaled_signal.squeeze(0)
 
 
 def spatial_resample(data, target_shape, mode='bicubic'):
     if mode == 'bicubic':
         return bicubic_resample(data, target_shape)
     elif mode == 'fourier':
-        return fourier_resample(data.squeeze(), target_shape)
+        return fourier_resample(data, target_shape)
     else:
         raise ValueError(f'Unknown mode: {mode}')
 

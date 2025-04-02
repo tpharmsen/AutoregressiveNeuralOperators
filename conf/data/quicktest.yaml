@@ -1,0 +1,16 @@
+datasets:
+  - name: "amira"
+    path: "AmiraSet/"
+    dataset: "AmiraDatasetFromAM"
+    file_ext: "am"
+    resample_shape: [256, 256]
+    resample_mode: "fourier"
+    timesample: 5
+
+  - name: "amira"
+    path: "AmiraSet/"
+    dataset: "AmiraDatasetFromAM"
+    file_ext: "am"
+    resample_shape: [256, 256]
+    resample_mode: "fourier"
+    timesample: 5

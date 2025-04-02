@@ -155,3 +155,102 @@ def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertic
     plt.close()
     return ani
     
+def animate_rollout(stacked_pred, stacked_true, output_path="../output/rollout.gif"):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    timesteps, _, x_dim, y_dim = stacked_pred.shape
+    stacked_pred, stacked_true = stacked_pred.squeeze(1).cpu().numpy(), stacked_true.squeeze(1).cpu().numpy()
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    titles = ["Pred", "True"]
+    imgs = []
+    vmin, vmax = min(stacked_pred.min(), stacked_true.min()), max(stacked_pred.max(), stacked_true.max())
+
+    for ax, title in zip(axes, titles):
+        img = ax.imshow(np.zeros((x_dim, y_dim)), cmap='viridis', vmin=vmin, vmax=vmax)
+        ax.set_title(title)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        imgs.append(img)
+    
+    def init():
+        imgs[0].set_data(stacked_pred[0])
+        imgs[1].set_data(stacked_true[0])
+        return imgs
+
+    def update(frame):
+        imgs[0].set_data(stacked_pred[frame])
+        imgs[1].set_data(stacked_true[frame])
+
+        fig.suptitle(f"Dataset: {dataset.name}, timestep {frame + 1}")
+        return imgs
+
+    ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=50)
+    ani.save(output_path, writer="ffmpeg")
+    plt.close()
+
+def magnitude_vel(x):
+    magnitude = torch.sqrt(x[:, 0]**2 + x[:, 1]**2)
+    return magnitude.unsqueeze(1)
+
+def rollout(x, model, length):
+    model.eval()
+    preds = []
+    with torch.no_grad():
+        pred = model(front)
+        preds.append(pred)
+        for i in range(length - 1):
+            pred = model(pred)
+            preds.append(pred)
+    preds = torch.cat(preds, dim=0)
+    return preds
+
+def make_plot(output_path, on_val=True):
+        self.model.eval()
+
+        if on_val:
+            for front, label in self.val_loader:
+                break           
+        else:
+            for front, label in self.train_loader:
+                break  
+        front, label = front.to(self.device), label.to(self.device)
+        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
+
+        with torch.no_grad():
+            pred = self.model(front)
+        
+        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
+        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
+        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
+        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
+
+        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        fig.suptitle(f"Epoch {self.epoch}")
+
+        titles = ["Input", "Prediction", "Target", "Difference"]
+
+        axes[0, 0].imshow(front_x, cmap='viridis')
+        axes[0, 1].imshow(pred_x, cmap='viridis')
+        axes[0, 2].imshow(label_x, cmap='viridis')
+        axes[0, 3].imshow(diff_x, cmap='magma')
+
+        axes[1, 0].imshow(front_y, cmap='viridis')
+        axes[1, 1].imshow(pred_y, cmap='viridis')
+        axes[1, 2].imshow(label_y, cmap='viridis')
+        axes[1, 3].imshow(diff_y, cmap='magma')
+
+        for i in range(4):
+            axes[0, i].set_title(titles[i])
+            axes[1, i].set_title(titles[i])
+        
+        axes[0, 0].set_ylabel("X")
+        axes[1, 0].set_ylabel("Y")
+            
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
+    
+    

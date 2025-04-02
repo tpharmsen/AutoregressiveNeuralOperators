@@ -10,6 +10,8 @@ class PDEGymDataset(Dataset):
         self.data = []
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
+        self.name = None
+        
         for filepath in filepaths:
             with nc.Dataset(filepath, "r") as f:
                 velocity = torch.from_numpy(f['velocity'][:,::timesample,:2])  # remove passive tracer

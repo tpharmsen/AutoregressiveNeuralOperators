@@ -14,6 +14,7 @@ class AmiraDatasetFromAM(Dataset):
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
+        self.name = None
         
         for filepath in filepaths:
             #print(filepath)
@@ -62,5 +63,9 @@ class AmiraDatasetFromAM(Dataset):
         
     def get_single_traj(self, idx):
         full = self.data[idx]
+        #print("test1:")
+        #print(full.shape)
         full = spatial_resample(full, self.resample_shape, self.resample_mode)
+        #print('test2:')
+        #print(full.shape)
         return full

@@ -16,6 +16,7 @@ import matplotlib.animation as animation
 from dataloaders import *
 from dataloaders import DATASET_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
+from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
 
 class STT:
     def __init__(self, cb, cd, cm, ct, cv):
@@ -55,6 +56,7 @@ class STT:
     def prepare_dataloader(self):
         train_datasets = []
         self.val_datasets = []
+        self.val_samplers = []
 
         for item in self.cd.datasets:
             dataset = get_dataset(
@@ -65,18 +67,15 @@ class STT:
                 resample_mode=item["resample_mode"], 
                 timesample=item["timesample"]
             )
+            dataset.name = item['name']
 
             train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
 
-            #train_datasets.append((dataset, train_sampler))
-            #val_datasets.append((dataset, val_sampler))
-
-            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
-            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
             #print(len(train_sampler.indices))
             train_datasets.append(Subset(dataset, train_sampler.indices))
             self.val_datasets.append(Subset(dataset, val_sampler.indices))
+            self.val_samplers.append(val_sampler)
         
         train_loader = DataLoader(
             ConcatDataset(train_datasets),
@@ -86,18 +85,6 @@ class STT:
             ConcatDataset(self.val_datasets),
             batch_size=self.ct.batch_size,
             shuffle=True) # simply set to true to provide random sampling for image plotting function
-
-        #train_loader = DataLoader(
-        #    ConcatDataset([dataset for dataset, _ in train_datasets]),
-        #    batch_size=self.ct.batch_size,
-        #    sampler=ConcatDataset([sampler for _, sampler in train_datasets])
-        #)
-
-        #val_loader = DataLoader(
-        #    ConcatDataset([d for d, _ in val_datasets]),
-        #    batch_size=self.ct.batch_size,
-        #    sampler=ConcatDataset([s for _, s in val_datasets])
-        #)
 
         return train_loader, val_loader
             
@@ -131,14 +118,18 @@ class STT:
         #self.model = self._initialize_model()
         self._initialize_model()
         self.train_loader, self.val_loader = self.prepare_dataloader()
+        print('test')
+        self.make_anim()
+        print('test done')
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
             #print('epoch:', self.epoch)
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
             epoch_time = time.time() - start_time
-            self.make_plot(output_path='output/test_train.png', on_val=False)
-            self.make_plot(output_path='output/test_val.png', on_val=True)
+            make_plot(output_path='output/test_train.png', on_val=False)
+            make_plot(output_path='output/test_val.png', on_val=True)
+            
             plot_time = time.time() - epoch_time
             print(f"Epoch {self.epoch}:  "
                     f"Train Loss = {train_loss:.8f} - "
@@ -149,52 +140,14 @@ class STT:
             self.scheduler.step(val_loss)
         print('finished')
 
-    def make_plot(self, output_path, on_val=True):
-        self.model.eval()
-
-        if on_val:
-            for front, label in self.val_loader:
-                break           
-        else:
-            for front, label in self.train_loader:
-                break  
-        front, label = front.to(self.device), label.to(self.device)
-        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
-
-        with torch.no_grad():
-            pred = self.model(front)
-        
-        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
-        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
-        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
-        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
-
-        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
-        fig.suptitle(f"Epoch {self.epoch}")
-
-        titles = ["Input", "Prediction", "Target", "Difference"]
-
-        axes[0, 0].imshow(front_x, cmap='viridis')
-        axes[0, 1].imshow(pred_x, cmap='viridis')
-        axes[0, 2].imshow(label_x, cmap='viridis')
-        axes[0, 3].imshow(diff_x, cmap='magma')
-
-        axes[1, 0].imshow(front_y, cmap='viridis')
-        axes[1, 1].imshow(pred_y, cmap='viridis')
-        axes[1, 2].imshow(label_y, cmap='viridis')
-        axes[1, 3].imshow(diff_y, cmap='magma')
-
-        for i in range(4):
-            axes[0, i].set_title(titles[i])
-            axes[1, i].set_title(titles[i])
-        
-        axes[0, 0].set_ylabel("X")
-        axes[1, 0].set_ylabel("Y")
-            
-        for ax in axes.flat:
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-        plt.tight_layout()
-        plt.savefig(output_path)
-        plt.close()
+    def make_anim(self):
+        output_path = self.cv.anim_out
+        print(self.val_datasets)
+        dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()
+        traj_idx = self.val_samplers[dataset_idx].random_val_traj()
+        val_traj = self.val_datasets[dataset_idx].get_full_traj(traj_idx)
+        print(val_traj.shape)
+        front = val_traj[0].unsqueeze(0)	
+        stacked_pred = rollout(front)
+        stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
+        anim
