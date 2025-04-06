@@ -1,9 +1,12 @@
 epochs: 300
-batch_size: 16
-init_lr: 1.0e-4
+batch_size: 8
+init_lr: 1.0e-3
 patience: 10
 weight_decay: 1.0e-3
-max_unrolling: 1
-pushforward_step: 1
 inj_noise: False
 train_ratio: 0.8
+normalize: True
+
+plottrain_out: "output/plot_train_yesnorm.png"
+plotval_out: "output/plot_val_yesnorm.png"
+anim_out: "output/anim_out_yesnorm.gif"

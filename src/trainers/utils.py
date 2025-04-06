@@ -156,7 +156,7 @@ def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertic
     plt.close()
     return ani
     
-def animate_rollout(stacked_pred, stacked_true, output_path="output/rollout.gif"):
+def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="output/rollout.gif"):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     timesteps, _, x_dim, y_dim = stacked_pred.shape
     stacked_pred, stacked_true = stacked_pred.squeeze(1).cpu().numpy(), stacked_true.squeeze(1).cpu().numpy()
@@ -181,12 +181,12 @@ def animate_rollout(stacked_pred, stacked_true, output_path="output/rollout.gif"
         imgs[0].set_data(stacked_pred[frame])
         imgs[1].set_data(stacked_true[frame])
 
-        #fig.suptitle(f"Dataset: {dataset.name}, timestep {frame + 1}")
-        fig.suptitle(f"Dataset: -, timestep {frame + 1}")
+        fig.suptitle(f"Dataset: {dataset_name}, timestep {frame + 1}")
+        #fig.suptitle(f"Dataset: -, timestep {frame + 1}")
         return imgs
 
     ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=50)
-    print(output_path)
+    #print(output_path)
     ani.save(output_path, writer="ffmpeg")
     plt.close()
 

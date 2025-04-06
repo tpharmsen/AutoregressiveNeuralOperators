@@ -21,19 +21,18 @@ from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 from trainers.utils import animate_rollout, magnitude_vel, rollout
 
 class STT:
-    def __init__(self, cb, cd, cm, ct, cv):
+    def __init__(self, cb, cd, cm, ct):
         self.cb = cb
         self.cd = cd
         self.cm = cm
         self.ct = ct
-        self.cv = cv
         self.device = torch.device(self.cb.device)
 
     def _initialize_model(self):
         if self.cm.model_name == "swinUnet":
             from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
             self.model = SwinUnet(emb_dim=96,
-                            data_dim=[self.ct.batch_size, self.cm.in_channels, 256, 256],
+                            data_dim=[self.ct.batch_size, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(8,8),
                             hiddenout_dim=256,
                             depth=2,
@@ -65,11 +64,11 @@ class STT:
                 dataset_obj=DATASET_MAPPER[item['dataset']], 
                 folderPath=str(self.cb.data_base + item["path"]), 
                 file_ext=item["file_ext"], 
-                resample_shape=item["resample_shape"], 
-                resample_mode=item["resample_mode"], 
+                resample_shape=self.cd.resample_shape, 
+                resample_mode=self.cd.resample_mode, 
                 timesample=item["timesample"]
             )
-            dataset.name = "test12345" #item['name']
+            dataset.name = item['name']
 
             train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
@@ -79,12 +78,22 @@ class STT:
             self.val_datasets.append(Subset(dataset, val_sampler.indices))
             self.val_samplers.append(val_sampler)
         
+        train_dataset = ConcatNormDataset(train_datasets)
+        val_dataset = ConcatNormDataset(self.val_datasets)
+
+        #unnorm_trainset = train_dataset.normalize_velocity()
+        #unnorm_valset = val_dataset.normalize_velocity()
+        if self.ct.normalize:
+            unnorm_dataset = train_dataset.normalize_velocity()
+            print(unnorm_dataset)
+        #print(unnorm_trainset, unnorm_valset)
+
         train_loader = DataLoader(
-            ConcatDataset(train_datasets),
+            train_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True)
         val_loader = DataLoader(
-            ConcatDataset(self.val_datasets),
+            val_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True) # simply set to true to provide random sampling for image plotting function
 
@@ -95,6 +104,8 @@ class STT:
         self.model.train()
 
         for idx, (front, label) in enumerate(self.train_loader):
+            #print('shapes:', front.shape, torch.max(front), torch.min(front))
+            print(f"{idx/len(self.train_loader):2f}", end='\r')
             front, label = front.to(self.device), label.to(self.device)
             self.optimizer.zero_grad()
             pred = self.model(front)
@@ -123,26 +134,28 @@ class STT:
         print('booting up...')
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
-            #print('epoch:', self.epoch)
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
             epoch_time = time.time() - start_time
-            self.make_plot(self.cv.plottrain_out, False)
-            self.make_plot(self.cv.plotval_out, True)
-            self.make_anim()
-            plot_time = time.time() - epoch_time
+            plot_time = time.time()
+            self.make_plot(self.ct.plottrain_out, False)
+            self.make_plot(self.ct.plotval_out, True)
+            #self.make_anim()
+            plot_time = time.time() - plot_time
+
             print(f"Epoch {self.epoch}:  "
                     f"Train Loss = {train_loss:.8f} - "
                     f"Val Loss = {val_loss:.8f} - "
                     f"LR: {self.optimizer.param_groups[0]['lr']:.1e} - "
                     f"ET: {epoch_time:.2f} s - "
-                    f"PT: {plot_time:.2f} s")
+                    f"PT: {plot_time:.4f} s")
             self.scheduler.step(val_loss)
         print('finished')
 
     def make_anim(self):
-        output_path = self.cv.anim_out
-        print(output_path)
+        self.model.eval()
+        output_path = self.ct.anim_out
+        #print(output_path)
         #print(self.val_datasets)
         dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()
         traj_idx = self.val_samplers[dataset_idx].random_val_traj()
@@ -152,7 +165,8 @@ class STT:
         front = front.to(self.device)
         stacked_pred = rollout(front, self.model, len(val_traj))
         stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
-        animate_rollout(stacked_pred, stacked_true, output_path)
+        dataset_name = self.val_datasets[dataset_idx].dataset.name
+        animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
         
     
     def make_plot(self, output_path="output/out.png", on_val=True):

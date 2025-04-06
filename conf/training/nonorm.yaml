@@ -1,0 +1,12 @@
+epochs: 300
+batch_size: 8
+init_lr: 1.0e-3
+patience: 10
+weight_decay: 1.0e-3
+inj_noise: False
+train_ratio: 0.8
+normalize: False
+
+plottrain_out: "output/plot_train_nonorm.png"
+plotval_out: "output/plot_val_nonorm.png"
+anim_out: "output/anim_out_nonorm.gif"

@@ -81,10 +81,12 @@ def fourier_resample(data, target_shape):
 
 
 def spatial_resample(data, target_shape, mode='bicubic'):
+    if data.shape[-1] == target_shape and data.shape[-2] == target_shape:
+        return data
     if mode == 'bicubic':
-        return bicubic_resample(data, target_shape)
+        return bicubic_resample(data, (target_shape, target_shape))
     elif mode == 'fourier':
-        return fourier_resample(data, target_shape)
+        return fourier_resample(data, (target_shape, target_shape))
     else:
         raise ValueError(f'Unknown mode: {mode}')
 

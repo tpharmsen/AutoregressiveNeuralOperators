@@ -8,13 +8,14 @@ import numpy as np
 
 
 class AmiraDatasetFromAM(Dataset):
-    def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=5):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=5):
         self.data_list = []
         self.traj_list = []
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
         self.name = None
+        self.vel_scale = None
         
         for filepath in filepaths:
             #print(filepath)
@@ -69,3 +70,10 @@ class AmiraDatasetFromAM(Dataset):
         #print('test2:')
         #print(full.shape)
         return full
+    
+    def normalize_velocity(self, vel_scale):
+        self.data = self.data / vel_scale
+        self.vel_scale = vel_scale
+
+    def absmax_vel(self):
+        return self.data.abs().max()

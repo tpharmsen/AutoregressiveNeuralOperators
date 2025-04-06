@@ -33,7 +33,6 @@ if __name__ == "__main__":
     parser.add_argument("--CD", type=str, default="std.yaml")
     parser.add_argument("--CM", type=str, default="std.yaml")
     parser.add_argument("--CT", type=str, default="std.yaml")
-    parser.add_argument("--CV", type=str, default="std.yaml")
     parser.add_argument("--trainer", type=str, default="STT")
     args = parser.parse_args()
 
@@ -53,10 +52,6 @@ if __name__ == "__main__":
         ct = load_yaml_as_dotdict("conf/training/" + args.CT)
     else:
         raise FileNotFoundError(f"Config file {args.CT} not found.")
-    if os.path.exists("conf/validation/" + args.CV):
-        cv = load_yaml_as_dotdict("conf/validation/" + args.CV)
-    else:
-        raise FileNotFoundError(f"Config file {args.CV} not found.")
 
     if args.trainer == "simple":
         from trainers.simple import SimpleTrainer
@@ -69,7 +64,7 @@ if __name__ == "__main__":
         trainer = PFTBTrainer(args.conf)
     elif args.trainer == "STT":
         from trainers.STT import STT
-        trainer = STT(cb, cd, cm, ct, cv)
+        trainer = STT(cb, cd, cm, ct)
     else:
         raise ValueError("Trainer not set")
 

@@ -7,13 +7,14 @@ from dataloaders.utils import spatial_resample
 
 
 class PDEBenchIncompDataset(Dataset):
-    def __init__(self, filepaths, resample_shape=(256, 256), resample_mode='fourier', timesample=10):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=10):
         self.data_list = []
         self.traj_list = []
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
         self.name = None
+        self.vel_scale = None
         
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
@@ -56,3 +57,10 @@ class PDEBenchIncompDataset(Dataset):
         full = self.data[idx]
         full = spatial_resample(full, self.resample_shape, self.resample_mode)
         return full
+    
+    def normalize_velocity(self, vel_scale):
+        self.data = self.data / vel_scale
+        self.vel_scale = vel_scale
+
+    def absmax_vel(self):
+        return self.data.abs().max()
