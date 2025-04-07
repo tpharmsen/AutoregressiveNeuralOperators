@@ -24,7 +24,11 @@ def bicubic_resample(data, target_shape):
     assert data.shape[-2] == data.shape[-1], 'Only square images supported'
     assert target_shape[0] == target_shape[1], 'Only square output images supported'
     assert data.shape[-2] != target_shape[0], 'Image already in target shape'
-    return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False)
+    if data.dim() == 3:
+        data = data.unsqueeze(0)
+        return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False).squeeze(0)
+    else:
+        return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False)
 
 def fourier_resample(data, target_shape):
     assert data.dim() in (3, 4)
@@ -81,6 +85,7 @@ def fourier_resample(data, target_shape):
 
 
 def spatial_resample(data, target_shape, mode='bicubic'):
+    #print(data.shape, target_shape)
     if data.shape[-1] == target_shape and data.shape[-2] == target_shape:
         return data
     if mode == 'bicubic':

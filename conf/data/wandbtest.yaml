@@ -1,5 +1,5 @@
 resample_shape: 128
-resample_mode: "fourier"
+resample_mode: "bicubic"
 
 datasets:
   - name: "amira"

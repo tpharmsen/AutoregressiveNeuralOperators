@@ -4,6 +4,7 @@ import os
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
+#os.environ["WANDB_SILENT"] = "true"
 
 class DotDict(dict):
     def __init__(self, mapping=None):

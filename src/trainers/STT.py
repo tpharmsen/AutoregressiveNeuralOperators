@@ -75,9 +75,7 @@ class STT:
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
-        nparams = self.nparams(self.model)
-        self.cm.nparams = nparams
-        print('Amount of parameters in model:', nparams)
+        self.cm.nparams = self.nparams(self.model)
         #print(self.ct.init_lr, self.ct.weight_decay)
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.ct.init_lr, weight_decay=self.ct.weight_decay)
         self.criterion = nn.MSELoss()
@@ -117,8 +115,10 @@ class STT:
         #unnorm_valset = val_dataset.normalize_velocity()
         if self.ct.normalize:
             unnorm_dataset = train_dataset.normalize_velocity()
-            print('datasets norm factor:', unnorm_dataset.item())
-        #print(unnorm_trainset, unnorm_valset)
+            self.ct.norm_factor = unnorm_dataset.item()
+            #print('datasets norm factor:', unnorm_dataset.item())
+        else:
+            self.ct.norm_factor = None
 
         train_loader = DataLoader(
             train_dataset,
@@ -161,17 +161,18 @@ class STT:
         return np.mean(losses)
 
     def train(self):
-        
+        print("initialising model...", end='\r')
         self._initialize_model()
+        print("setting up dataflow...", end='\r')
         self.train_loader, self.val_loader = self.prepare_dataloader()
-
+        
         if self.cb.wandb:
+            print("booting up wandb...", end='\r')
             wandb_config = self.build_wandb_config()
-            #print(wandb_config)
             wandb.init(project="FluidGPT", name=self.cb.wandb_name, config=wandb_config)    
             #wandb.config.update(self.config)
 
-        print('booting up...')
+        print('front/label trainpairs:', self.ct.batch_size * len(self.train_loader), "- nparams model:", self.cm.nparams, "- norm factor:", self.ct.norm_factor)
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
             train_loss = self.train_one_epoch()
