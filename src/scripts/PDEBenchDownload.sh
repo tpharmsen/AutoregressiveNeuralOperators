@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CSV_FILE="src/scripts/pdebench_data_urls.csv"
-SAVE_DIR="datasets/prjs1359/NS_incom_inhom"
+SAVE_DIR="datasets/prjs1359/PDE_TEMP"
 
 # Create target directory
 mkdir -p "$SAVE_DIR"
