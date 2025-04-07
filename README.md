@@ -1,6 +1,10 @@
 # AutoregressiveNeuralOperators
 A small repo for autoregressive neural operator training
 
+
+conda activate grad312
+python src/train.py --CB [] -- CD [] --CM [] --CT [] --out folder --name wandb_name
+
 # runcommands PC:
 python src/train.py --conf conf/example.yaml --trainer PFTB
 
