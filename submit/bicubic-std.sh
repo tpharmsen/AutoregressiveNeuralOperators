@@ -13,4 +13,4 @@ module load Anaconda3/2023.07-2
 conda activate grad312
 cd AutoregressiveNeuralOperators
 
-python src/train.py --CB wandb.yaml --CD 3set-bicubic.yaml --out /bicubic-nonorm --name bicubic
+python src/train.py --CB wandb.yaml --CD 3set-bicubic.yaml --out /bicubic --name bicubic
