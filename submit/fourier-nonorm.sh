@@ -7,10 +7,12 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --reservation=terv92681
 
-module load 2023
-module load Anaconda3/2023.07-2
-. "/sw/arch/RHEL8/EB_production/2023/software/Anaconda3/2023.07-2/etc/profile.d/conda.sh"
+module load 2024
+module load Anaconda3/2024.06-1
+source "/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/etc/profile.d/conda.sh"
+conda env list
 conda activate grad312
+conda env list
 cd AutoregressiveNeuralOperators
 
 python src/train.py --CB wandb.yaml --CD 3set-fourier.yaml --out /fourier-nonorm --name fourier-nonorm --CT nonorm.yaml
