@@ -27,25 +27,57 @@ class STT:
         self.cm = cm
         self.ct = ct
         self.device = torch.device(self.cb.device)
+        self.out_0 = self.cb.save_path + self.cb.folder_out + self.ct.plottrain_out
+        self.out_1 = self.cb.save_path + self.cb.folder_out + self.ct.plotval_out
+        self.out_2 = self.cb.save_path + self.cb.folder_out + self.ct.anim_out
+        #os.makedirs(self.cb.save_path + self.cb.folder_out, exist_ok=True)            
+
+    def build_wandb_config(self):
+        wandb_config = {}
+        configs = {
+        'cb': self.cb,
+        'cd': self.cd,
+        'cm': self.cm,
+        'ct': self.ct
+        }
+        def flatten_dict(d, parent_key=''):
+            items = []
+            for k, v in d.items():
+                new_key = f"{parent_key}.{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_dict(v, new_key).items())
+                else:
+                    items.append((new_key, v))
+            return dict(items)
+
+        for prefix, config in configs.items():
+            flat_config = flatten_dict(config)
+            for key, value in flat_config.items():
+                wandb_config[f"{prefix}.{key}"] = value
+
+        return wandb_config
 
     def _initialize_model(self):
         if self.cm.model_name == "swinUnet":
             from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
             self.model = SwinUnet(emb_dim=96,
                             data_dim=[self.ct.batch_size, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
-                            patch_size=(8,8),
-                            hiddenout_dim=256,
-                            depth=2,
-                            stage_depths=[2, 2, 6, 2, 2],
-                            num_heads=[3, 6, 12, 6, 3],
-                            window_size=4,
-                            use_flex_attn=True, # fix device
+                            patch_size=(self.cm.patch_size, self.cm.patch_size),
+                            hiddenout_dim=self.cm.hiddenout_dim,
+                            depth=self.cm.depth,
+                            stage_depths=self.cm.stage_depths,
+                            num_heads=self.cm.num_heads,
+                            window_size=self.cm.window_size,
+                            use_flex_attn=self.cm.use_flex_attn,
                             act=nn.GELU,
-                            skip_connect=ConvNeXtBlock).to(self.device)
+                            skip_connect=ConvNeXtBlock
+                            ).to(self.device)
         else:
             raise ValueError('MODEL NOT RECOGNIZED')
         
-        print('Amount of parameters in model:', self.nparams(self.model))
+        nparams = self.nparams(self.model)
+        self.cm.nparams = nparams
+        print('Amount of parameters in model:', nparams)
         #print(self.ct.init_lr, self.ct.weight_decay)
         self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.ct.init_lr, weight_decay=self.ct.weight_decay)
         self.criterion = nn.MSELoss()
@@ -85,18 +117,19 @@ class STT:
         #unnorm_valset = val_dataset.normalize_velocity()
         if self.ct.normalize:
             unnorm_dataset = train_dataset.normalize_velocity()
-            print(unnorm_dataset)
+            print('datasets norm factor:', unnorm_dataset.item())
         #print(unnorm_trainset, unnorm_valset)
 
         train_loader = DataLoader(
             train_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True)
+            shuffle=True,
+            pin_memory=self.ct.pin_memory)
         val_loader = DataLoader(
             val_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True) # simply set to true to provide random sampling for image plotting function
-
+            shuffle=True, # simply set to true to provide random sampling for image plotting function
+            pin_memory=self.ct.pin_memory) 
         return train_loader, val_loader
             
     def train_one_epoch(self):
@@ -128,20 +161,31 @@ class STT:
         return np.mean(losses)
 
     def train(self):
-        #self.model = self._initialize_model()
+        
         self._initialize_model()
         self.train_loader, self.val_loader = self.prepare_dataloader()
+
+        if self.cb.wandb:
+            wandb_config = self.build_wandb_config()
+            #print(wandb_config)
+            wandb.init(project="FluidGPT", name=self.cb.wandb_name, config=wandb_config)    
+            #wandb.config.update(self.config)
+
         print('booting up...')
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
             train_loss = self.train_one_epoch()
             val_loss = self._validate_timestep()
             epoch_time = time.time() - start_time
-            plot_time = time.time()
-            self.make_plot(self.ct.plottrain_out, False)
-            self.make_plot(self.ct.plotval_out, True)
-            #self.make_anim()
-            plot_time = time.time() - plot_time
+            makeviz = self.epoch % self.cb.viz_freq == 0
+            if makeviz and self.cb.viz:
+                plot_time = time.time()
+                self.make_plot(self.out_0, False)
+                self.make_plot(self.out_1, True)
+                self.make_anim(self.out_2)
+                plot_time = time.time() - plot_time
+            else:
+                plot_time = 0
 
             print(f"Epoch {self.epoch}:  "
                     f"Train Loss = {train_loss:.8f} - "
@@ -149,12 +193,28 @@ class STT:
                     f"LR: {self.optimizer.param_groups[0]['lr']:.1e} - "
                     f"ET: {epoch_time:.2f} s - "
                     f"PT: {plot_time:.4f} s")
+
+            if self.cb.wandb:
+                wandb.log({
+                    "epoch": self.epoch,
+                    "Train Loss": train_loss,
+                    "Val Loss": val_loss ,
+                    "Learning Rate": self.optimizer.param_groups[0]['lr'],
+                    "Epoch time": epoch_time,
+                    "Plot time": plot_time,
+                    "rollout_val_gif": wandb.Video(self.out_2, format="gif") if self.cb.viz and makeviz else None,
+                    "rollout_val_plot": wandb.Image(self.out_1) if self.cb.viz and makeviz else None,
+                    "rollout_train_plot": wandb.Image(self.out_0) if self.cb.viz and makeviz else None,
+                })
+
             self.scheduler.step(val_loss)
+
+        if self.cb.wandb:
+            wandb.finish()
         print('finished')
 
-    def make_anim(self):
+    def make_anim(self, output_path):
         self.model.eval()
-        output_path = self.ct.anim_out
         #print(output_path)
         #print(self.val_datasets)
         dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()

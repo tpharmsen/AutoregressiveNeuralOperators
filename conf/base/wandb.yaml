@@ -3,8 +3,8 @@ device: "cuda"
 save_path: "output/"
 folder_out: "0/"
 save_on: 0
-wandb: 0
-wandb_name: "base"
+wandb: 1
+wandb_name: "wandb_test"
 
 viz: True
 viz_freq: 5

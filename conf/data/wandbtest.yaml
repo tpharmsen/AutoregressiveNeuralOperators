@@ -1,0 +1,10 @@
+resample_shape: 128
+resample_mode: "fourier"
+
+datasets:
+  - name: "amira"
+    path: "AmiraSet/"
+    dataset: "AmiraDatasetFromAM"
+    file_ext: "am"
+    timesample: 5
+    

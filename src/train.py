@@ -1,6 +1,9 @@
 import argparse
 import yaml
 import os
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 class DotDict(dict):
     def __init__(self, mapping=None):
@@ -34,6 +37,8 @@ if __name__ == "__main__":
     parser.add_argument("--CM", type=str, default="std.yaml")
     parser.add_argument("--CT", type=str, default="std.yaml")
     parser.add_argument("--trainer", type=str, default="STT")
+    parser.add_argument("--out", type=str, default=None)
+    parser.add_argument("--name", type=str, default=None)
     args = parser.parse_args()
 
     if os.path.exists("conf/base/" + args.CB):
@@ -53,6 +58,15 @@ if __name__ == "__main__":
     else:
         raise FileNotFoundError(f"Config file {args.CT} not found.")
 
+
+    if args.out != None:
+        cb.folder_out = args.out
+        #print('args flag')
+    os.makedirs(cb.save_path + cb.folder_out, exist_ok=True)
+    if args.name != None:
+        cb.wandb_name = args.name
+        
+
     if args.trainer == "simple":
         from trainers.simple import SimpleTrainer
         trainer = SimpleTrainer(args.conf)
@@ -67,5 +81,6 @@ if __name__ == "__main__":
         trainer = STT(cb, cd, cm, ct)
     else:
         raise ValueError("Trainer not set")
+
 
     trainer.train()
