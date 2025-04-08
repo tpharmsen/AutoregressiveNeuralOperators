@@ -1,84 +1,0 @@
-============================================================================================== 
-Warning! Mixing Conda and module environments may lead to corruption of the
-user environment. 
-We do not recommend users mixing those two environments unless absolutely
-necessary. Note that 
-SURF does not provide any support for Conda environment.
-For more information, please refer to our software policy page:
-https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
-
-Remember that many packages have already been installed on the system and can
-be loaded using 
-the 'module load <package__name>' command. If you are uncertain if a package is
-already available 
-on the system, please use 'module avail' or 'module spider' to search for it.
-============================================================================================== 
-# conda environments:
-#
-fenics2024               /home/tharmsen/.conda/envs/fenics2024
-grad311_hpc2023          /home/tharmsen/.conda/envs/grad311_hpc2023
-grad312                  /home/tharmsen/.conda/envs/grad312
-base                  *  /sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1
-
-# conda environments:
-#
-fenics2024               /home/tharmsen/.conda/envs/fenics2024
-grad311_hpc2023          /home/tharmsen/.conda/envs/grad311_hpc2023
-grad312               *  /home/tharmsen/.conda/envs/grad312
-base                     /sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1
-
-/var/spool/slurm/slurmd/job11056771/slurm_script: line 16: cd: AutoregressiveNeuralOperators: No such file or directory
-wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
-wandb: Currently logged in as: tpharmsen (tpharmsen-tue). Use `wandb login --relogin` to force relogin
-wandb: Tracking run with wandb version 0.19.1
-wandb: Run data is saved locally in /gpfs/home5/tharmsen/AutoregressiveNeuralOperators/wandb/run-20250408_014138-7zdch9o0
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run bicubic
-wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/FluidGPT
-wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/FluidGPT/runs/7zdch9o0
-initialising model...setting up dataflow...booting up wandb...front/label trainpairs: 25856 - nparams model: 10653076 - norm factor: 3.568570375442505
-0.0000000.0024750.0049500.0074260.0099010.0123760.0148510.0173270.0198020.0222770.0247520.0272280.0297030.0321780.0346530.0371290.0396040.0420790.0445540.0470300.0495050.0519800.0544550.0569310.0594060.0618810.0643560.0668320.0693070.0717820.0742570.0767330.0792080.0816830.0841580.0866340.0891090.0915840.0940590.0965350.0990100.1014850.1039600.1064360.1089110.1113860.1138610.1163370.1188120.1212870.1237620.1262380.1287130.1311880.1336630.1361390.1386140.1410890.1435640.1460400.1485150.1509900.1534650.1559410.1584160.1608910.1633660.1658420.1683170.1707920.1732670.1757430.1782180.1806930.1831680.1856440.1881190.1905940.1930690.1955450.1980200.2004950.2029700.2054460.2079210.2103960.2128710.2153470.2178220.2202970.2227720.2252480.2277230.2301980.2326730.2351490.2376240.2400990.2425740.2450500.2475250.2500000.2524750.2549500.2574260.2599010.2623760.2648510.2673270.2698020.2722770.2747520.2772280.2797030.2821780.2846530.2871290.2896040.2920790.2945540.2970300.2995050.3019800.3044550.3069310.3094060.3118810.3143560.3168320.3193070.3217820.3242570.3267330.3292080.3316830.3341580.3366340.3391090.3415840.3440590.3465350.3490100.3514850.3539600.3564360.3589110.3613860.3638610.3663370.3688120.3712870.3737620.3762380.3787130.3811880.3836630.3861390.3886140.3910890.3935640.3960400.3985150.4009900.4034650.4059410.4084160.4108910.4133660.4158420.4183170.4207920.4232670.4257430.4282180.4306930.4331680.4356440.4381190.4405940.4430690.4455450.4480200.4504950.4529700.4554460.4579210.4603960.4628710.4653470.4678220.4702970.4727720.4752480.4777230.4801980.4826730.4851490.4876240.4900990.4925740.4950500.4975250.5000000.5024750.5049500.5074260.5099010.5123760.5148510.5173270.5198020.5222770.5247520.5272280.5297030.5321780.5346530.5371290.5396040.5420790.5445540.5470300.5495050.5519800.5544550.5569310.5594060.5618810.5643560.5668320.5693070.5717820.5742570.5767330.5792080.5816830.5841580.5866340.5891090.5915840.5940590.5965350.5990100.6014850.6039600.6064360.6089110.6113860.6138610.6163370.6188120.6212870.6237620.6262380.6287130.6311880.6336630.6361390.6386140.6410890.6435640.6460400.6485150.6509900.6534650.6559410.6584160.6608910.6633660.6658420.6683170.6707920.6732670.6757430.6782180.6806930.6831680.6856440.6881190.6905940.6930690.6955450.6980200.7004950.7029700.7054460.7079210.7103960.7128710.7153470.7178220.7202970.7227720.7252480.7277230.7301980.7326730.7351490.7376240.7400990.7425740.7450500.7475250.7500000.7524750.7549500.7574260.7599010.7623760.7648510.7673270.7698020.7722770.7747520.7772280.7797030.7821780.7846530.7871290.7896040.7920790.7945540.7970300.7995050.8019800.8044550.8069310.8094060.8118810.8143560.8168320.8193070.8217820.8242570.8267330.8292080.8316830.8341580.8366340.8391090.8415840.8440590.8465350.8490100.8514850.8539600.8564360.8589110.8613860.8638610.8663370.8688120.8712870.8737620.8762380.8787130.8811880.8836630.8861390.8886140.8910890.8935640.8960400.8985150.9009900.9034650.9059410.9084160.9108910.9133660.9158420.9183170.9207920.9232670.9257430.9282180.9306930.9331680.9356440.9381190.9405940.9430690.9455450.9480200.9504950.9529700.9554460.9579210.9603960.9628710.9653470.9678220.9702970.9727720.9752480.9777230.9801980.9826730.9851490.9876240.9900990.9925740.9950500.997525Traceback (most recent call last):
-  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/train.py", line 87, in <module>
-    trainer.train()
-  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/STT.py", line 179, in train
-    val_loss = self._validate_timestep()
-               ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/trainers/STT.py", line 156, in _validate_timestep
-    for idx, (front, label) in enumerate(self.val_loader):
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
-    data = self._next_data()
-           ^^^^^^^^^^^^^^^^^
-  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 757, in _next_data
-    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataset.py", line 350, in __getitem__
-    return self.datasets[dataset_idx][sample_idx]
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
-  File "/home/tharmsen/.conda/envs/grad312/lib/python3.12/site-packages/torch/utils/data/dataset.py", line 412, in __getitem__
-    return self.dataset[self.indices[idx]]
-           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
-  File "/gpfs/home5/tharmsen/AutoregressiveNeuralOperators/src/dataloaders/AmiraDatasetFromAM.py", line 59, in __getitem__
-    front = self.data[traj_idx][ts_idx]
-            ~~~~~~~~~^^^^^^^^^^
-IndexError: index 5 is out of bounds for dimension 0 with size 5
-[1;34mwandb[0m: 🚀 View run [33mbicubic[0m at: [34mhttps://wandb.ai/tpharmsen-tue/FluidGPT/runs/7zdch9o0[0m
-[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250408_014138-7zdch9o0/logs[0m
-
-JOB STATISTICS
-==============
-Job ID: 11056771
-Cluster: snellius
-User/Group: tharmsen/tharmsen
-State: RUNNING
-Nodes: 1
-Cores per node: 9
-CPU Utilized: 00:00:00
-CPU Efficiency: 0.00% of 00:13:12 core-walltime
-Job Wall-clock time: 00:01:28
-Memory Utilized: 0.00 MB
-Memory Efficiency: 0.00% of 60.00 GB (60.00 GB/node)
-WARNING: Efficiency statistics can only be obtained after the job has ended as seff tool is based on the accounting database data.
