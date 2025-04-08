@@ -7,7 +7,7 @@ from dataloaders.utils import spatial_resample
 class PDEGymDataset(Dataset):
     def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1):
 
-        self.data = []
+        self.data_list = []
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
         self.name = None
@@ -16,10 +16,11 @@ class PDEGymDataset(Dataset):
         
         for filepath in filepaths:
             with nc.Dataset(filepath, "r") as f:
-                velocity = torch.from_numpy(f['velocity'][:,:,:2])  # remove passive tracer
-                self.data.append(velocity)  
+                data = torch.from_numpy(f['velocity'][:,:,:2])  # remove passive tracer
+                data = spatial_resample(data, self.resample_shape, self.resample_mode)
+                self.data_list.append(data)  
 
-        self.data = torch.cat(self.data, dim=0) 
+        self.data = torch.cat(self.data_list, dim=0) 
         self.traj = self.data.shape[0]
         self.ts = self.data.shape[1]
         #print(self.ts)
@@ -33,8 +34,8 @@ class PDEGymDataset(Dataset):
 
         front = self.data[traj_idx][ts_idx]
         label = self.data[traj_idx][ts_idx + self.dt]
-        front = spatial_resample(front, self.resample_shape, self.resample_mode)
-        label = spatial_resample(label, self.resample_shape, self.resample_mode)
+        #front = spatial_resample(front, self.resample_shape, self.resample_mode)
+        #label = spatial_resample(label, self.resample_shape, self.resample_mode)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
         
     def get_single_traj(self, idx):

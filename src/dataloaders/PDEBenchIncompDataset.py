@@ -27,6 +27,7 @@ class PDEBenchIncompDataset(Dataset):
                     #print(data.shape)
                     data = data.permute(0, 1, 4, 2, 3)  
                     
+                    data = spatial_resample(data, self.resample_shape, self.resample_mode)
                     if self.ts is None:
                         self.ts = data.shape[1]
                     elif self.ts != data.shape[1]:
@@ -50,8 +51,8 @@ class PDEBenchIncompDataset(Dataset):
         
         front = self.data[traj_idx][ts_idx]
         label = self.data[traj_idx][ts_idx + self.dt]
-        front = spatial_resample(front, self.resample_shape, self.resample_mode)
-        label = spatial_resample(label, self.resample_shape, self.resample_mode)
+        #front = spatial_resample(front, self.resample_shape, self.resample_mode)
+        #label = spatial_resample(label, self.resample_shape, self.resample_mode)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
     
     def get_single_traj(self, idx):

@@ -20,80 +20,90 @@ class ZeroShotSampler(Sampler):
     def random_val_traj(self):
         return self.val_trajs[torch.randint(0, len(self.val_trajs), (1,)).item()]
 
-def bicubic_resample(data, target_shape):
+def bicubic_resample(data, target_shape, device):
+    assert data.dim() >= 2, "Input must have at least 2 dimensions"
     assert data.shape[-2] == data.shape[-1], 'Only square images supported'
     assert target_shape[0] == target_shape[1], 'Only square output images supported'
     assert data.shape[-2] != target_shape[0], 'Image already in target shape'
-    if data.dim() == 3:
-        data = data.unsqueeze(0)
-        return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False).squeeze(0)
-    else:
-        return torch.nn.functional.interpolate(data, size=target_shape, mode='bicubic', align_corners=False)
-
-def fourier_resample(data, target_shape):
-    assert data.dim() in (3, 4)
     
-    four_dim = data.dim() == 4
-    if four_dim:
-        batch_size, c, x, y = data.shape
+    original_shape = data.shape
+    flattened = data.reshape(-1, *original_shape[-2:]).to(device)
+    
+    if flattened.dim() == 2:
+        flattened = flattened.unsqueeze(0).unsqueeze(0) 
+    elif flattened.dim() == 3:
+        flattened = flattened.unsqueeze(1) 
+    
+    resampled = torch.nn.functional.interpolate(
+        flattened, 
+        size=target_shape, 
+        mode='bicubic', 
+        align_corners=False
+    )
+    
+    if data.dim() == 2:
+        resampled = resampled.squeeze(0).squeeze(0)
+    elif data.dim() == 3:
+        resampled = resampled.squeeze(1)
     else:
-        c, x, y = data.shape
-        batch_size = 1
-        data = data.unsqueeze(0)
+        resampled = resampled.reshape(*original_shape[:-2], *target_shape)
+    
+    return resampled
 
+def fourier_resample(data, target_shape, device):
+    assert data.dim() >= 2, "Input must have at least 2 dimensions"
+    
+    original_shape = data.shape
+    x, y = data.shape[-2], data.shape[-1]
     target_x, target_y = target_shape
     assert x == y, 'Only square images supported'
     assert target_x == target_y, 'Only square images supported'
-    if x == target_x:
-        return data if four_dim else data.squeeze(0) 
 
-    device = data.device
-    sampled_data = []
+    #device = data.device
+    flattened = data.reshape(-1, x, y)
+    signal = flattened.to(dtype=torch.complex64, device=device)
 
-    for b in range(batch_size):
-        batch_samples = []
-        for i in range(c):
-            signal = data[b, i].to(dtype=torch.complex64, device=device)
+    pos0 = torch.linspace(0.5, x - 0.5, x, device=device)
+    pos1 = torch.linspace(0.5, target_x - 0.5, target_x, device=device)
+    freq0 = torch.fft.fftfreq(x, device=device)
+    freq1 = torch.fft.fftfreq(target_x, device=device)
 
-            pos0 = torch.linspace(0.5, x - 0.5, x, device=device)
-            pos1 = torch.linspace(0.5, target_x - 0.5, target_x, device=device)
-            freq0 = torch.fft.fftfreq(x, device=device)
-            freq1 = torch.fft.fftfreq(target_x, device=device)
+    exp_matrix_0 = torch.exp(-2j * torch.pi * torch.outer(pos0, freq0))
+    exp_matrix_1 = torch.exp(2j * torch.pi * torch.outer(freq1, pos1))
 
-            exp_matrix_0 = torch.exp(-2j * torch.pi * torch.outer(pos0, freq0))
+    results = []
+    for item in signal:
+        freq_coeff = torch.matmul(torch.matmul(exp_matrix_0.H, item), exp_matrix_0) / x**2
+        scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64, device=device)
 
-            freq_coeff = torch.matmul(torch.matmul(exp_matrix_0.H, signal), exp_matrix_0) / x**2
-            scaled_coeff = torch.zeros((target_x, target_x), dtype=torch.complex64, device=device)
+        if target_x > x:  # Upsample
+            min_idx = (target_x - x) // 2
+            scaled_coeff[min_idx:min_idx + x, min_idx:min_idx + x] = torch.fft.fftshift(freq_coeff)
+            scaled_coeff = torch.fft.ifftshift(scaled_coeff)
+        else:  # Downsample
+            min_idx = (x - target_x) // 2
+            scaled_coeff = torch.fft.fftshift(freq_coeff)[min_idx:min_idx + target_x, min_idx:min_idx + target_x]
+            scaled_coeff = torch.fft.ifftshift(scaled_coeff)
 
-            if target_x > x:  # Upsample
-                min_idx = (target_x - x) // 2
-                scaled_coeff[min_idx:min_idx + x, min_idx:min_idx + x] = torch.fft.fftshift(freq_coeff)
-                scaled_coeff = torch.fft.ifftshift(scaled_coeff)
-            else:  # Downsample
-                min_idx = (x - target_x) // 2
-                scaled_coeff = torch.fft.fftshift(freq_coeff)[min_idx:min_idx + target_x, min_idx:min_idx + target_x]
-                scaled_coeff = torch.fft.ifftshift(scaled_coeff)
+        scaled_signal = torch.matmul(torch.matmul(exp_matrix_1.H, scaled_coeff), exp_matrix_1)
+        results.append(scaled_signal.real)
 
-            exp_matrix_1 = torch.exp(2j * torch.pi * torch.outer(freq1, pos1))
-            scaled_signal = torch.matmul(torch.matmul(exp_matrix_1.H, scaled_coeff), exp_matrix_1)
-            batch_samples.append(scaled_signal.real)
-
-        sampled_data.append(torch.stack(batch_samples, dim=0))
-
-    scaled_signal = torch.stack(sampled_data, dim=0)
-    return scaled_signal if four_dim else scaled_signal.squeeze(0)
+    output = torch.stack(results).reshape(*original_shape[:-2], target_x, target_y)
+    return output
 
 
-def spatial_resample(data, target_shape, mode='bicubic'):
-    #print(data.shape, target_shape)
+def spatial_resample(data, target_shape, mode):
     if data.shape[-1] == target_shape and data.shape[-2] == target_shape:
         return data
+    old_device = data.device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if mode == 'bicubic':
-        return bicubic_resample(data, (target_shape, target_shape))
+        return bicubic_resample(data, (target_shape, target_shape), device).to(old_device)
     elif mode == 'fourier':
-        return fourier_resample(data, (target_shape, target_shape))
+        return fourier_resample(data, (target_shape, target_shape), device).to(old_device)
     else:
         raise ValueError(f'Unknown mode: {mode}')
+
 
 def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample):
     subdir = Path(folderPath)

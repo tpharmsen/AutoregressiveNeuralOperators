@@ -27,6 +27,7 @@ class PDEBenchCompDataset(Dataset):
                     data = torch.from_numpy(
                         np.stack((f["Vx"][:], f["Vy"][:]), axis=2).astype(np.float32)
                     )
+                    data = spatial_resample(data, self.resample_shape, self.resample_mode)
 
                     if self.ts is None:
                         self.ts = data.shape[1]
@@ -47,8 +48,8 @@ class PDEBenchCompDataset(Dataset):
         ts_idx = idx % (self.ts - self.dt)
         front = self.data[traj_idx][ts_idx]
         label = self.data[traj_idx][ts_idx + self.dt]
-        front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
-        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
+        #front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
+        #label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
         
     def get_single_traj(self, idx):

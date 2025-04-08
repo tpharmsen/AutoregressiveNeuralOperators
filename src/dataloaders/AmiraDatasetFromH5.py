@@ -19,6 +19,7 @@ class AmiraDatasetFromH5(Dataset):
             with h5py.File(filepath, 'r') as f:
                 data = torch.from_numpy(f['velocity'][:])
                 data = data.permute(0,3,1,2)
+                data = spatial_resample(data, self.resample_shape, self.resample_mode)
                 self.data_list.append(data)
                 self.traj_list.append(torch.tensor(1))
                 if self.ts is None:
@@ -37,8 +38,8 @@ class AmiraDatasetFromH5(Dataset):
         front = self.data[traj_idx][ts_idx]
         label = self.data[traj_idx][ts_idx + self.dt]
 
-        front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
-        label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
+        #front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
+        #label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
     
         
