@@ -13,10 +13,11 @@ class AmiraDatasetFromH5(Dataset):
         self.resample_mode = resample_mode
         self.name = None
         self.vel_scale = None
+        self.dt = timesample
         
         for filepath in filepaths:
             with h5py.File(filepath, 'r') as f:
-                data = torch.from_numpy(f['velocity'][::timesample])
+                data = torch.from_numpy(f['velocity'][:])
                 data = data.permute(0,3,1,2)
                 self.data_list.append(data)
                 self.traj_list.append(torch.tensor(1))
@@ -27,14 +28,14 @@ class AmiraDatasetFromH5(Dataset):
         self.traj = sum(self.traj_list)
 
     def __len__(self):
-        return self.traj * (self.ts - 1)
+        return self.traj * (self.ts - self.dt)
 
     def __getitem__(self, idx):
-        traj_idx = idx // (self.ts - 1)
-        ts_idx = idx % (self.ts - 1)
+        traj_idx = idx // (self.ts - self.dt)
+        ts_idx = idx % (self.ts - self.dt)
         
         front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + 1]
+        label = self.data[traj_idx][ts_idx + self.dt]
 
         front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
         label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
@@ -42,7 +43,7 @@ class AmiraDatasetFromH5(Dataset):
     
         
     def get_single_traj(self, idx):
-        full = self.data[idx]
+        full = self.data[idx][::self.dt]
         full = spatial_resample(full, self.resample_shape, self.resample_mode)
         return full
     

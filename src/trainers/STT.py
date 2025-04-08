@@ -138,7 +138,7 @@ class STT:
 
         for idx, (front, label) in enumerate(self.train_loader):
             #print('shapes:', front.shape, torch.max(front), torch.min(front))
-            print(f"{idx/len(self.train_loader):2f}", end='\r')
+            #print(f"{idx/len(self.train_loader):2f}", end='\r')
             front, label = front.to(self.device), label.to(self.device)
             self.optimizer.zero_grad()
             pred = self.model(front)

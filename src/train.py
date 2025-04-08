@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
 
     if args.out != None:
-        cb.folder_out = args.out
+        cb.folder_out = args.out.replace("/", "") + "/"
         #print('args flag')
     os.makedirs(cb.save_path + cb.folder_out, exist_ok=True)
     if args.name != None:
