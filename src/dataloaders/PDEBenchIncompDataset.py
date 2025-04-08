@@ -57,7 +57,7 @@ class PDEBenchIncompDataset(Dataset):
     
     def get_single_traj(self, idx):
         full = self.data[idx][::self.dt]
-        full = spatial_resample(full, self.resample_shape, self.resample_mode)
+        #full = spatial_resample(full, self.resample_shape, self.resample_mode)
         return full
     
     def normalize_velocity(self, vel_scale):

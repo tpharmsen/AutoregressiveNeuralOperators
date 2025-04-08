@@ -68,7 +68,7 @@ class AmiraDatasetFromAM(Dataset):
         full = self.data[idx][::self.dt]
         #print("test1:")
         #print(full.shape)
-        full = spatial_resample(full, self.resample_shape, self.resample_mode)
+        #full = spatial_resample(full, self.resample_shape, self.resample_mode)
         #print('test2:')
         #print(full.shape)
         return full
