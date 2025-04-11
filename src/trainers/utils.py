@@ -168,8 +168,11 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
     for ax, title in zip(axes, titles):
         img = ax.imshow(np.zeros((x_dim, y_dim)), cmap='viridis', vmin=vmin, vmax=vmax)
         ax.set_title(title)
-        ax.set_xticks([])
-        ax.set_yticks([])
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(False)
         imgs.append(img)
     
     def init():

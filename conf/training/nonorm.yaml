@@ -7,7 +7,7 @@ inj_noise: False
 train_ratio: 0.8
 normalize: False
 pin_memory: False
-forward_steps_loss: 4
+forward_steps_loss: 3
 
 plottrain_out: "plot_train_nonorm.png"
 plotval_out: "plot_val_nonorm.png"

@@ -20,6 +20,11 @@ from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
 from trainers.utils import animate_rollout, magnitude_vel, rollout
 
+plt.style.use('dark_background')
+plt.rcParams['figure.facecolor'] = '#1F1F1F'
+plt.rcParams['axes.facecolor'] = '#1F1F1F'
+plt.rcParams['savefig.facecolor'] = '#1F1F1F'
+
 class STT:
     def __init__(self, cb, cd, cm, ct):
         self.cb = cb
@@ -168,7 +173,7 @@ class STT:
                 front, label = front.to(self.device), label.to(self.device)
                 pred = self.model(front)
                 loss = self.criterion(pred, label)
-            losses.append(loss.detach().item())
+                losses.append(loss.detach().item())
         return np.mean(losses)
     
     def _validate_rollout(self):
@@ -186,7 +191,7 @@ class STT:
                     #print(i)
                     pred = self.model(pred)
                 loss = self.criterion(pred, label)
-            losses.append(loss.detach().item())
+                losses.append(loss.detach().item())
         return np.mean(losses)
     
 
@@ -307,7 +312,9 @@ class STT:
         for ax in axes.flat:
             ax.set_xticks([])
             ax.set_yticks([])
-
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()

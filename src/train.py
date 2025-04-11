@@ -39,7 +39,6 @@ if __name__ == "__main__":
     parser.add_argument("--CT", type=str, default="std.yaml")
     parser.add_argument("--trainer", type=str, default="STT")
     parser.add_argument("--out", type=str, default=None)
-    parser.add_argument("--name", type=str, default=None)
     args = parser.parse_args()
 
     if os.path.exists("conf/base/" + args.CB):
@@ -64,8 +63,8 @@ if __name__ == "__main__":
         cb.folder_out = args.out.replace("/", "") + "/"
         #print('args flag')
     os.makedirs(cb.save_path + cb.folder_out, exist_ok=True)
-    if args.name != None:
-        cb.wandb_name = args.name
+    if args.out != None:
+        cb.wandb_name = args.out
         
 
     if args.trainer == "simple":
