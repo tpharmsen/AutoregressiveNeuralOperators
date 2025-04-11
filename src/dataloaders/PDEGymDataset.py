@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 import netCDF4 as nc
 from dataloaders.utils import spatial_resample
 
-
 class PDEGymDataset(Dataset):
     def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1, forward_steps=1):
 
@@ -33,10 +32,13 @@ class PDEGymDataset(Dataset):
         traj_idx = idx // (self.ts - self.dt)
         ts_idx = idx % (self.ts - self.dt)
 
+        #front = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
+        #label = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
         front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + self.dt]
+        label = self.data[traj_idx][ts_idx + self.fs * self.dt]
         #front = spatial_resample(front, self.resample_shape, self.resample_mode)
         #label = spatial_resample(label, self.resample_shape, self.resample_mode)
+        #print(idx, ts_idx, ts_idx + self.fs * self.dt)
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
         
     def get_single_traj(self, idx):

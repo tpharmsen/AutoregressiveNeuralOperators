@@ -96,13 +96,14 @@ class STT:
                 file_ext=item["file_ext"], 
                 resample_shape=self.cd.resample_shape, 
                 resample_mode=self.cd.resample_mode, 
-                timesample=item["timesample"]
+                timesample=item["timesample"],
+                n = 1
             )
             dataset.name = item['name']
 
             train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train", n=1)
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=1)
-            val_rollout_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train-ratio, split="val", n=5)
+            #val_rollout_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=5)
 
             #print(len(train_sampler.indices))
             train_datasets.append(Subset(dataset, train_sampler.indices))
@@ -110,7 +111,7 @@ class STT:
             self.val_samplers.append(val_sampler)
         
         train_dataset = ConcatNormDataset(train_datasets)
-        val_dataset = ConcatNormDataset(self.val_datasets)
+        self.val_dataset = ConcatNormDataset(self.val_datasets)
 
         #unnorm_trainset = train_dataset.normalize_velocity()
         #unnorm_valset = val_dataset.normalize_velocity()
@@ -127,7 +128,7 @@ class STT:
             shuffle=True,
             pin_memory=self.ct.pin_memory)
         val_loader = DataLoader(
-            val_dataset,
+            self.val_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True, # simply set to true to provide random sampling for image plotting function
             pin_memory=self.ct.pin_memory) 
@@ -150,9 +151,18 @@ class STT:
 
         return np.mean(losses)
 
+    def validate(self):
+        loss_ts = self._validate_timestep()
+        loss_fs = self._validate_rollout()
+        return loss_ts, loss_fs
+
     def _validate_timestep(self):
         losses = []
         self.model.eval()
+
+        for dataset in self.val_dataset.datasets:
+            #print(dataset)
+            dataset.fs = 1 # next timestep pred
         with torch.no_grad():
             for idx, (front, label) in enumerate(self.val_loader):
                 front, label = front.to(self.device), label.to(self.device)
@@ -160,6 +170,25 @@ class STT:
                 loss = self.criterion(pred, label)
             losses.append(loss.detach().item())
         return np.mean(losses)
+    
+    def _validate_rollout(self):
+        losses = []
+        self.model.eval()
+        
+        for dataset in self.val_dataset.datasets:
+            dataset.fs = self.ct.forward_steps_loss
+
+        with torch.no_grad():
+            for idx, (front, label) in enumerate(self.val_loader):
+                front, label = front.to(self.device), label.to(self.device)
+                pred = front
+                for i in range(self.ct.forward_steps_loss):
+                    #print(i)
+                    pred = self.model(pred)
+                loss = self.criterion(pred, label)
+            losses.append(loss.detach().item())
+        return np.mean(losses)
+    
 
     def train(self):
         print("initialising model...", end='\r')
@@ -177,7 +206,7 @@ class STT:
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
             train_loss = self.train_one_epoch()
-            val_loss = self._validate_timestep()
+            val_loss_SS, val_loss_FS = self.validate()
             epoch_time = time.time() - start_time
             makeviz = self.epoch % self.cb.viz_freq == 0
             if makeviz and self.cb.viz:
@@ -191,7 +220,8 @@ class STT:
 
             print(f"Epoch {self.epoch}:  "
                     f"Train Loss = {train_loss:.8f} - "
-                    f"Val Loss = {val_loss:.8f} - "
+                    f"Val Loss SS = {val_loss_SS:.8f} - "
+                    f"Val Loss FS = {val_loss_FS:.8f} - "
                     f"LR: {self.optimizer.param_groups[0]['lr']:.1e} - "
                     f"ET: {epoch_time:.2f} s - "
                     f"PT: {plot_time:.4f} s")
@@ -200,7 +230,8 @@ class STT:
                 wandb.log({
                     "epoch": self.epoch,
                     "Train Loss": train_loss,
-                    "Val Loss": val_loss ,
+                    "Val Loss SS": val_loss_SS,
+                    "Val Loss FS": val_loss_FS,
                     "Learning Rate": self.optimizer.param_groups[0]['lr'],
                     "Epoch time": epoch_time,
                     "Plot time": plot_time,
@@ -209,7 +240,7 @@ class STT:
                     "rollout_train_plot": wandb.Image(self.out_0) if self.cb.viz and makeviz else None,
                 })
 
-            self.scheduler.step(val_loss)
+            self.scheduler.step(val_loss_SS)
 
         if self.cb.wandb:
             wandb.finish()

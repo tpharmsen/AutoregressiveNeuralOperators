@@ -37,7 +37,7 @@ class AmiraDatasetFromH5(Dataset):
         ts_idx = idx % (self.ts - self.dt)
         
         front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + self.dt]
+        label = self.data[traj_idx][ts_idx + self.fs * self.dt]
 
         #front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
         #label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
