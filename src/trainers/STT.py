@@ -100,8 +100,9 @@ class STT:
             )
             dataset.name = item['name']
 
-            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train")
-            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val")
+            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train", n=1)
+            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=1)
+            val_rollout_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train-ratio, split="val", n=5)
 
             #print(len(train_sampler.indices))
             train_datasets.append(Subset(dataset, train_sampler.indices))

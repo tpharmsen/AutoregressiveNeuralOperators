@@ -4,14 +4,14 @@ import numpy as np
 from torch.utils.data import Sampler
 
 class ZeroShotSampler(Sampler):
-    def __init__(self, dataset, train_ratio=0.8, split="train", seed=227):
+    def __init__(self, dataset, train_ratio=0.8, split="train", seed=227, n=1):
         torch.manual_seed(seed) 
         num_train = int(dataset.traj * train_ratio)
         shuffled_trajs = torch.randperm(dataset.traj).tolist() 
         train_trajs = shuffled_trajs[:num_train]
         self.val_trajs = shuffled_trajs[num_train:]
-        train_indices = [t * (dataset.ts - dataset.dt) + ts for t in train_trajs for ts in range(dataset.ts - dataset.dt)]
-        val_indices = [t * (dataset.ts - dataset.dt) + ts for t in self.val_trajs for ts in range(dataset.ts - dataset.dt)]
+        train_indices = [t * (dataset.ts - dataset.dt) + ts for t in train_trajs for ts in range(dataset.ts - dataset.dt * n)]
+        val_indices = [t * (dataset.ts - dataset.dt) + ts for t in self.val_trajs for ts in range(dataset.ts - dataset.dt * n)]
         self.indices = train_indices if split == "train" else val_indices
     def __iter__(self):
         return iter(self.indices)
@@ -105,10 +105,10 @@ def spatial_resample(data, target_shape, mode):
         raise ValueError(f'Unknown mode: {mode}')
 
 
-def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample):
+def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample, n):
     subdir = Path(folderPath)
     assert subdir.exists(), 'subdir doesnt exist'
     files = list(subdir.glob("*." + str(file_ext)))
     #print(files)
-    return dataset_obj(files, resample_shape, resample_mode, timesample)
+    return dataset_obj(files, resample_shape, resample_mode, timesample, n)
 

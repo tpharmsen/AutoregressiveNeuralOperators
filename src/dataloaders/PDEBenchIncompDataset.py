@@ -7,7 +7,7 @@ from dataloaders.utils import spatial_resample
 
 
 class PDEBenchIncompDataset(Dataset):
-    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=10):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=10, forward_steps=1):
         self.data_list = []
         self.traj_list = []
         self.ts = None
@@ -16,6 +16,7 @@ class PDEBenchIncompDataset(Dataset):
         self.name = None
         self.vel_scale = None
         self.dt = timesample
+        self.fs = forward_steps
         
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
@@ -35,9 +36,6 @@ class PDEBenchIncompDataset(Dataset):
                     
                     self.data_list.append(data)
                     self.traj_list.append(data.shape[0])
-                #if "t" in keys:
-                #    self.data_t = torch.from_numpy(f['t'][:].astype(np.float32))
-                #    print(self.data_t.shape)
         
         self.data = torch.cat(self.data_list, dim=0)
         self.traj = sum(self.traj_list)

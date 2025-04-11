@@ -8,7 +8,7 @@ import numpy as np
 
 
 class AmiraDatasetFromAM(Dataset):
-    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=5):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=5, forward_steps=1):
         self.data_list = []
         self.traj_list = []
         self.ts = None
@@ -17,6 +17,7 @@ class AmiraDatasetFromAM(Dataset):
         self.name = None
         self.vel_scale = None
         self.dt = timesample
+        self.fs = forward_steps
         
         for filepath in filepaths:
             #print(filepath)

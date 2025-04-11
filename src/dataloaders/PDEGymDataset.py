@@ -5,7 +5,7 @@ from dataloaders.utils import spatial_resample
 
 
 class PDEGymDataset(Dataset):
-    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1, forward_steps=1):
 
         self.data_list = []
         self.resample_shape = resample_shape
@@ -13,6 +13,7 @@ class PDEGymDataset(Dataset):
         self.name = None
         self.vel_scale = None
         self.dt = timesample
+        self.fs = forward_steps
         
         for filepath in filepaths:
             with nc.Dataset(filepath, "r") as f:
