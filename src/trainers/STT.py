@@ -34,7 +34,9 @@ class STT:
         self.device = torch.device(self.cb.device)
         self.out_0 = self.cb.save_path + self.cb.folder_out + self.ct.plottrain_out
         self.out_1 = self.cb.save_path + self.cb.folder_out + self.ct.plotval_out
-        self.out_2 = self.cb.save_path + self.cb.folder_out + self.ct.anim_out
+        self.out_2 = self.cb.save_path + self.cb.folder_out + self.ct.plotvalf_out
+        self.out_3 = self.cb.save_path + self.cb.folder_out + self.ct.anim_out
+        self.out_4 = self.cb.save_path + self.cb.folder_out + self.ct.checkpoint
         #os.makedirs(self.cb.save_path + self.cb.folder_out, exist_ok=True)            
 
     def build_wandb_config(self):
@@ -93,6 +95,7 @@ class STT:
         train_datasets = []
         self.val_datasets = []
         self.val_samplers = []
+        self.val_forward_datasets = []
 
         for item in self.cd.datasets:
             dataset = get_dataset(
@@ -108,15 +111,17 @@ class STT:
 
             train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train", n=1)
             val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=1)
-            #val_rollout_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=5)
+            val_forward_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=self.ct.forward_steps_loss)
 
-            #print(len(train_sampler.indices))
             train_datasets.append(Subset(dataset, train_sampler.indices))
             self.val_datasets.append(Subset(dataset, val_sampler.indices))
             self.val_samplers.append(val_sampler)
+            self.val_forward_datasets.append(Subset(dataset, val_forward_sampler.indices))
+            print(len(train_sampler), len(val_sampler), len(val_forward_sampler))
         
         train_dataset = ConcatNormDataset(train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
+        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
 
         #unnorm_trainset = train_dataset.normalize_velocity()
         #unnorm_valset = val_dataset.normalize_velocity()
@@ -137,7 +142,13 @@ class STT:
             batch_size=self.ct.batch_size,
             shuffle=True, # simply set to true to provide random sampling for image plotting function
             pin_memory=self.ct.pin_memory) 
-        return train_loader, val_loader
+        val_forward_loader = DataLoader(
+            self.val_forward_dataset,
+            batch_size=self.ct.batch_size,
+            shuffle=True,
+            pin_memory=self.ct.pin_memory
+        )
+        return train_loader, val_loader, val_forward_loader
             
     def train_one_epoch(self):
         losses = []
@@ -158,16 +169,13 @@ class STT:
 
     def validate(self):
         loss_ts = self._validate_timestep()
-        loss_fs = self._validate_rollout()
+        loss_fs = self._validate_forward()
         return loss_ts, loss_fs
 
     def _validate_timestep(self):
         losses = []
         self.model.eval()
 
-        for dataset in self.val_dataset.datasets:
-            #print(dataset)
-            dataset.fs = 1 # next timestep pred
         with torch.no_grad():
             for idx, (front, label) in enumerate(self.val_loader):
                 front, label = front.to(self.device), label.to(self.device)
@@ -176,30 +184,32 @@ class STT:
                 losses.append(loss.detach().item())
         return np.mean(losses)
     
-    def _validate_rollout(self):
+    def _validate_forward(self):
         losses = []
         self.model.eval()
-        
-        for dataset in self.val_dataset.datasets:
-            dataset.fs = self.ct.forward_steps_loss
+
+        for subset in self.val_forward_dataset.datasets:
+            subset.dataset.fs = self.ct.forward_steps_loss
 
         with torch.no_grad():
-            for idx, (front, label) in enumerate(self.val_loader):
-                front, label = front.to(self.device), label.to(self.device)
+            for idx, (front, label) in enumerate(self.val_forward_loader):
                 pred = front
+                pred, label = pred.to(self.device), label.to(self.device)
                 for i in range(self.ct.forward_steps_loss):
-                    #print(i)
                     pred = self.model(pred)
                 loss = self.criterion(pred, label)
                 losses.append(loss.detach().item())
-        return np.mean(losses)
-    
 
+        for subset in self.val_forward_dataset.datasets:
+            subset.dataset.fs = 1
+        return np.mean(losses)
+
+    
     def train(self):
         print("initialising model...", end='\r')
         self._initialize_model()
         print("setting up dataflow...", end='\r')
-        self.train_loader, self.val_loader = self.prepare_dataloader()
+        self.train_loader, self.val_loader, self.val_forward_loader = self.prepare_dataloader()
         
         if self.cb.wandb:
             print("booting up wandb...", end='\r')
@@ -207,6 +217,7 @@ class STT:
             wandb.init(project="FluidGPT", name=self.cb.wandb_name, config=wandb_config)    
             #wandb.config.update(self.config)
 
+        best_loss = np.inf#float('inf')
         print('front/label trainpairs:', self.ct.batch_size * len(self.train_loader), "- nparams model:", self.cm.nparams, "- norm factor:", self.ct.norm_factor)
         for self.epoch in range(self.ct.epochs):
             start_time = time.time()
@@ -216,9 +227,10 @@ class STT:
             makeviz = self.epoch % self.cb.viz_freq == 0
             if makeviz and self.cb.viz:
                 plot_time = time.time()
-                self.make_plot(self.out_0, False)
-                self.make_plot(self.out_1, True)
-                self.make_anim(self.out_2)
+                self.make_plot(self.out_0, 'train')
+                self.make_plot(self.out_1, 'val')
+                self.make_plot(self.out_2, 'val_forward')
+                self.make_anim(self.out_3)
                 plot_time = time.time() - plot_time
             else:
                 plot_time = 0
@@ -240,12 +252,25 @@ class STT:
                     "Learning Rate": self.optimizer.param_groups[0]['lr'],
                     "Epoch time": epoch_time,
                     "Plot time": plot_time,
-                    "rollout_val_gif": wandb.Video(self.out_2, format="gif") if self.cb.viz and makeviz else None,
-                    "rollout_val_plot": wandb.Image(self.out_1) if self.cb.viz and makeviz else None,
-                    "rollout_train_plot": wandb.Image(self.out_0) if self.cb.viz and makeviz else None,
+                    "rollout_val_gif": wandb.Video(self.out_3, format="gif") if self.cb.viz and makeviz else None,
+                    "val_forward_plot": wandb.Image(self.out_2) if self.cb.viz and makeviz else None,
+                    "val_plot": wandb.Image(self.out_1) if self.cb.viz and makeviz else None,
+                    "train_plot": wandb.Image(self.out_0) if self.cb.viz and makeviz else None,
                 })
 
             self.scheduler.step(val_loss_SS)
+
+            if self.cb.save_on:
+                if val_loss_SS < best_loss:
+                    torch.save({
+                        'epoch': self.epoch,
+                        'model_state_dict': self.model.state_dict(),
+                        'optimizer_state_dict': self.optimizer.state_dict(),
+                        'train_loss': train_loss,
+                        'val_loss_ss': val_loss_SS,
+                        'val_loss_fs': val_loss_FS
+                    }, self.out_4)
+                    best_loss = val_loss_SS
 
         if self.cb.wandb:
             wandb.finish()
@@ -267,18 +292,28 @@ class STT:
         animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
         
     
-    def make_plot(self, output_path="output/out.png", on_val=True):
+    def make_plot(self, output_path="output/out.png", mode='val'):
         self.model.eval()
 
-        if on_val:
+        if mode == 'val':
             for front, label in self.val_loader:
                 break           
-        else:
+        elif mode == 'train':
             for front, label in self.train_loader:
                 break  
+        elif mode == 'val_forward':
+            for subset in self.val_forward_dataset.datasets:
+                subset.dataset.fs = self.ct.forward_steps_loss
+            for front, label in self.val_forward_loader:
+                break
+            for subset in self.val_forward_dataset.datasets:
+                subset.dataset.fs = 1
+        else:
+            raise ValueError('PLOTMODE NOT RECOGNIZED')
         front, label = front.to(self.device), label.to(self.device)
         front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
 
+        #print(mode, self.val_dataset.datasets[0].dataset.fs, self.val_forward_dataset.datasets[0].dataset.fs)
         with torch.no_grad():
             pred = self.model(front)
         

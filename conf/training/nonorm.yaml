@@ -7,8 +7,10 @@ inj_noise: False
 train_ratio: 0.8
 normalize: False
 pin_memory: False
-forward_steps_loss: 3
+forward_steps_loss: 4
 
 plottrain_out: "plot_train_nonorm.png"
 plotval_out: "plot_val_nonorm.png"
+plotvalf_out: "plotf_val.png"
 anim_out: "anim_out_nonorm.gif"
+checkpoint: 'checkpoint.pth'

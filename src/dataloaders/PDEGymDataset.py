@@ -31,14 +31,14 @@ class PDEGymDataset(Dataset):
     def __getitem__(self, idx):
         traj_idx = idx // (self.ts - self.dt)
         ts_idx = idx % (self.ts - self.dt)
-
+        #print(idx, ts_idx, ts_idx + self.fs * self.dt)
         #front = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
         #label = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
         front = self.data[traj_idx][ts_idx]
         label = self.data[traj_idx][ts_idx + self.fs * self.dt]
         #front = spatial_resample(front, self.resample_shape, self.resample_mode)
         #label = spatial_resample(label, self.resample_shape, self.resample_mode)
-        #print(idx, ts_idx, ts_idx + self.fs * self.dt)
+        
         return front, label #front.unsqueeze(0), label.unsqueeze(0)
         
     def get_single_traj(self, idx):
