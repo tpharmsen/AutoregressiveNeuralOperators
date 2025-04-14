@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--CD", type=str, default="std.yaml")
     parser.add_argument("--CM", type=str, default="std.yaml")
     parser.add_argument("--CT", type=str, default="std.yaml")
-    parser.add_argument("--trainer", type=str, default="STT")
+    parser.add_argument("--trainer", type=str, default="MTT")
     parser.add_argument("--out", type=str, default=None)
     args = parser.parse_args()
 
@@ -79,6 +79,9 @@ if __name__ == "__main__":
     elif args.trainer == "STT":
         from trainers.STT import STT
         trainer = STT(cb, cd, cm, ct)
+    elif args.trainer == "MTT":
+        from trainers.MTT import MTT
+        trainer = MTT(cb, cd, cm, ct)
     else:
         raise ValueError("Trainer not set")
 
