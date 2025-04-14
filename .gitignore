@@ -2,4 +2,5 @@ wandb
 datasets
 output
 models
+lightning_logs
 __pycache__/
