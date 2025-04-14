@@ -117,7 +117,7 @@ class STT:
             self.val_datasets.append(Subset(dataset, val_sampler.indices))
             self.val_samplers.append(val_sampler)
             self.val_forward_datasets.append(Subset(dataset, val_forward_sampler.indices))
-            print(len(train_sampler), len(val_sampler), len(val_forward_sampler))
+            #print(len(train_sampler), len(val_sampler), len(val_forward_sampler))
         
         train_dataset = ConcatNormDataset(train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
@@ -282,6 +282,8 @@ class STT:
         #print(self.val_datasets)
         dataset_idx = torch.randint(0, len(self.val_datasets), (1,)).item()
         traj_idx = self.val_samplers[dataset_idx].random_val_traj()
+        #print(traj_idx)
+        #print(np.sort(self.val_samplers[dataset_idx].val_trajs))
         val_traj = self.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
         #print(val_traj.shape)
         front = val_traj[0].unsqueeze(0)	
@@ -341,8 +343,8 @@ class STT:
             axes[0, i].set_title(titles[i])
             axes[1, i].set_title(titles[i])
         
-        axes[0, 0].set_ylabel("X")
-        axes[1, 0].set_ylabel("Y")
+        axes[0, 0].set_ylabel(r"$v_x$")
+        axes[1, 0].set_ylabel(r"$v_y$")
             
         for ax in axes.flat:
             ax.set_xticks([])

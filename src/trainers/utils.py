@@ -160,12 +160,13 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     timesteps, _, x_dim, y_dim = stacked_pred.shape
     stacked_pred, stacked_true = stacked_pred.squeeze(1).cpu().numpy(), stacked_true.squeeze(1).cpu().numpy()
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    titles = ["Pred", "True"]
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    titles = ["Pred", "True", "Diff"]
     imgs = []
     vmin, vmax = min(stacked_pred.min(), stacked_true.min()), max(stacked_pred.max(), stacked_true.max())
 
     for ax, title in zip(axes, titles):
+        #print(ax, title)
         img = ax.imshow(np.zeros((x_dim, y_dim)), cmap='viridis', vmin=vmin, vmax=vmax)
         ax.set_title(title)
         for ax in axes.flat:
@@ -174,15 +175,20 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
             for spine in ax.spines.values():
                 spine.set_visible(False)
         imgs.append(img)
+
+    axes[0].set_ylabel(r'$\sqrt{v_x^2 + v_y^2}$')
+    imgs[2].set_cmap('magma')
     
     def init():
         imgs[0].set_data(stacked_pred[0])
         imgs[1].set_data(stacked_true[0])
+        #imgs[2].set_data(torch.zeros([stacked_true.shape[0], stacked_true.shape[1]]))
         return imgs
 
     def update(frame):
         imgs[0].set_data(stacked_pred[frame])
         imgs[1].set_data(stacked_true[frame])
+        imgs[2].set_data(np.abs(stacked_true[frame] - stacked_pred[frame]))
 
         fig.suptitle(f"Dataset: {dataset_name}, timestep {frame + 1}")
         #fig.suptitle(f"Dataset: -, timestep {frame + 1}")
