@@ -12,6 +12,10 @@ python src/train.py --conf conf/example.yaml --trainer PFTB
 CUDA_VISIBLE_DEVICES=1 python src/train.py --conf conf/local_01DS8_1.yaml >> testWSV.out
 
 # runcommands HPC:
+salloc --job-name=sshconnect --partition=gpu_mig --time=02:00:00 --gpus-per-node=1 --reservation=terv92681
+
+
+
 single run:
 sbatch submit/simple-reservation-short.sh
 
