@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
-#SBATCH --reservation=terv92681
+#BATCH --reservation=terv92681
 
 module load 2024
 module load Anaconda3/2024.06-1
