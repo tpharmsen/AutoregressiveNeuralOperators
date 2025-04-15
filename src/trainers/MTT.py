@@ -1,4 +1,5 @@
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
 import torch 
 import torch.nn as nn
 import torch.optim as optim
@@ -26,6 +27,8 @@ plt.rcParams['figure.facecolor'] = '#1F1F1F'
 plt.rcParams['axes.facecolor'] = '#1F1F1F'
 plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0" # if gpu mig is used
+
 #torch.set_float32_matmul_precision('medium')
 
 class MTT:
@@ -34,10 +37,7 @@ class MTT:
         self.cd = cd
         self.cm = cm
         self.ct = ct
-        #torch.device("cuda:0")
-        num_gpus = torch.cuda.device_count()
-        #print(num_gpus)
-        #print()
+        
 
         #print('init\n')
     def train(self):
@@ -47,10 +47,12 @@ class MTT:
         num_gpus = torch.cuda.device_count()
         print(num_gpus)
         print()
+        wandb_logger = WandbLogger(project="your_project_name")
         trainer = pl.Trainer(
             precision="bf16-mixed",
             accelerator="gpu",
-            devices= 1#num_gpus,
+            devices= 'auto',
+            logger=wandb_logger#num_gpus,
             #strategy="ddp"
         )
         
@@ -223,3 +225,87 @@ class MTTdata(pl.LightningDataModule):
             shuffle=True,
             pin_memory=self.ct.pin_memory
         )
+
+class LoggerCallback(pl.Callback):
+    def on_validation_epoch_end(self, trainer, pl_module):
+        epoch = trainer.current_epoch
+        device = pl_module.device
+
+        # Create and log plot
+        
+        plot_path = f"{pl_module.out_1}/val_plot_epoch{epoch:03d}.png"
+        self.make_plot(pl_module, plot_path, mode='val', device=device)
+        trainer.logger.experiment.log({"val_plot": wandb.Image(plot_path), "epoch": epoch})
+
+        # Create and log animation
+        anim_path = f"{pl_module.out_3}/val_anim_epoch{epoch:03d}.mp4"
+        self.make_anim(pl_module, anim_path, device=device)
+        trainer.logger.experiment.log({"val_anim": wandb.Video(anim_path, fps=4, format="mp4"), "epoch": epoch})
+
+    def make_anim(self, pl_module, output_path, device):
+        model = pl_module
+        model.eval()
+        with torch.no_grad():
+            dataset_idx = torch.randint(0, len(model.trainer.datamodule.val_datasets), (1,)).item()
+            traj_idx = model.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
+            val_traj = model.trainer.datamodule.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
+
+            front = val_traj[0].unsqueeze(0).to(device)
+            stacked_pred = rollout(front, model, len(val_traj))
+            stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
+            dataset_name = model.trainer.datamodule.val_datasets[dataset_idx].dataset.name
+            animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
+
+    def make_plot(self, pl_module, output_path, mode='val', device='cuda'):
+        model = pl_module
+        model.eval()
+
+        if mode == 'val':
+            loader = iter(model.trainer.datamodule.val_dataloader()[0])
+        elif mode == 'train':
+            loader = iter(model.trainer.datamodule.train_dataloader())
+        elif mode == 'val_forward':
+            loader = iter(model.trainer.datamodule.val_dataloader()[1])
+        else:
+            raise ValueError('PLOTMODE NOT RECOGNIZED')
+
+        front, label = next(loader)
+        front, label = front.to(device), label.to(device)
+        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
+
+        with torch.no_grad():
+            pred = model(front)
+
+        # Plotting logic (same as yours)
+        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
+        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
+        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
+        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
+
+        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        fig.suptitle(f"Epoch {model.trainer.current_epoch}")
+
+        titles = ["Input", "Prediction", "Target", "Difference"]
+        axes[0, 0].imshow(front_x, cmap='viridis')
+        axes[0, 1].imshow(pred_x, cmap='viridis')
+        axes[0, 2].imshow(label_x, cmap='viridis')
+        axes[0, 3].imshow(diff_x, cmap='magma')
+        axes[1, 0].imshow(front_y, cmap='viridis')
+        axes[1, 1].imshow(pred_y, cmap='viridis')
+        axes[1, 2].imshow(label_y, cmap='viridis')
+        axes[1, 3].imshow(diff_y, cmap='magma')
+
+        for i in range(4):
+            axes[0, i].set_title(titles[i])
+            axes[1, i].set_title(titles[i])
+        axes[0, 0].set_ylabel(r"$v_x$")
+        axes[1, 0].set_ylabel(r"$v_y$")
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()

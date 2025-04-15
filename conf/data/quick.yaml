@@ -2,9 +2,8 @@ resample_shape: 128
 resample_mode: "fourier"
 
 datasets:
-  - name: "pdegym-gauss"
-    path: "PDEGym-NSGauss"
-    dataset: "PDEGymDataset"
-    file_ext: "nc"
-    timesample: 1
-
+  - name: "amira"
+    path: "AmiraSet-test/"
+    dataset: "AmiraDatasetFromAM"
+    file_ext: "am"
+    timesample: 5
