@@ -6,6 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --reservation=terv92681
+#SBATCH --wrap="sleep infinity"
 
 module load 2024
 module load Anaconda3/2024.06-1
