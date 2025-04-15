@@ -39,10 +39,12 @@ class MTT:
     def train(self):
         model = MTTmodel(self.cb, self.cd, self.cm, self.ct)
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
+        num_gpus = torch.cuda.device_count()
+        #print(num_gpus)
         trainer = pl.Trainer(
             precision="bf16-mixed",
             accelerator="gpu",
-            #devices=2,
+            devices=num_gpus,
             strategy="ddp"
         )
         trainer.fit(model, datamodule)

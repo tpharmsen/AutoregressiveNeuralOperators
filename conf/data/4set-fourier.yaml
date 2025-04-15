@@ -25,9 +25,3 @@ datasets:
     dataset: "PDEGymDataset"
     file_ext: "nc"
     timesample: 1
-  
-  - name: "pdegym-sines"
-    path: "PDEGym-NSSines/"
-    dataset: "PDEGymDataset" 
-    file_ext: "nc"
-    timesample: 1
