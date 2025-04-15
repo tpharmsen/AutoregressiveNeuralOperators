@@ -4,7 +4,7 @@
 cd datasets/prjs1359
 mkdir -p AmiraSet 
 
-n=2  # number of elements to select
+n=100  # number of elements to select
 max=7999
 
 # Compute interval step
