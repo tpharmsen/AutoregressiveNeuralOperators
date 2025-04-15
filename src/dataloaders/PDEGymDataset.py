@@ -3,8 +3,8 @@ from torch.utils.data import Dataset
 import netCDF4 as nc
 from dataloaders.utils import spatial_resample
 
-class PDEGymDataset(Dataset):
-    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1, forward_steps=1):
+class PDEGymReader:
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1):
 
         self.data_list = []
         self.resample_shape = resample_shape
@@ -12,7 +12,6 @@ class PDEGymDataset(Dataset):
         self.name = None
         self.vel_scale = None
         self.dt = timesample
-        self.fs = forward_steps
         
         for filepath in filepaths:
             with nc.Dataset(filepath, "r") as f:
@@ -23,23 +22,6 @@ class PDEGymDataset(Dataset):
         self.data = torch.cat(self.data_list, dim=0) 
         self.traj = self.data.shape[0]
         self.ts = self.data.shape[1]
-        #print(self.ts)
-
-    def __len__(self):
-        return self.traj * (self.ts - self.dt)
-
-    def __getitem__(self, idx):
-        traj_idx = idx // (self.ts - self.dt)
-        ts_idx = idx % (self.ts - self.dt)
-        #print(idx, ts_idx, ts_idx + self.fs * self.dt)
-        #front = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
-        #label = self.data[traj_idx][ts_idx : ts_idx + self.fs * self.dt + 1 : self.dt]
-        front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + self.fs * self.dt]
-        #front = spatial_resample(front, self.resample_shape, self.resample_mode)
-        #label = spatial_resample(label, self.resample_shape, self.resample_mode)
-        
-        return front, label #front.unsqueeze(0), label.unsqueeze(0)
         
     def get_single_traj(self, idx):
         full = self.data[idx][::self.dt]
@@ -52,3 +34,22 @@ class PDEGymDataset(Dataset):
 
     def absmax_vel(self):
         return self.data.abs().max()
+
+class PDEGymDataset(Dataset):
+    def __init__(self, reader: PDEGymReader, forward_steps = 1):
+        self.reader = reader
+        self.traj = reader.traj
+        self.dt = reader.dt
+        self.ts = reader.ts
+        self.fs = forward_steps
+
+    def __len__(self):
+        return self.reader.traj * (self.reader.ts - self.reader.dt)
+
+    def __getitem__(self, idx):
+        traj_idx = idx // (self.reader.ts - self.reader.dt)
+        ts_idx = idx % (self.reader.ts - self.reader.dt)
+        
+        front = self.reader.data[traj_idx][ts_idx]
+        label = self.reader.data[traj_idx][ts_idx + self.fs * self.reader.dt]
+        return front, label

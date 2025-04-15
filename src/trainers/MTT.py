@@ -16,7 +16,7 @@ import matplotlib.animation as animation
 import os
 
 from dataloaders import *
-from dataloaders import DATASET_MAPPER
+from dataloaders import READER_MAPPER, DATASET_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
 from trainers.utils import animate_rollout, magnitude_vel, rollout
@@ -26,6 +26,8 @@ plt.rcParams['figure.facecolor'] = '#1F1F1F'
 plt.rcParams['axes.facecolor'] = '#1F1F1F'
 plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 
+#torch.set_float32_matmul_precision('medium')
+
 class MTT:
     def __init__(self, cb, cd, cm, ct):
         self.cb = cb
@@ -33,11 +35,16 @@ class MTT:
         self.cm = cm
         self.ct = ct
 
-        print('init\n')
+        #print('init\n')
     def train(self):
         model = MTTmodel(self.cb, self.cd, self.cm, self.ct)
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
-        trainer = pl.Trainer()
+        trainer = pl.Trainer(
+            precision="bf16-mixed",
+            accelerator="gpu",
+            #devices=2,
+            strategy="ddp"
+        )
         trainer.fit(model, datamodule)
 
 
@@ -83,17 +90,20 @@ class MTTmodel(pl.LightningModule):
         # Training logic
         front, label = batch
         pred = self(front)
-        loss = F.mse_loss(pred, label)
-        self.log("train_loss", loss)
-        return loss
+        train_loss = F.mse_loss(pred, label)
+        self.log("train_loss", train_loss, on_epoch=True)
+        return train_loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx):
         # Validation logic
         front, label = batch
         pred = self(front)
-        loss = F.mse_loss(pred, label)
-        self.log("train_loss", loss)
-        return loss
+        val_loss = F.mse_loss(pred, label)
+        if dataloader_idx == 0:
+            self.log("val_SS_loss", val_loss, on_epoch=True)
+        elif dataloader_idx == 1:
+            self.log("val_FS_loss", val_loss, on_epoch=True)
+        return val_loss
 
     def test_step(self, batch, batch_idx):
         # Testing logic
@@ -101,54 +111,68 @@ class MTTmodel(pl.LightningModule):
         y_hat = self(x)
         test_loss = F.mse_loss(y_hat, y)
         self.log("test_loss", test_loss)
+        return test_loss
 
     def configure_optimizers(self):
-        # Optimizer (and optionally scheduler)
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.ct.init_lr, weight_decay=self.ct.weight_decay)
-        #self.criterion = nn.MSELoss()
-        #scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=self.ct.patience, min_lr=1e-7)
-        #return {"optimizer": optimizer, "lr_scheduler": scheduler}
-        return optimizer
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=self.ct.init_lr,
+            weight_decay=self.ct.weight_decay
+        )
+        
+        scheduler = {
+            "scheduler": ReduceLROnPlateau(
+                optimizer,
+                mode='min', 
+                factor=0.1,
+                patience=self.ct.patience,
+                min_lr=1e-7
+            ),
+            "monitor": "val_SS_loss/dataloader_idx_0", 
+            "interval": "epoch",
+            "frequency": 1
+        }
+        return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
 class MTTdata(pl.LightningDataModule):
     def __init__(self, cb, cd, cm, ct):
         super().__init__()
         self.cb = cb
-        self.cd = cd  # dataset config
-        self.cm = cm  # training config
-        self.ct = ct  # base path config
+        self.cd = cd 
+        self.cm = cm  
+        self.ct = ct 
 
     def prepare_data(self):
-        # This is for downloading etc., but not for assigning state
         pass
 
     def setup(self, stage=None):
-        # Called on every process (train/val/test)
         self.train_datasets = []
         self.val_datasets = []
         self.val_samplers = []
         self.val_forward_datasets = []
 
         for item in self.cd.datasets:
-            dataset = get_dataset(
-                dataset_obj=DATASET_MAPPER[item['dataset']], 
+            reader = get_dataset(
+                dataset_obj=READER_MAPPER[item['dataset']], 
                 folderPath=str(self.cb.data_base + item["path"]), 
                 file_ext=item["file_ext"], 
                 resample_shape=self.cd.resample_shape, 
                 resample_mode=self.cd.resample_mode, 
-                timesample=item["timesample"],
-                n = 1
+                timesample=item["timesample"]
             )
-            dataset.name = item['name']
+            reader.name = item['name']
 
-            train_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="train", n=1)
-            val_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=1)
-            val_forward_sampler = ZeroShotSampler(dataset, train_ratio=self.ct.train_ratio, split="val", n=self.ct.forward_steps_loss)
+            dataset_SS = DATASET_MAPPER[item['dataset']](reader, forward_steps = 1)
+            dataset_FS = DATASET_MAPPER[item['dataset']](reader, forward_steps = self.ct.forward_steps_loss)
 
-            self.train_datasets.append(Subset(dataset, train_sampler.indices))
-            self.val_datasets.append(Subset(dataset, val_sampler.indices))
+            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", n=1)
+            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", n=1)
+            val_forward_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", n=self.ct.forward_steps_loss)
+
+            self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
+            self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
             self.val_samplers.append(val_sampler)
-            self.val_forward_datasets.append(Subset(dataset, val_forward_sampler.indices))
+            self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
 
         self.train_dataset = ConcatNormDataset(self.train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
@@ -169,12 +193,19 @@ class MTTdata(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        return DataLoader(
+        val_SS_loader = DataLoader(
             self.val_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True,  # for randomized image plotting
+            shuffle=True, 
             pin_memory=self.ct.pin_memory
         )
+        val_FS_loader = DataLoader(
+            self.val_forward_dataset,
+            batch_size=self.ct.batch_size,
+            shuffle=True,
+            pin_memory=self.ct.pin_memory
+        )
+        return [val_SS_loader, val_FS_loader]
 
     def val_forward_dataloader(self):
         return DataLoader(

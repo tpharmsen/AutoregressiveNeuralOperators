@@ -105,10 +105,9 @@ def spatial_resample(data, target_shape, mode):
         raise ValueError(f'Unknown mode: {mode}')
 
 
-def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample, n):
+def get_dataset(dataset_obj, folderPath, file_ext, resample_shape, resample_mode, timesample):
     subdir = Path(folderPath)
     assert subdir.exists(), 'subdir doesnt exist'
     files = list(subdir.glob("*." + str(file_ext)))
-    #print(files)
-    return dataset_obj(files, resample_shape, resample_mode, timesample, n)
+    return dataset_obj(files, resample_shape, resample_mode, timesample)
 

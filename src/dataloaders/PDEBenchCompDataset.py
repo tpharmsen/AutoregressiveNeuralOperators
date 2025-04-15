@@ -6,8 +6,8 @@ from pathlib import Path
 from dataloaders.utils import spatial_resample
 
 
-class PDEBenchCompDataset(Dataset):
-    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1, forward_steps=1):
+class PDEBenchCompReader(Dataset):
+    def __init__(self, filepaths, resample_shape=128, resample_mode='fourier', timesample=1):
         self.data_list = []
         self.traj_list = []
         self.ts = None
@@ -16,7 +16,6 @@ class PDEBenchCompDataset(Dataset):
         self.name = None
         self.vel_scale = None
         self.dt = timesample
-        self.fs = forward_steps
 
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
@@ -41,18 +40,6 @@ class PDEBenchCompDataset(Dataset):
         self.data = torch.cat(self.data_list, dim=0)
         self.traj = sum(self.traj_list)
         
-    def __len__(self):
-        return self.traj * (self.ts - self.dt)
-
-    def __getitem__(self, idx):
-        traj_idx = idx // (self.ts - self.dt)
-        ts_idx = idx % (self.ts - self.dt)
-        front = self.data[traj_idx][ts_idx]
-        label = self.data[traj_idx][ts_idx + self.fs * self.dt]
-        #front = spatial_resample(front, self.resample_shape, mode=self.resample_mode)
-        #label = spatial_resample(label, self.resample_shape, mode=self.resample_mode)
-        return front, label #front.unsqueeze(0), label.unsqueeze(0)
-        
     def get_single_traj(self, idx):
         full = self.data[idx][::self.dt]
         #full = spatial_resample(full, self.resample_shape, self.resample_mode)
@@ -64,3 +51,22 @@ class PDEBenchCompDataset(Dataset):
 
     def absmax_vel(self):
         return self.data.abs().max()
+
+class PDEBenchCompDataset(Dataset):
+    def __init__(self, reader: PDEBenchCompReader, forward_steps = 1):
+        self.reader = reader
+        self.traj = reader.traj
+        self.dt = reader.dt
+        self.ts = reader.ts
+        self.fs = forward_steps
+
+    def __len__(self):
+        return self.reader.traj * (self.reader.ts - self.reader.dt)
+
+    def __getitem__(self, idx):
+        traj_idx = idx // (self.reader.ts - self.reader.dt)
+        ts_idx = idx % (self.reader.ts - self.reader.dt)
+        
+        front = self.reader.data[traj_idx][ts_idx]
+        label = self.reader.data[traj_idx][ts_idx + self.fs * self.reader.dt]
+        return front, label
