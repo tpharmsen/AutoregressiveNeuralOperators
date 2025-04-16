@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
 import os
+import subprocess
 
 from dataloaders import *
 from dataloaders import READER_MAPPER, DATASET_MAPPER
@@ -27,7 +28,9 @@ plt.rcParams['figure.facecolor'] = '#1F1F1F'
 plt.rcParams['axes.facecolor'] = '#1F1F1F'
 plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0" # if gpu mig is used
+# following is a gpu mig bug fix
+if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 #torch.set_float32_matmul_precision('medium')
 
