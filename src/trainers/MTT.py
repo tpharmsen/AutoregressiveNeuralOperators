@@ -55,9 +55,7 @@ class MTT:
             accelerator="gpu",
             devices= 'auto',
             logger=wandb_logger,#num_gpus,
-            #log_every_n_steps=0,
-            #callbacks=[LoggerCallback(self.cb, self.cd, self.cm, self.ct)],
-            #strategy="ddp"
+            strategy="deepspeed",
             max_epochs=self.ct.epochs,
         )
         
