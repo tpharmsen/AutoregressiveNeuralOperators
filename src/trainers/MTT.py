@@ -213,7 +213,7 @@ class MTTmodel(pl.LightningModule):
                 self.make_plot(self.out_1, mode='val', device=device)
                 self.make_plot(self.out_0, mode='train', device=device)
                 self.make_plot(self.out_2, mode='val_forward', device=device)
-                #self.make_anim(model, self.out_3, device=device)
+                self.make_anim(self.out_3, device=device)
             
             self.log_time = time.time() - self.log_time
             self.logger.experiment.log({
@@ -226,7 +226,7 @@ class MTTmodel(pl.LightningModule):
                 "train_plot": wandb.Image(self.out_0) if visuals else None,
                 "val_plot": wandb.Image(self.out_1) if visuals else None,
                 "val_forward_plot": wandb.Image(self.out_2) if visuals else None,
-                #"val_anim": wandb.Video(self.out_3, format="gif") if visuals else None,
+                "val_anim": wandb.Video(self.out_3, format="gif") if visuals else None,
                 "Log Time": self.log_time
             })
 
@@ -243,9 +243,9 @@ class MTTmodel(pl.LightningModule):
 
             front = val_traj[0].unsqueeze(0).to(device).to(torch.bfloat16)
             stacked_pred = rollout(front, self.model, len(val_traj))
-            stacked_pred = stacked_pred.to(torch.bfloat16) 
-            stacked_true = magnitude_vel(val_traj).to(torch.bfloat16)
-            stacked_pred = magnitude_vel(stacked_pred)
+            stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
+            stacked_true = magnitude_vel(val_traj).float()# .to(torch.bfloat16)
+            stacked_pred = magnitude_vel(stacked_pred).float() 
             dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.name
             animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
 
