@@ -20,8 +20,8 @@ datasets:
     file_ext: "h5"
     timesample: 10
 
-  - name: "pdegym-gauss"
-    path: "PDEGym-NSGauss"
+  - name: "pdegym-sines"
+    path: "PDEGym-NSSines"
     dataset: "PDEGymDataset"
     file_ext: "nc"
     timesample: 1
