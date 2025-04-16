@@ -4,3 +4,4 @@ output
 models
 lightning_logs
 __pycache__/
+your_project_name
