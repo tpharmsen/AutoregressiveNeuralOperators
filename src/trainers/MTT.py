@@ -37,7 +37,10 @@ class MTT:
         self.cd = cd
         self.cm = cm
         self.ct = ct
-        
+        self.out_0 = self.cb.save_path + self.cb.folder_out + self.ct.plottrain_out
+        self.out_1 = self.cb.save_path + self.cb.folder_out + self.ct.plotval_out
+        self.out_2 = self.cb.save_path + self.cb.folder_out + self.ct.plotvalf_out
+        self.out_3 = self.cb.save_path + self.cb.folder_out + self.ct.anim_out
 
         #print('init\n')
     def train(self):
@@ -52,7 +55,9 @@ class MTT:
             precision="bf16-mixed",
             accelerator="gpu",
             devices= 'auto',
-            logger=wandb_logger#num_gpus,
+            logger=wandb_logger,#num_gpus,
+            log_every_n_steps=0,
+            callbacks=[LoggerCallback(self.out_0, self.out_1, self.out_2, self.out_3)],
             #strategy="ddp"
         )
         
@@ -67,11 +72,7 @@ class MTTmodel(pl.LightningModule):
         self.cd = cd
         self.cm = cm
         self.ct = ct
-        self.out_0 = self.cb.save_path + self.cb.folder_out + self.ct.plottrain_out
-        self.out_1 = self.cb.save_path + self.cb.folder_out + self.ct.plotval_out
-        self.out_2 = self.cb.save_path + self.cb.folder_out + self.ct.plotvalf_out
-        self.out_3 = self.cb.save_path + self.cb.folder_out + self.ct.anim_out
-        self.out_4 = self.cb.save_path + self.cb.folder_out + self.ct.checkpoint
+
 
         self._initialize_model()   
 
@@ -102,7 +103,7 @@ class MTTmodel(pl.LightningModule):
         front, label = batch
         pred = self(front)
         train_loss = F.mse_loss(pred, label)
-        self.log("train_loss", train_loss, on_epoch=True)
+        self.log("train_loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
         return train_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
@@ -111,9 +112,9 @@ class MTTmodel(pl.LightningModule):
         pred = self(front)
         val_loss = F.mse_loss(pred, label)
         if dataloader_idx == 0:
-            self.log("val_SS_loss", val_loss, on_epoch=True)
+            self.log("val_SS_loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
         elif dataloader_idx == 1:
-            self.log("val_FS_loss", val_loss, on_epoch=True)
+            self.log("val_FS_loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
         return val_loss
 
     def test_step(self, batch, batch_idx):
@@ -121,7 +122,7 @@ class MTTmodel(pl.LightningModule):
         x, y = batch
         y_hat = self(x)
         test_loss = F.mse_loss(y_hat, y)
-        self.log("test_loss", test_loss)
+        self.log("test_loss", test_loss, on_step=False, on_epoch=True, prog_bar=True)
         return test_loss
 
     def configure_optimizers(self):
@@ -227,20 +228,32 @@ class MTTdata(pl.LightningDataModule):
         )
 
 class LoggerCallback(pl.Callback):
-    def on_validation_epoch_end(self, trainer, pl_module):
+    def __init__(self, out_0, out_1, out_2, out_3):
+        super().__init__()
+        self.out_0 = out_0
+        self.out_1 = out_1
+        self.out_2 = out_2
+        self.out_3 = out_3
+
+    def on_train_epoch_end(self, trainer, pl_module):
         epoch = trainer.current_epoch
         device = pl_module.device
-
-        # Create and log plot
-        
-        plot_path = f"{pl_module.out_1}/val_plot_epoch{epoch:03d}.png"
-        self.make_plot(pl_module, plot_path, mode='val', device=device)
-        trainer.logger.experiment.log({"val_plot": wandb.Image(plot_path), "epoch": epoch})
+        #print("\nStart with plotting and animation\n", flush=True)
+        self.make_plot(pl_module, self.out_1, mode='val', device=device)
+        self.make_plot(pl_module, self.out_0, mode='train', device=device)
+        self.make_plot(pl_module, self.out_2, mode='val_forward', device=device)
+        # Log plots to wandb
+        trainer.logger.experiment.log({
+            "epoch": epoch,
+            "train_plot": wandb.Image(self.out_0),
+            "val_plot": wandb.Image(self.out_1),
+            "val_forward_plot": wandb.Image(self.out_2)
+        })
 
         # Create and log animation
-        anim_path = f"{pl_module.out_3}/val_anim_epoch{epoch:03d}.mp4"
-        self.make_anim(pl_module, anim_path, device=device)
-        trainer.logger.experiment.log({"val_anim": wandb.Video(anim_path, fps=4, format="mp4"), "epoch": epoch})
+        #anim_path = f"{pl_module.out_3}/val_anim_epoch{epoch:03d}.mp4"
+        #self.make_anim(pl_module, anim_path, device=device)
+        #trainer.logger.experiment.log({"val_anim": wandb.Video(anim_path, fps=4, format="mp4"), "epoch": epoch})
 
     def make_anim(self, pl_module, output_path, device):
         model = pl_module
