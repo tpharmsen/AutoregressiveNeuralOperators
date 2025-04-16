@@ -6,7 +6,8 @@ weight_decay: 0.0 #1.0e-3
 inj_noise: False
 train_ratio: 0.8
 normalize: False
-pin_memory: False
+pin_memory: True
+num_workers: 4
 forward_steps_loss: 4
 
 plottrain_out: "plot_train_nonorm.png"

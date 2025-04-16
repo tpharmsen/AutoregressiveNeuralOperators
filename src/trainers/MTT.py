@@ -264,7 +264,7 @@ class MTTmodel(pl.LightningModule):
         front, label = next(loader)
         front, label = front.to(device), label.to(device)
         front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
-        
+
         with torch.no_grad():
             pred = self(front)
         
@@ -361,7 +361,8 @@ class MTTdata(pl.LightningDataModule):
             self.train_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True,
-            pin_memory=self.ct.pin_memory
+            pin_memory=self.ct.pin_memory, 
+            num_workers=self.ct.num_workers
         )
 
     def val_dataloader(self):
@@ -369,13 +370,15 @@ class MTTdata(pl.LightningDataModule):
             self.val_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True, 
-            #pin_memory=self.ct.pin_memory
+            pin_memory=self.ct.pin_memory, 
+            num_workers=self.ct.num_workers
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True,
-            #pin_memory=self.ct.pin_memory
+            pin_memory=self.ct.pin_memory, 
+            num_workers=self.ct.num_workers
         )
         return [val_SS_loader, val_FS_loader]
 
