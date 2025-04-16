@@ -137,6 +137,7 @@ class MTTmodel(pl.LightningModule):
         # Training logic
         front, label = batch
         pred = self(front)
+        #print(pred.dtype)
         train_loss = F.mse_loss(pred, label)
         #self.log("train_loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
         #return train_loss
@@ -234,15 +235,17 @@ class MTTmodel(pl.LightningModule):
         self.val_FS_losses = []
 
     def make_anim(self, output_path, device='cuda'):
-        model.eval()
+        self.model.eval()
         with torch.no_grad():
             dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
             traj_idx = self.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
             val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.get_single_traj(traj_idx)
 
-            front = val_traj[0].unsqueeze(0).to(device)
+            front = val_traj[0].unsqueeze(0).to(device).to(torch.bfloat16)
             stacked_pred = rollout(front, self.model, len(val_traj))
-            stacked_pred, stacked_true = magnitude_vel(stacked_pred), magnitude_vel(val_traj)
+            stacked_pred = stacked_pred.to(torch.bfloat16) 
+            stacked_true = magnitude_vel(val_traj).to(torch.bfloat16)
+            stacked_pred = magnitude_vel(stacked_pred)
             dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.name
             animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
 
@@ -260,10 +263,14 @@ class MTTmodel(pl.LightningModule):
 
         front, label = next(loader)
         front, label = front.to(device), label.to(device)
-        front, label = front[0].unsqueeze(0), label[0].unsqueeze(0)
-
+        front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
+        
         with torch.no_grad():
             pred = self(front)
+        
+        front = front.float() #.to(torch.bfloat16)
+        pred = pred.float() #.to(torch.bfloat16)
+        label = label.float() #.to(torch.bfloat16)
 
         front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
         pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
@@ -362,20 +369,13 @@ class MTTdata(pl.LightningDataModule):
             self.val_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True, 
-            pin_memory=self.ct.pin_memory
+            #pin_memory=self.ct.pin_memory
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
             batch_size=self.ct.batch_size,
             shuffle=True,
-            pin_memory=self.ct.pin_memory
+            #pin_memory=self.ct.pin_memory
         )
         return [val_SS_loader, val_FS_loader]
 
-    def val_forward_dataloader(self):
-        return DataLoader(
-            self.val_forward_dataset,
-            batch_size=self.ct.batch_size,
-            shuffle=True,
-            pin_memory=self.ct.pin_memory
-        )
