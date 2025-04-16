@@ -44,21 +44,46 @@ class MTT:
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
         
         num_gpus = torch.cuda.device_count()
-        print(num_gpus)
-        print()
-        wandb_logger = WandbLogger(project="your_project_name")
+        #print(num_gpus)
+        #print()
+        wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
         trainer = pl.Trainer(
             precision="bf16-mixed",
             accelerator="gpu",
             devices= 'auto',
             logger=wandb_logger,#num_gpus,
-            log_every_n_steps=0,
+            #log_every_n_steps=0,
             callbacks=[LoggerCallback(self.cb, self.cd, self.cm, self.ct)],
             #strategy="ddp"
             max_epochs=self.ct.epochs,
         )
         
         trainer.fit(model, datamodule)
+
+    def build_wandb_config(self):
+        wandb_config = {}
+        configs = {
+        'cb': self.cb,
+        'cd': self.cd,
+        'cm': self.cm,
+        'ct': self.ct
+        }
+        def flatten_dict(d, parent_key=''):
+            items = []
+            for k, v in d.items():
+                new_key = f"{parent_key}.{k}" if parent_key else k
+                if isinstance(v, dict):
+                    items.extend(flatten_dict(v, new_key).items())
+                else:
+                    items.append((new_key, v))
+            return dict(items)
+
+        for prefix, config in configs.items():
+            flat_config = flatten_dict(config)
+            for key, value in flat_config.items():
+                wandb_config[f"{prefix}.{key}"] = value
+
+        return wandb_config
 
 
 class MTTmodel(pl.LightningModule):
@@ -287,7 +312,7 @@ class LoggerCallback(pl.Callback):
             self.make_plot(model, self.out_0, mode='train', device=device)
             self.make_plot(model, self.out_2, mode='val_forward', device=device)
             
-            self.make_anim(model, self.out_3, device=device)
+            #self.make_anim(model, self.out_3, device=device)
 
             self.callback_start_time = time.time() - self.callback_start_time
             trainer.logger.experiment.log({
@@ -295,7 +320,7 @@ class LoggerCallback(pl.Callback):
                 "train_plot": wandb.Image(self.out_0),
                 "val_plot": wandb.Image(self.out_1),
                 "val_forward_plot": wandb.Image(self.out_2),
-                "val_anim": wandb.Video(self.out_3, format="gif"),
+                #"val_anim": wandb.Video(self.out_3, format="gif"),
                 "Callback Time": self.callback_start_time
             })
 
