@@ -13,4 +13,6 @@ source "/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/etc/profi
 conda activate grad312
 cd AutoregressiveNeuralOperators
 
+export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
+
 python src/train.py --CB wandb.yaml --CD 3set-fourier.yaml --out MultiGPUtest
