@@ -1,0 +1,65 @@
+
+----------------------------------------------------------------------------
+  CUDA: CUDA/12.6.0
+----------------------------------------------------------------------------
+    Description:
+      CUDA (formerly Compute Unified Device Architecture) is a parallel
+      computing platform and programming model created by NVIDIA and
+      implemented by the graphics processing units (GPUs) that they
+      produce. CUDA gives developers access to the virtual instruction set
+      and memory of the parallel computational elements in CUDA GPUs.
+
+
+    You will need to load all module(s) on any one of the lines below before the "CUDA/12.6.0" module is available to load.
+
+      2024
+ 
+    Help:
+      
+      Description
+      ===========
+      CUDA (formerly Compute Unified Device Architecture) is a parallel
+       computing platform and programming model created by NVIDIA and implemented by the
+       graphics processing units (GPUs) that they produce. CUDA gives developers access
+       to the virtual instruction set and memory of the parallel computational elements in CUDA GPUs.
+      
+      
+      More information
+      ================
+       - Homepage: https://developer.nvidia.com/cuda-toolkit
+      
+
+
+ 
+
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/var/spool/slurm/slurmd/job11228052/slurm_script: line 14: cd: AutoregressiveNeuralOperators: No such file or directory
+[2025-04-16 23:12:16,320] [INFO] [real_accelerator.py:239:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+You are using the plain ModelCheckpoint callback. Consider using LitModelCheckpoint which with seamless uploading to Model registry.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+HPU available: False, using: 0 HPUs
+You are using a CUDA device ('NVIDIA H100') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+initializing deepspeed distributed: GLOBAL_RANK: 0, MEMBER: 1/1
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: tpharmsen (tpharmsen-tue). Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.19.1
+wandb: Run data is saved locally in output/MultiGPUtest/wandb/run-20250416_231221-4no2miuy
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run MultiGPUtest
+wandb: ⭐️ View project at https://wandb.ai/tpharmsen-tue/FluidGPT
+wandb: 🚀 View run at https://wandb.ai/tpharmsen-tue/FluidGPT/runs/4no2miuy

@@ -1,5 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=fftnonorm
+#SBATCH --job-name=mtt_a100
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
 #SBATCH --partition=gpu_a100
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
