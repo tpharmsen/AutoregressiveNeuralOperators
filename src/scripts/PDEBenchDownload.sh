@@ -16,8 +16,8 @@ echo "Hello, World!"
 #    exit 1
 #fi
 #mylist=($(seq 19 5 250))
-adjusted_indices=()
-#adjusted_indices=($(seq 19 5 290))
+#adjusted_indices=()
+adjusted_indices=($(seq 19 5 290))
 for arg in "$@"; do
     adjusted_indices+=($((arg - 1)))
 done
