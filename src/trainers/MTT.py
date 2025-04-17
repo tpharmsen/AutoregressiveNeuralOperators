@@ -267,6 +267,12 @@ class MTTmodel(pl.LightningModule):
 
         with torch.no_grad():
             pred = self(front)
+            if mode == 'val_forward':
+                pred = front
+                for _ in range(self.ct.forward_steps_loss):
+                    pred = self.model(pred)
+            else:
+                pred = self(front)
         
         front = front.float() #.to(torch.bfloat16)
         pred = pred.float() #.to(torch.bfloat16)
