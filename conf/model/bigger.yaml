@@ -1,10 +1,10 @@
 model_name: "swinUnet"
 in_channels: 2
-emb_dim: 96
+emb_dim: 128
 patch_size: 8
 hiddenout_dim: 256
 depth: 2
 stage_depths: [2,2,6,2,2]
-num_heads: [6,12,24,12,6]
+num_heads: [8,8,16,8,8]
 window_size: 4
 use_flex_attn: True
