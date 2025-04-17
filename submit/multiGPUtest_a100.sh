@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=mtt_a100
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=slurmlogs/%x_%j.out
+#SBATCH --error=slurmlogs/%x_%j.err
 #SBATCH --partition=gpu_a100
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=3
