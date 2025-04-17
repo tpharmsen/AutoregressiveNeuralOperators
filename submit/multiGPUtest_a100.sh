@@ -3,7 +3,7 @@
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --partition=gpu_a100
-#SBATCH --time=00:10:00
+#SBATCH --time=04:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=3
@@ -17,4 +17,4 @@ cd AutoregressiveNeuralOperators
 
 export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
 
-python src/train.py --CB wandb_highfreq.yaml --CD 3set-fourier.yaml --CT 3_h100.yaml --out MultiGPUtest
+python src/train.py --CB wandb_highfreq.yaml --CD 5set-fourier.yaml --CT 3_h100.yaml --out a100run
