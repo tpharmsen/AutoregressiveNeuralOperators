@@ -6,7 +6,7 @@
 #SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=3
+#SBATCH --gpus-per-node=4
 
 module load 2024
 module spider CUDA/12.6.0
@@ -17,4 +17,4 @@ cd AutoregressiveNeuralOperators
 
 export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
 
-python src/train.py --CB wandb_highfreq.yaml --CD 5set-fourier.yaml --CT 3_h100.yaml --CM bigger.yaml --out 3h100run
+python src/train.py --CB wandb_highfreq.yaml --CD 5set-fourier.yaml --CT 4_h100.yaml --CM bigger.yaml --out 3h100run
