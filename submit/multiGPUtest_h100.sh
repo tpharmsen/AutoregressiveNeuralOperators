@@ -17,4 +17,4 @@ cd AutoregressiveNeuralOperators
 
 export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
 
-python src/train.py --CB wandb_highfreq.yaml --CD 5set-fourier.yaml --CT 4_h100.yaml --CM bigger.yaml --out 3h100run
+python src/train.py --CB wandb_highfreq.yaml --CD 5set-fourier.yaml --CT 4_h100.yaml --CM bigger.yaml --out 4h100run
