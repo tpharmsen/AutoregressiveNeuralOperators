@@ -1,5 +1,5 @@
 epochs: 300
-batch_size: 64
+batch_size: 192
 init_lr: 1.0e-4
 patience: 5
 weight_decay: 0.0 #1.0e-3
