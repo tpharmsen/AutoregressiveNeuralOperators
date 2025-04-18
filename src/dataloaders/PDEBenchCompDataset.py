@@ -17,7 +17,7 @@ class PDEBenchCompReader(Dataset):
         self.vel_scale = None
         self.dt = timesample
         
-        batchread = 100
+        batchread = 50
 
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
