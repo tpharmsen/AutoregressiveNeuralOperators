@@ -241,7 +241,8 @@ class PatchUnMerge(nn.Module):
 
 class WindowAttention(nn.Module):
 
-    def __init__(self, emb_dim, window_size, num_heads, qkv_bias=True, use_flex_attn=True):
+    def __init__(self, emb_dim, window_size, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0.,
+    use_flex_attn=True):
 
         super().__init__()
         self.emb_dim = emb_dim
@@ -298,7 +299,9 @@ class WindowAttention(nn.Module):
         else:
             self.q_bias = None
             self.v_bias = None
+        self.attn_drop = nn.Dropout(attn_drop)
         self.proj_out = nn.Linear(emb_dim, emb_dim)
+        self.proj_drop = nn.Dropout(proj_drop)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x, mask=None):
@@ -333,15 +336,17 @@ class WindowAttention(nn.Module):
             attn = self.softmax(attn)
         else:
             attn = self.softmax(attn)
+        attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj_out(x)
+        x = self.proj_drop(x)
         return x
     
 class SwinV2Block(nn.Module): #change name to something else
 
     def __init__(self, emb_dim, patch_grid_res, num_heads, window_size=4, shift_size=0,
-                 mlp_ratio=4., qkv_bias=True, use_flex_attn=True, use_proj_in=True, 
+                 mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, use_proj_in=True, 
                  act_layer=nn.GELU, norm_layer=nn.LayerNorm):
         super().__init__()
         self.emb_dim = emb_dim
@@ -358,11 +363,11 @@ class SwinV2Block(nn.Module): #change name to something else
         #print('test')
         self.attn = WindowAttention(
             emb_dim, window_size=(self.window_size, self.window_size), num_heads=num_heads,
-            qkv_bias=qkv_bias, use_flex_attn=use_flex_attn)
+            qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop, use_flex_attn=use_flex_attn)
         #print('test')
         self.norm2 = norm_layer(emb_dim)
         mlp_hidden_dim = int(emb_dim * mlp_ratio)
-        self.mlp = MLP(in_features=emb_dim, hidden_features=mlp_hidden_dim, act_layer=act_layer)
+        self.mlp = MLP(in_features=emb_dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
         if self.shift_size > 0:
             # calculate attention mask for SW-MSA (from original swin paper source code)
@@ -433,7 +438,7 @@ class SwinV2Block(nn.Module): #change name to something else
 class SwinStage(nn.Module): # change name since stage also includes patch merge formally
     
     def __init__(self, emb_dim, patch_grid_res, stage_depth, num_heads, window_size,
-                 mlp_ratio=4., qkv_bias=True, use_flex_attn=True,
+                 mlp_ratio=4., qkv_bias=True, drop=drop, attn_drop=attn_drop, use_flex_attn=True,
                  norm_layer=nn.LayerNorm):
 
         super().__init__()
@@ -450,6 +455,8 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
                                  shift_size=0 if (i % 2 == 0) else window_size // 2,
                                  mlp_ratio=mlp_ratio,
                                  qkv_bias=qkv_bias, 
+                                 drop=drop,
+                                 attn_drop=attn_drop,
                                  use_flex_attn=use_flex_attn,
                                  norm_layer=norm_layer
                                  )
@@ -463,7 +470,7 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
 class SwinUnet(nn.Module):
     def __init__(self, emb_dim, data_dim, patch_size, hiddenout_dim, depth, 
                  stage_depths, num_heads, window_size=8, mlp_ratio=4., 
-                 qkv_bias=True, use_flex_attn=True, norm_layer=nn.LayerNorm,
+                 qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, norm_layer=nn.LayerNorm,
                  act=nn.GELU, skip_connect=ConvNeXtBlock):
         super().__init__()
 
@@ -492,6 +499,8 @@ class SwinUnet(nn.Module):
                     window_size=window_size, 
                     mlp_ratio = mlp_ratio, 
                     qkv_bias = qkv_bias, 
+                    drop=drop,
+                    attn_drop = attn_drop,
                     use_flex_attn = use_flex_attn, 
                     norm_layer = norm_layer
                 )
@@ -511,6 +520,8 @@ class SwinUnet(nn.Module):
             window_size=window_size,
             mlp_ratio=mlp_ratio,
             qkv_bias=qkv_bias,
+            drop=drop,
+            attn_drop=attn_drop,
             use_flex_attn=use_flex_attn,
             norm_layer=norm_layer
         )
@@ -528,6 +539,8 @@ class SwinUnet(nn.Module):
                     window_size=window_size, 
                     mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias,
+                    drop=drop,
+                    attn_drop=attn_drop,
                     use_flex_attn=use_flex_attn,
                     norm_layer=norm_layer
                 )
