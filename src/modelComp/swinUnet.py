@@ -195,7 +195,22 @@ class LinearEmbedding(nn.Module):
         #x = rearrange(x, "(b t) c h w -> b t c h w", b=B)
 
         return x
-    
+
+class SpatialPositionalEncoding(nn.Module):
+    def __init__(self, emb_dim, emb_amount):
+        super().__init__()
+        self.emb_dim = emb_dim
+        self.H = self.W = int(emb_amount**0.5)
+        self.row_embed = nn.Parameter(torch.randn(1, self.H, 1, self.emb_dim // 2))  
+        self.col_embed = nn.Parameter(torch.randn(1, 1, self.W, self.emb_dim // 2))  
+
+    def forward(self, x):
+        pos = torch.cat([
+            self.row_embed.expand(-1, -1, self.W, -1),
+            self.col_embed.expand(-1, self.H, -1, -1)
+        ], dim=-1)  
+        pos = pos.view(1, -1, self.emb_dim)
+        return x + pos
  
 class PatchMerge(nn.Module):
     def __init__(self, emb_dim):
@@ -453,7 +468,8 @@ class SwinUnet(nn.Module):
         super().__init__()
 
         self.embedding = LinearEmbedding(emb_dim, data_dim, patch_size, hiddenout_dim)
-
+        self.pos_encoding = SpatialPositionalEncoding(emb_dim, data_dim[2] * data_dim[3] // (patch_size[0] * patch_size[1]))
+        
         self.blockDown = nn.ModuleList()
         self.blockUp = nn.ModuleList()
         self.patchMerges = nn.ModuleList()
@@ -525,6 +541,7 @@ class SwinUnet(nn.Module):
         skips = []
 
         x = self.embedding.encode(x, proj=True)
+        x = self.pos_encoding(x)
         #print(x.shape)
         for i in range(self.depth):
             #print(i)

@@ -41,7 +41,7 @@ class PDEBenchCompReader(Dataset):
                         B, T, C, H, W = batch.shape
 
                         batch = spatial_resample(batch, self.resample_shape, self.resample_mode)
-                        print(batch.shape)
+                        #print(batch.shape)
 
                         if self.ts is None:
                             self.ts = batch.shape[1]

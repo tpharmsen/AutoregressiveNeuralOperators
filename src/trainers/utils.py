@@ -206,10 +206,11 @@ def magnitude_vel(x):
 def rollout(front, model, length):
     model.eval()
     preds = []
+    preds.append(front)
     with torch.no_grad():
         pred = model(front)
         preds.append(pred)
-        for i in range(length - 1):
+        for i in range(length - 2):
             pred = model(pred)
             preds.append(pred)
     preds = torch.cat(preds, dim=0)

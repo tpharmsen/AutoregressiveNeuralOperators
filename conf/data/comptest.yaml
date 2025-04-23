@@ -1,0 +1,9 @@
+resample_shape: 128
+resample_mode: "fourier"
+
+datasets:
+  - name: "pdebench_comp"
+    path: "PDEBench-Comp-Turbulent/"
+    dataset: "PDEBenchCompDataset"
+    file_ext: "hdf5"
+    timesample: 1
