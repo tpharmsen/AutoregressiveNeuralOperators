@@ -33,30 +33,30 @@ def load_yaml(file_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--CB", type=str, default="std.yaml")
-    parser.add_argument("--CD", type=str, default="std.yaml")
-    parser.add_argument("--CM", type=str, default="std.yaml")
-    parser.add_argument("--CT", type=str, default="std.yaml")
+    parser.add_argument("--CB", type=str, default="std")
+    parser.add_argument("--CD", type=str, default="std")
+    parser.add_argument("--CM", type=str, default="std")
+    parser.add_argument("--CT", type=str, default="std")
     parser.add_argument("--trainer", type=str, default="MTT")
     parser.add_argument("--out", type=str, default=None)
     args = parser.parse_args()
 
-    if os.path.exists("conf/base/" + args.CB):
-        cb = load_yaml_as_dotdict("conf/base/" + args.CB)
+    if os.path.exists("conf/base/" + args.CB + ".yaml"):
+        cb = load_yaml_as_dotdict("conf/base/" + args.CB + ".yaml")
     else:
-        raise FileNotFoundError(f"Config file {args.CB} not found.")
-    if os.path.exists("conf/data/" + args.CD):
-        cd = load_yaml_as_dotdict("conf/data/" + args.CD)
+        raise FileNotFoundError(f"Config file {args.CB}.yaml not found.")
+    if os.path.exists("conf/data/" + args.CD + ".yaml"):
+        cd = load_yaml_as_dotdict("conf/data/" + args.CD + ".yaml")
     else:
-        raise FileNotFoundError(f"Config file {args.CD} not found.")
-    if os.path.exists("conf/model/" + args.CM):
-        cm = load_yaml_as_dotdict("conf/model/" + args.CM)
+        raise FileNotFoundError(f"Config file {args.CD}.yaml not found.")
+    if os.path.exists("conf/model/" + args.CM + ".yaml"):
+        cm = load_yaml_as_dotdict("conf/model/" + args.CM + ".yaml")
     else:
-        raise FileNotFoundError(f"Config file {args.CM} not found.")
-    if os.path.exists("conf/training/" + args.CT):
-        ct = load_yaml_as_dotdict("conf/training/" + args.CT)
+        raise FileNotFoundError(f"Config file {args.CM}.yaml not found.")
+    if os.path.exists("conf/training/" + args.CT + ".yaml"):
+        ct = load_yaml_as_dotdict("conf/training/" + args.CT + ".yaml")
     else:
-        raise FileNotFoundError(f"Config file {args.CT} not found.")
+        raise FileNotFoundError(f"Config file {args.CT}.yaml not found.")
 
 
     if args.out != None:
