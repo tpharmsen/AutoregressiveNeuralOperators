@@ -467,90 +467,6 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
         for blk in self.blocks:
             x = blk(x)
         return x
-    
-class TwinBlock(nn.Module):
-    def __init__(self, emb_dim, patch_grid_res, num_heads, window_size=4, shift_size=0,
-                     mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, use_proj_in=True, 
-                     act_layer=nn.GELU, norm_layer=nn.LayerNorm):
-        super().__init__()
-        self.emb_dim = emb_dim
-        self.patch_grid_res = patch_grid_res
-        self.num_heads = num_heads
-        self.window_size = window_size
-        self.shift_size = shift_size
-        self.mlp_ratio = mlp_ratio
-        #self.use_proj_in = use_proj_in
-        
-        assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
-
-        self.norm1 = norm_layer(emb_dim)
-        #print('test')
-        self.attn = WindowAttention(
-            emb_dim, window_size=(self.window_size, self.window_size), num_heads=num_heads,
-            qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop, use_flex_attn=use_flex_attn)
-        #print('test')
-        self.norm2 = norm_layer(emb_dim)
-        mlp_hidden_dim = int(emb_dim * mlp_ratio)
-        self.mlp = MLP(in_features=emb_dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
-
-        if self.shift_size > 0:
-            # calculate attention mask for SW-MSA (from original swin paper source code)
-            H, W = self.patch_grid_res
-            img_mask = torch.zeros((1, H, W, 1))  # 1 H W 1
-            h_slices = (slice(0, -self.window_size),
-                        slice(-self.window_size, -self.shift_size),
-                        slice(-self.shift_size, None))
-            w_slices = (slice(0, -self.window_size),
-                        slice(-self.window_size, -self.shift_size),
-                        slice(-self.shift_size, None))
-            cnt = 0
-            for h in h_slices:
-                for w in w_slices:
-                    img_mask[:, h, w, :] = cnt
-                    cnt += 1
-            #print('test')
-            mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
-            mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
-            attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
-            attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
-        else:
-            attn_mask = None
-
-        self.register_buffer("attn_mask", attn_mask)
-
-    def forward(self, x):
-        H, W = self.patch_grid_res
-        B, L, C = x.shape
-        assert L == H * W, "input feature has wrong size for window partitioning (use proj_in=True for projection)"
-        #print('u', x.shape)
-        shortcut = x
-        x = x.view(B, H, W, C)
-
-        if self.shift_size > 0:
-            shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
-        else:
-            shifted_x = x
-
-        x_windows = window_partition(shifted_x, self.window_size)  # nW*B, window_size, window_size, C
-        x_windows = x_windows.view(-1, self.window_size * self.window_size, C)  # nW*B, window_size*window_size, C
-
-        # W-MSA/SW-MSA
-        attn_windows = self.attn(x_windows, mask=self.attn_mask)  
-        
-        attn_windows = attn_windows.view(-1, self.window_size, self.window_size, C)
-        shifted_x = window_reverse(attn_windows, self.window_size, H, W)
-
-        if self.shift_size > 0:
-            x = torch.roll(shifted_x, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
-        else:
-            x = shifted_x
-        x = x.view(B, H * W, C)
-        x = shortcut + self.norm1(x)
-
-        x = x + self.norm2(self.mlp(x))
-
-        return x
-    
 
 class SwinUnet(nn.Module):
     def __init__(self, emb_dim, data_dim, patch_size, hiddenout_dim, depth, 
@@ -563,6 +479,7 @@ class SwinUnet(nn.Module):
         self.pos_encoding = SpatialPositionalEncoding(emb_dim, data_dim[2] * data_dim[3] // (patch_size[0] * patch_size[1]))
         
         self.blockDown = nn.ModuleList()
+        self.blockMiddle = nn.ModuleList()
         self.blockUp = nn.ModuleList()
         self.patchMerges = nn.ModuleList()
         self.patchUnmerges = nn.ModuleList()
@@ -570,6 +487,7 @@ class SwinUnet(nn.Module):
         # TODO: implement act 
 
         self.depth = depth
+        self.middleblocklen = stage_depths[depth]
 
         for i in range(depth):
             patch_grid_res = (data_dim[2] // (patch_size[0] * 2**i), data_dim[3] // (patch_size[1] * 2**i))
@@ -596,20 +514,26 @@ class SwinUnet(nn.Module):
             #                                       layer_norm_eps=1e-5))
 
 
-        #print(emb_dim * 2**depth, (data_dim[3] // (patch_size[0] * 2**depth), data_dim[4] // (patch_size[1] * 2**depth)))
-        self.blockMiddle = SwinStage(
-            emb_dim * 2**depth,
-            patch_grid_res=(data_dim[2] // (patch_size[0] * 2**depth), data_dim[3] // (patch_size[1] * 2**depth)),
-            stage_depth=stage_depths[depth],
-            num_heads=num_heads[depth],
-            window_size=window_size,
-            mlp_ratio=mlp_ratio,
-            qkv_bias=qkv_bias,
-            drop=drop,
-            attn_drop=attn_drop,
-            use_flex_attn=use_flex_attn,
-            norm_layer=norm_layer
-        )
+        patch_grid_res = (data_dim[2] // (patch_size[0] * 2**depth), data_dim[3] // (patch_size[1] * 2**depth))
+        full_window_size = data_dim[2] // (patch_size[0] * 2**depth)
+        for i in range(self.middleblocklen):
+            self.blockMiddle.append(
+                SwinV2Block(
+                    emb_dim * 2**depth,
+                    patch_grid_res=patch_grid_res,
+                    num_heads=num_heads[depth],
+                    window_size = full_window_size,
+                    shift_size=0,
+                    mlp_ratio=mlp_ratio,
+                    qkv_bias=qkv_bias,
+                    drop=0.,
+                    attn_drop=0.,
+                    use_flex_attn=use_flex_attn,
+                    use_proj_in=True,
+                    act_layer=act,
+                    norm_layer=norm_layer
+                )
+            )
 
         for i in reversed(range(depth)):
             patch_grid_res = (data_dim[2] // (patch_size[0] * 2**i), data_dim[3] // (patch_size[1] * 2**i))
@@ -649,7 +573,9 @@ class SwinUnet(nn.Module):
             x = self.patchMerges[i](x)
             #print(x.shape)
         #print('middle')
-        x = self.blockMiddle(x)
+        for i in range(self.middleblocklen):
+            #print(i)
+            x = self.blockMiddle[i](x)
         #print(x.shape)
         for i in range(self.depth):
             #print(i)
