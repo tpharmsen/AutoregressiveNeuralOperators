@@ -8,3 +8,6 @@ stage_depths: [2,2,4,2,2]
 num_heads: [3,6,12,6,3]
 window_size: 4
 use_flex_attn: True
+act: "swiglu"
+skipblock: "convnext"
+gradient_flowthrough: [True, True, False]

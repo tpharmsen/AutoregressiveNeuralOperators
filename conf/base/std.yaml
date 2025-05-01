@@ -7,4 +7,4 @@ wandb: 0
 wandb_name: "base"
 
 viz: True
-viz_freq: 1
+viz_freq: 5

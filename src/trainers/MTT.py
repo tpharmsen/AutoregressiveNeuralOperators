@@ -22,6 +22,7 @@ from dataloaders import READER_MAPPER, DATASET_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
 from trainers.utils import animate_rollout, magnitude_vel, rollout
+from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#1F1F1F'
@@ -123,8 +124,9 @@ class MTTmodel(pl.LightningModule):
                             num_heads=self.cm.num_heads,
                             window_size=self.cm.window_size,
                             use_flex_attn=self.cm.use_flex_attn,
-                            act=nn.GELU,
-                            skip_connect=ConvNeXtBlock
+                            act=ACT_MAPPER[self.cm.act],
+                            skip_connect=SKIPBLOCK_MAPPER[self.cm.skipblock],
+                            gradient_flowthrough=self.cm.gradient_flowthrough,
                             )
         else:
             raise ValueError('MODEL NOT RECOGNIZED')        
