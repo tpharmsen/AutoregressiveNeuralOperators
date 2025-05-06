@@ -26,19 +26,19 @@ class MLP(nn.Module): #might change name to FFN
         x = self.fc2(x)
         x = self.drop(x)
         return x
-
+"""
 class ConvNeXtBlock(nn.Module):
-    r"""Taken from: https://github.com/facebookresearch/ConvNeXt/blob/main/models/convnext.py
-    ConvNeXt Block. There are two equivalent implementations:
-    (1) DwConv -> LayerNorm (channels_first) -> 1x1 Conv -> GELU -> 1x1 Conv; all in (N, C, H, W)
-    (2) DwConv -> Permute to (N, H, W, C); LayerNorm (channels_last) -> Linear -> GELU -> Linear; Permute back
-    We use (2) as we find it slightly faster in PyTorch
-
-    Args:
-        dim (int): Number of input channels.
-        drop_path (float): Stochastic depth rate. Default: 0.0
-        layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
-    """
+    #Taken from: https://github.com/facebookresearch/ConvNeXt/blob/main/models/convnext.py
+    #ConvNeXt Block. There are two equivalent implementations:
+    #(1) DwConv -> LayerNorm (channels_first) -> 1x1 Conv -> GELU -> 1x1 Conv; all in (N, C, H, W)
+    #(2) DwConv -> Permute to (N, H, W, C); LayerNorm (channels_last) -> Linear -> GELU -> Linear; Permute back
+    #We use (2) as we find it slightly faster in PyTorch
+    #
+    #Args:
+    #    dim (int): Number of input channels.
+    #    drop_path (float): Stochastic depth rate. Default: 0.0
+    #    layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
+    
 
     def __init__(self, emb_dim, layer_scale_init_value=1e-6, layer_norm_eps=1e-5):
         super().__init__()
@@ -80,7 +80,53 @@ class ConvNeXtBlock(nn.Module):
 
         x = input + x
         return x
-    
+"""
+
+class ConvNeXtBlock(nn.Module):
+    def __init__(self, emb_dim, layer_scale_init_value=1e-6, layer_norm_eps=1e-5):
+        super().__init__()
+        self.dwconv = nn.Conv2d(
+            emb_dim, emb_dim, kernel_size=7, padding=3, groups=emb_dim
+        )  # depthwise conv
+
+        self.norm = nn.LayerNorm(emb_dim, eps=layer_norm_eps)
+        self.pwconv1 = nn.Linear(emb_dim, 4 * emb_dim)
+        self.act = nn.GELU()
+        self.pwconv2 = nn.Linear(4 * emb_dim, emb_dim)
+
+        self.weight = (
+            nn.Parameter(layer_scale_init_value * torch.ones((emb_dim)), requires_grad=True)
+            if layer_scale_init_value > 0
+            else None
+        )
+
+    def forward(self, x):
+        # x: (B, T, E, C), where E = H*W
+        B, T, E, C = x.shape
+        H = W = int(math.sqrt(E))
+        assert H * W == E, f"Expected E to be a perfect square, got E={E}"
+
+        residual = x
+
+        # Reshape to (B*T, C, H, W) for Conv2D
+        x = x.view(B * T, H, W, C).permute(0, 3, 1, 2)  # (B*T, C, H, W)
+        x = self.dwconv(x)
+
+        # Back to (B*T, H, W, C) and flatten spatial
+        x = x.permute(0, 2, 3, 1).contiguous().view(B * T, H * W, C)
+
+        x = self.norm(x)
+        x = self.pwconv1(x)
+        x = self.act(x)
+        x = self.pwconv2(x)
+
+        if self.weight is not None:
+            x = self.weight * x
+
+        # Reshape back to (B, T, E, C)
+        x = x.view(B, T, E, C)
+        x = residual + x
+        return x
 
 class ResNetBlock(nn.Module):
     # taken from poseidon code

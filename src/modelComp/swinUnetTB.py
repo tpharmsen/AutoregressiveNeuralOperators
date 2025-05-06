@@ -262,7 +262,7 @@ class WindowAttention(nn.Module):
         return x
 
     
-class SwinV2Block(nn.Module): #change name to something else
+class SpatialSwinBlock(nn.Module): #change name to something else
 
     def __init__(self, emb_dim, patch_grid_res, num_heads, window_size=4, shift_size=0,
                  mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, 
@@ -348,23 +348,96 @@ class SwinV2Block(nn.Module): #change name to something else
         x = x + self.norm2(self.mlp(x))
 
         return x
+
+class TemporalBlock(nn.Module):
+    def __init__(self, emb_dim, num_heads, max_timesteps=5, mlp_ratio=4.0,
+                 qkv_bias=True, drop=0.0, attn_drop=0.0, use_flex_attn=True,
+                 act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.emb_dim = emb_dim
+        self.num_heads = num_heads
+        self.max_timesteps = max_timesteps
+
+        self.norm1 = norm_layer(emb_dim)
+        self.qkv = nn.Linear(emb_dim, emb_dim * 3, bias=qkv_bias)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.proj = nn.Linear(emb_dim, emb_dim)
+        self.proj_drop = nn.Dropout(drop)
+
+        self.use_flex_attn = use_flex_attn
+        if self.use_flex_attn:
+            self.flex_attn = nn.Parameter(torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
+
+        # Continuous relative positional bias (not trainable)
+        relative_positions = torch.arange(-max_timesteps + 1, max_timesteps, dtype=torch.float32)
+        relative_positions /= (max_timesteps - 1)
+        bias_values = torch.sign(relative_positions) * torch.log2(torch.abs(relative_positions) + 1.0) / np.log2(2)
+        bias_table = bias_values.unsqueeze(1).repeat(1, num_heads)
+        self.register_buffer("relative_position_bias_table", bias_table)
+
+        coords = torch.arange(max_timesteps)
+        relative_coords = coords[None, :] - coords[:, None]
+        relative_coords += max_timesteps - 1
+        self.register_buffer("relative_position_index", relative_coords)
+
+        self.norm2 = norm_layer(emb_dim)
+        mlp_hidden_dim = int(emb_dim * mlp_ratio)
+        self.mlp = MLP(in_features=emb_dim, hidden_features=mlp_hidden_dim,
+                       act=act_layer, drop=drop)
+
+    def forward(self, x):
+        # x: (B, T, E, C)
+        B, T, E, C = x.shape
+        assert T <= self.max_timesteps, f"Input timesteps {T} exceed max_timesteps {self.max_timesteps}"
+
+        # ============ Attention Block ============
+        x_ = x.permute(0, 2, 1, 3).contiguous()  # (B, E, T, C)
+        x_ = self.norm1(x_).reshape(B * E, T, C)
+
+        qkv = self.qkv(x_).reshape(B * E, T, 3, self.num_heads, C // self.num_heads)
+        q, k, v = qkv.unbind(dim=2)  # (B*E, T, num_heads, head_dim)
+        q = q.transpose(1, 2)  # (B*E, heads, T, head_dim)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
+
+        attn = (q @ k.transpose(-2, -1)) / (C // self.num_heads) ** 0.5
+        if self.use_flex_attn:
+            max_log = torch.log(torch.tensor(1. / 0.01, device=attn.device))
+            flex_attn = torch.clamp(self.flex_attn, max=max_log).exp()
+            attn = attn * flex_attn
+
+        bias = self.relative_position_bias_table[self.relative_position_index[:T, :T].reshape(-1)]
+        bias = bias.view(T, T, self.num_heads).permute(2, 0, 1)  # (heads, T, T)
+        attn = attn + bias.unsqueeze(0)
+
+        attn = F.softmax(attn, dim=-1)
+        attn = self.attn_drop(attn)
+
+        attn_out = (attn @ v).transpose(1, 2).reshape(B * E, T, C)
+        attn_out = self.proj(attn_out)
+        attn_out = self.proj_drop(attn_out)
+
+        x_ = x_ + attn_out  # Residual 1
+        x_ = x_.reshape(B, E, T, C).permute(0, 2, 1, 3).contiguous()  # (B, T, E, C)
+
+        x_norm = self.norm2(x_)
+        x = x_ + self.mlp(x_norm)  # Residual 2
+
+        return x
     
 class SwinStage(nn.Module): # change name since stage also includes patch merge formally
     
-    def __init__(self, emb_dim, patch_grid_res, stage_depth, num_heads, window_size,
+    def __init__(self, emb_dim, patch_grid_res, num_heads, window_size,
                  mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True,
                  act=nn.GELU, norm_layer=nn.LayerNorm):
 
         super().__init__()
         self.emb_dim = emb_dim
         self.patch_grid_res = patch_grid_res
-        self.stage_depth = stage_depth
-
-        assert stage_depth % 2 == 0, "stage depth must be divisible by 2"
 
         # build blocks
         self.blocks = nn.ModuleList([
-            SwinV2Block(emb_dim=emb_dim, patch_grid_res=patch_grid_res,
+            SpatialSwinBlock(emb_dim=emb_dim, patch_grid_res=patch_grid_res,
                                  num_heads=num_heads, window_size=window_size,
                                  shift_size=0 if (i % 2 == 0) else window_size // 2,
                                  mlp_ratio=mlp_ratio,
@@ -375,7 +448,7 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
                                  act=act,
                                  norm_layer=norm_layer
                                  )
-            for i in range(stage_depth)])
+            for i in range(2)])
 
     def forward(self, x):
         for blk in self.blocks:
@@ -389,12 +462,15 @@ class SwinUnet(nn.Module):
                  act=nn.GELU, skip_connect=ConvNeXtBlock, gradient_flowthrough=[True, False, False]):
         super().__init__()
 
+        # assert that every element in stage_depths is divisible by 3 except for the middle element
+        assert all(stage_depths[i] % 3 == 0 for i in range(len(stage_depths)) if i != depth), "stage depth must be divisible by 3 at non-middle elements"
+        assert stage_depths[depth] % 2 == 0, "stage depth must be divisible by 2 at middle element"
         self.embedding = LinearEmbedding(emb_dim, data_dim, patch_size, hiddenout_dim, act)
         self.pos_encoding = SpatiotemporalPositionalEncoding(emb_dim, data_dim[3] // patch_size[0], data_dim[4] // patch_size[1], data_dim[1])
         #print(data_dim[2] // patch_size[0], data_dim[2] // patch_size[0], data_dim[1])
-        self.blockDown = nn.ModuleList()
+        self.blockDown = [nn.ModuleList() for i in range(depth)]
         self.blockMiddle = nn.ModuleList()
-        self.blockUp = nn.ModuleList()
+        self.blockUp = [nn.ModuleList() for i in range(depth)]
         self.patchMerges = nn.ModuleList()
         self.patchUnmerges = nn.ModuleList()
         self.skip_connects = nn.ModuleList()
@@ -407,70 +483,124 @@ class SwinUnet(nn.Module):
 
         for i in range(depth):
             patch_grid_res = (data_dim[3] // (patch_size[0] * 2**i), data_dim[4] // (patch_size[1] * 2**i))
-            #print('patch_grid_res', patch_grid_res) 
-            #print(emb_dim * 2**i, patch_grid_res, stage_depths[i], num_heads[i], window_size)
-            self.blockDown.append(
-                SwinStage(
-                    emb_dim * 2**i, 
-                    patch_grid_res=patch_grid_res,
-                    stage_depth=stage_depths[i], 
-                    num_heads=num_heads[i], 
-                    window_size=window_size, 
-                    mlp_ratio = mlp_ratio, 
-                    qkv_bias = qkv_bias, 
-                    drop=drop,
-                    attn_drop = attn_drop,
-                    use_flex_attn = use_flex_attn, 
-                    act=act, 
-                    norm_layer=norm_layer
-                )
-            )
+            for j in range(stage_depths[i]):
+                #print(j)
+                if j % 3 == 0:
+                    self.blockDown[i].append(
+                        SwinStage(
+                            emb_dim * 2**i, 
+                            patch_grid_res=patch_grid_res, 
+                            num_heads=num_heads[i], 
+                            window_size=window_size, 
+                            mlp_ratio = mlp_ratio, 
+                            qkv_bias = qkv_bias, 
+                            drop=drop,
+                            attn_drop = attn_drop,
+                            use_flex_attn = use_flex_attn, 
+                            act=act, 
+                            norm_layer=norm_layer
+                        )
+                    )
+                    j += 1
+                elif j % 3 == 2:
+                    self.blockDown[i].append(
+                        TemporalBlock(
+                            emb_dim=emb_dim * 2**i,
+                            num_heads=num_heads[i],
+                            max_timesteps=data_dim[1],
+                            mlp_ratio=mlp_ratio,
+                            qkv_bias=qkv_bias,
+                            drop=drop,
+                            attn_drop=attn_drop,
+                            use_flex_attn=use_flex_attn,
+                            act_layer=act,
+                            norm_layer=norm_layer
+                        )
+                    )
+
             self.patchMerges.append(PatchMerge(emb_dim * 2**i))
 
 
         patch_grid_res = (data_dim[3] // (patch_size[0] * 2**depth), data_dim[4] // (patch_size[1] * 2**depth))
         full_window_size = data_dim[3] // (patch_size[0] * 2**depth)
         #print('full_window_size', full_window_size)
-        for i in range(self.middleblocklen):
-            self.blockMiddle.append(
-                SwinV2Block(
-                    emb_dim * 2**depth,
-                    patch_grid_res=patch_grid_res,
-                    num_heads=num_heads[depth],
-                    window_size = full_window_size,
-                    shift_size=0,
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    drop=0.,
-                    attn_drop=0.,
-                    use_flex_attn=use_flex_attn,
-                    act=act,
-                    norm_layer=norm_layer
+        for i in range(stage_depths[depth]):
+            if i % 2 == 0:
+
+                self.blockMiddle.append(
+                    SpatialSwinBlock(
+                        emb_dim * 2**depth,
+                        patch_grid_res=patch_grid_res,
+                        num_heads=num_heads[depth],
+                        window_size = full_window_size,
+                        shift_size=0,
+                        mlp_ratio=mlp_ratio,
+                        qkv_bias=qkv_bias,
+                        drop=0.,
+                        attn_drop=0.,
+                        use_flex_attn=use_flex_attn,
+                        act=act,
+                        norm_layer=norm_layer
+                    )
                 )
-            )
+            if i % 2 == 1:
+                self.blockMiddle.append(
+                    TemporalBlock(
+                        emb_dim=emb_dim * 2**depth,
+                        num_heads=num_heads[depth],
+                        max_timesteps=data_dim[1],
+                        mlp_ratio=mlp_ratio,
+                        qkv_bias=qkv_bias,
+                        drop=drop,
+                        attn_drop=attn_drop,
+                        use_flex_attn=use_flex_attn,
+                        act_layer=act,
+                        norm_layer=norm_layer
+                    )
+                )
 
         for i in reversed(range(depth)):
+            #print(i)
             patch_grid_res = (data_dim[3] // (patch_size[0] * 2**i), data_dim[4] // (patch_size[1] * 2**i))
-            #print(emb_dim * 2**i, patch_grid_res, stage_depths[2*depth - i], num_heads[2*depth - i], window_size)
-
-            self.blockUp.append(
-                SwinStage(
-                    emb_dim * 2**i, 
-                    patch_grid_res=patch_grid_res,
-                    stage_depth=stage_depths[2*depth - i], 
-                    num_heads=num_heads[2*depth - i], 
-                    window_size=window_size, 
-                    mlp_ratio=mlp_ratio,
-                    qkv_bias=qkv_bias,
-                    drop=drop,
-                    attn_drop=attn_drop,
-                    use_flex_attn=use_flex_attn,
-                    act=act,
-                    norm_layer=norm_layer
-                )
-            )
+            for j in range(stage_depths[depth + i + 1]):
+                #print(depth + i, j)
+                #print(i, emb_dim * 2**i)
+                if j % 3 == 0:
+                    self.blockUp[depth - i - 1].append(
+                        SwinStage(
+                            emb_dim * 2**i, 
+                            patch_grid_res=patch_grid_res, 
+                            num_heads=num_heads[2*depth - i], 
+                            window_size=window_size, 
+                            mlp_ratio=mlp_ratio,
+                            qkv_bias=qkv_bias,
+                            drop=drop,
+                            attn_drop=attn_drop,
+                            use_flex_attn=use_flex_attn,
+                            act=act,
+                            norm_layer=norm_layer
+                        )
+                    )
+                    j += 1
+                elif j % 3 == 2:
+                    self.blockUp[depth - i - 1].append(
+                        TemporalBlock(
+                            emb_dim=emb_dim * 2**i,
+                            num_heads=num_heads[2*depth - i],
+                            max_timesteps=data_dim[1],
+                            mlp_ratio=mlp_ratio,
+                            qkv_bias=qkv_bias,
+                            drop=drop,
+                            attn_drop=attn_drop,
+                            use_flex_attn=use_flex_attn,
+                            act_layer=act,
+                            norm_layer=norm_layer
+                        )
+                    )
+                    
             self.patchUnmerges.append(PatchUnMerge(emb_dim * 2**(i+1)))
             self.skip_connects.append(skip_connect(emb_dim * 2**i)) if skip_connect is not None else None
+            #print(len(self.blockUp))
 
     def forward(self, x):
         # shape checks
@@ -479,45 +609,52 @@ class SwinUnet(nn.Module):
         if x.shape[1] != self.embedding.T or x.shape[2] != self.embedding.C or x.shape[3] != self.embedding.H or x.shape[4] != self.embedding.W:
             raise ValueError(f"Input tensor must be of shape (B, {self.embedding.T}, {self.embedding.C}, {self.embedding.H}, {self.embedding.W}), but got {x.shape}")
         skips = []
-
+        #print('module_list', self.blockDown)
+        #print('block up', self.blockUp)
         x = self.embedding.encode(x, proj=True)
         x = self.pos_encoding(x)
         
         # ===== DOWN =====
-        for i in range(self.depth):
+        for i, module_list in enumerate(self.blockDown):
+            
             if self.gradient_flowthrough[0]:
                 residual = x
-                x = self.blockDown[i](x)
+                for module in module_list:
+                    x = module(x)
                 skips.append(x)
                 x = x + residual
             else:
-                x = self.blockDown[i](x)
+                for module in module_list:
+                    x = module(x)
                 skips.append(x)
 
             x = self.patchMerges[i](x)
 
         # ===== MIDDLE =====
-        for i in range(0, self.middleblocklen, 2):
-            residual = x
-            x = self.blockMiddle[i](x)
-            
-            if i + 1 < self.middleblocklen:
-                x = self.blockMiddle[i + 1](x)
-        
-            if self.gradient_flowthrough[1]:
-                x = x + residual
+        residual = x
+        for module in self.blockMiddle:
+            #print(module)
+            x = module(x)
+
+        if self.gradient_flowthrough[1]:
+            x = x + residual
 
         # ===== UP =====
-        for i in range(self.depth):
+        for i, module_list in enumerate(self.blockUp):
             x = self.patchUnmerges[i](x)
             #x = x + self.skip_connects[i](skips[self.depth - i - 1])
             skip = skips[self.depth - i - 1]
             x = x + (self.skip_connects[i](skip) if self.skip_connect is not None else skip)
             if self.gradient_flowthrough[2]:
                 residual = x
-                x = self.blockUp[i](x) + residual
+                for module in module_list:
+                    x = module(x)
+                x = x + residual
             else:
-                x = self.blockUp[i](x)
+                for module in module_list:
+                    #print(module)
+                    x = module(x)
+
 
         x = self.embedding.decode(x, proj=True)
         return x
