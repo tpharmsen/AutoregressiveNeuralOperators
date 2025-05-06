@@ -60,20 +60,23 @@ class AmiraReaderFromAM:
         return self.data.abs().max()
 
 class AmiraDatasetFromAM(Dataset):
-    def __init__(self, reader: AmiraReaderFromAM, forward_steps = 1):
+    def __init__(self, reader: AmiraReaderFromAM, temporal_bundling = 1, forward_steps = 1):
         self.reader = reader
         self.traj = reader.traj
         self.dt = reader.dt
         self.ts = reader.ts
+        self.tb = temporal_bundling
         self.fs = forward_steps
+        self.lenpertraj = self.reader.ts - (1 + self.fs) * self.reader.dt * self.tb + self.reader.dt
+        self.idx_window = self.reader.dt * self.tb
         
     def __len__(self):
-        return self.reader.traj * (self.reader.ts - self.reader.dt)
+        return self.reader.traj * self.lenpertraj
 
     def __getitem__(self, idx):
-        traj_idx = idx // (self.reader.ts - self.reader.dt)
-        ts_idx = idx % (self.reader.ts - self.reader.dt)
+        traj_idx = idx // self.lenpertraj
+        ts_idx = idx % self.lenpertraj
         
-        front = self.reader.data[traj_idx][ts_idx]
-        label = self.reader.data[traj_idx][ts_idx + self.fs * self.reader.dt]
+        front = self.reader.data[traj_idx][ts_idx : ts_idx + self.idx_window : self.reader.dt]
+        label = self.reader.data[traj_idx][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.reader.dt]
         return front, label
