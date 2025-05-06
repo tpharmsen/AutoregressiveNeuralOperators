@@ -113,10 +113,10 @@ class MTTmodel(pl.LightningModule):
         self.counter = 0
 
     def _initialize_model(self):
-        if self.cm.model_name == "swinUnet":
-            from modelComp.swinUnet import SwinUnet, ConvNeXtBlock, ResNetBlock
-            self.model = SwinUnet(emb_dim=96,
-                            data_dim=[self.ct.batch_size, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
+        if self.cm.model_name == "FluidGPT":
+            from modelComp.FluidGPT import FluidGPT
+            self.model = FluidGPT(emb_dim=96,
+                            data_dim=[self.ct.batch_size, self.cm.temporal_bundling, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(self.cm.patch_size, self.cm.patch_size),
                             hiddenout_dim=self.cm.hiddenout_dim,
                             depth=self.cm.depth,
@@ -342,12 +342,12 @@ class MTTdata(pl.LightningDataModule):
             )
             reader.name = item['name']
 
-            dataset_SS = DATASET_MAPPER[item['dataset']](reader, forward_steps = 1)
-            dataset_FS = DATASET_MAPPER[item['dataset']](reader, forward_steps = self.ct.forward_steps_loss)
+            dataset_SS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling = self.cm.temporal_bundling, forward_steps = 1)
+            dataset_FS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling = self.cm.temporal_bundling, forward_steps = self.ct.forward_steps_loss)
 
-            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", n=1)
-            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", n=1)
-            val_forward_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", n=self.ct.forward_steps_loss)
+            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
+            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
+            val_forward_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
 
             self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))

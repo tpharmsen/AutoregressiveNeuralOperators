@@ -3,15 +3,15 @@ from pathlib import Path
 import numpy as np
 from torch.utils.data import Sampler
 
-class ZeroShotSampler(Sampler):
+class ZeroShotSampler(torch.utils.data.Sampler):
     def __init__(self, dataset, train_ratio=0.8, split="train", seed=227, forward_steps=1):
         torch.manual_seed(seed) 
         num_train = int(dataset.traj * train_ratio)
         shuffled_trajs = torch.randperm(dataset.traj).tolist() 
         train_trajs = shuffled_trajs[:num_train]
         self.val_trajs = shuffled_trajs[num_train:]
-        train_indices = [t * (dataset.ts - dataset.dt * dataset.tb) + ts for t in train_trajs for ts in range(0, dataset.ts - dataset.dt * dataset.tb * forward_steps, forward_steps)]
-        val_indices = [t * (dataset.ts - dataset.dt * dataset.tb) + ts for t in self.val_trajs for ts in range(0, dataset.ts - dataset.dt * dataset.tb * forward_steps, forward_steps)]
+        train_indices = [t * dataset.lenpertraj + ts for t in train_trajs for ts in range(0, dataset.lenpertraj, forward_steps)] # we take only every forward_steps timestep for quickness
+        val_indices = [t * dataset.lenpertraj + ts for t in self.val_trajs for ts in range(0, dataset.lenpertraj, forward_steps)]
         self.indices = train_indices if split == "train" else val_indices
     def __iter__(self):
         return iter(self.indices)

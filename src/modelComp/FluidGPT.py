@@ -455,7 +455,7 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
             x = blk(x)
         return x
 
-class SwinUnet(nn.Module):
+class FluidGPT(nn.Module):
     def __init__(self, emb_dim, data_dim, patch_size, hiddenout_dim, depth, 
                  stage_depths, num_heads, window_size=8, mlp_ratio=4., 
                  qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, norm_layer=nn.LayerNorm,
