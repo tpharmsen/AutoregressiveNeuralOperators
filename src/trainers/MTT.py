@@ -32,6 +32,7 @@ plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 # following is a gpu mig bug fix
 if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    print('MIG GPU detected, using GPU 0')
 
 #torch.set_float32_matmul_precision('medium')
 
@@ -48,6 +49,7 @@ class MTT:
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
         
         num_gpus = torch.cuda.device_count()
+        print(f"Number of GPUs available: {num_gpus}")
         #print(num_gpus)
         #print()
         wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
@@ -108,7 +110,7 @@ class MTTmodel(pl.LightningModule):
         self.val_FS_losses = []
         self.epoch_time = None
         self.log_time = None
-
+        
         self._initialize_model()   
         self.counter = 0
 
@@ -132,7 +134,6 @@ class MTTmodel(pl.LightningModule):
             raise ValueError('MODEL NOT RECOGNIZED')        
 
     def forward(self, x):
-        # Inference logic
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
@@ -192,7 +193,9 @@ class MTTmodel(pl.LightningModule):
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
+    
     def on_train_epoch_start(self):
+        #print(self.device)
         if not self.trainer.sanity_checking:
             self.epoch_time = time.time()
 

@@ -1,6 +1,7 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
+import pytorch_lightning as pl
 from einops import rearrange
 from einops.layers.torch import Rearrange
 import numpy as np
@@ -78,23 +79,29 @@ class LinearEmbedding(nn.Module):
 
         # TODO: add Positional Encoding
         if proj:
-            #print(5, x.shape)
             return self.pre_proj(x)#.transpose(1, 2)
         else:
             return x#.transpose(1, 2)
 
     def decode(self, x, proj=True):
+        #print('decode', x.shape)
         if proj:
             x = self.post_proj(x)  
+        #print('x shape', x.shape)
 
         B, T, N, D = x.shape
         #x = rearrange(x, "b (t pp) d -> (b t) d pp", pp=self.patch_grid_res[0]*self.patch_grid_res[1]) #might change to .permute
         x = rearrange(x, 'b t n d -> (b t) d n')
+        #x = rearrange(x, 'b t n d -> (b t) n d')
         #print('before unpatchify decode', x.shape)
+        #print(self.unpatchify)
+        #print()
         x = self.unpatchify(x)  
+        #print()
         #print(x.shape)
-        #x = rearrange(x, "(b t) c h w -> b t c h w", b=B)
-        x = rearrange(x, '(b t) c h w -> b t c h w', t=T)
+        #print()
+        x = rearrange(x, "(b t) c h w -> b t c h w", b=B, t=T)
+        #x = rearrange(x, '(b t) c h w -> b t c h w', t=T)
         #print('end decoder: ', x.shape)
         return x
 
@@ -174,6 +181,8 @@ class WindowAttention(nn.Module):
 
         if self.use_flex_attn: 
             self.flex_attn = nn.Parameter(torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
+            flex_limit = torch.log(torch.tensor(1. / 0.01))
+            self.register_buffer("flex_limit", flex_limit)
             #self.register_parameter("flex_attn", nn.Parameter(self.flex_attn))
 
         # mlp to generate continuous relative position bias
@@ -213,7 +222,7 @@ class WindowAttention(nn.Module):
         if qkv_bias:
             self.q_bias = nn.Parameter(torch.zeros(emb_dim))
             self.v_bias = nn.Parameter(torch.zeros(emb_dim))
-            print(self.q_bias.device, self.v_bias.device)
+            #print(self.q_bias.device, self.v_bias.device)
             # TODO: understand why not key bias
         else:
             self.q_bias = None
@@ -228,9 +237,7 @@ class WindowAttention(nn.Module):
         B, N, C = x.shape
         qkv_bias = None
         if self.q_bias is not None:
-            print(self.q_bias.device, self.v_bias.device)
-            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False, device=x.device), self.v_bias))
-        #print(x.shape, self.qkv.weight.shape, qkv_bias.shape)
+            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
         #print('test')
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
@@ -238,9 +245,26 @@ class WindowAttention(nn.Module):
 
         # cosine attention
         attn = (F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
+        '''
         if self.use_flex_attn:
             flex_attn = torch.clamp(self.flex_attn, max=torch.log(torch.tensor(1. / 0.01, device=x.device))).exp()
             attn = attn * flex_attn
+        '''
+        if self.use_flex_attn:
+            #print('windowattn')
+            #print(attn.shape, self.flex_attn.shape, x.device, torch.tensor(1. / 0.01))
+            #clamp_max = torch.tensor(100.)
+            #print(clamp_max)
+            #clamp_max = torch.log(clamp_max)
+            #print(clamp_max, clamp_max.shape, self.flex_attn.shape)
+            #flex_attn = torch.clamp(self.flex_attn, max=clamp_max).exp()
+            #print(flex_attn.shape, self.flex_attn.shape)
+            #flex_attn = flex_attn.expand(attn.shape)  # Match shape exactly to attn
+            flex_attn = torch.clamp(self.flex_attn, max=self.flex_limit).exp()
+                        
+            #print(flex_attn.shape, self.flex_attn.shape)
+            attn = attn * flex_attn
+        #print('attn', attn.shape)
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
         relative_position_bias = relative_position_bias_table[self.relative_position_index.view(-1)].view(
@@ -369,6 +393,12 @@ class TemporalBlock(nn.Module):
         self.use_flex_attn = use_flex_attn
         if self.use_flex_attn:
             self.flex_attn = nn.Parameter(torch.log(10 * torch.ones((num_heads, 1, 1))), requires_grad=True)
+            flex_limit2 = torch.log(torch.tensor(1. / 0.01))
+            self.register_buffer("flex_limit2", flex_limit2)
+            #print()
+            #print('self.flex_attn', self.flex_attn.shape)
+            #print()
+            #self.register_parameter("flex_attn", nn.Parameter(self.flex_attn))
 
         # Continuous relative positional bias (not trainable)
         relative_positions = torch.arange(-max_timesteps + 1, max_timesteps, dtype=torch.float32)
@@ -392,7 +422,6 @@ class TemporalBlock(nn.Module):
         B, T, E, C = x.shape
         assert T <= self.max_timesteps, f"Input timesteps {T} exceed max_timesteps {self.max_timesteps}"
 
-        # ============ Attention Block ============
         x_ = x.permute(0, 2, 1, 3).contiguous()  # (B, E, T, C)
         x_ = self.norm1(x_).reshape(B * E, T, C)
 
@@ -402,11 +431,20 @@ class TemporalBlock(nn.Module):
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
-        attn = (q @ k.transpose(-2, -1)) / (C // self.num_heads) ** 0.5
+        #attn = (q @ k.transpose(-2, -1)) / (C // self.num_heads) ** 0.5
+        attn = F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1)
         if self.use_flex_attn:
-            max_log = torch.log(torch.tensor(1. / 0.01))#, device=attn.device))
-            flex_attn = torch.clamp(self.flex_attn, max=max_log).exp()
+            #print('temporalattn')
+            #print(attn.shape, self.flex_attn.shape)
+            #clamp_max = torch.log(torch.tensor(1. / 0.01, device=self.flex_attn.device))
+            #print(clamp_max, clamp_max.shape, self.flex_attn.shape)
+            #flex_attn = torch.clamp(self.flex_attn, max=clamp_max).exp()
+            #print(flex_attn.shape, self.flex_attn.shape)
+            #flex_attn = flex_attn.expand(attn.shape)  # Match shape exactly to attn
+            #print(flex_attn.shape, self.flex_attn.shape)
+            flex_attn = torch.clamp(self.flex_attn, max=self.flex_limit2).exp()
             attn = attn * flex_attn
+        
 
         bias = self.relative_position_bias_table[self.relative_position_index[:T, :T].reshape(-1)]
         bias = bias.view(T, T, self.num_heads).permute(2, 0, 1)  # (heads, T, T)
@@ -470,9 +508,9 @@ class FluidGPT(nn.Module):
         self.embedding = LinearEmbedding(emb_dim, data_dim, patch_size, hiddenout_dim, act)
         self.pos_encoding = SpatiotemporalPositionalEncoding(emb_dim, data_dim[3] // patch_size[0], data_dim[4] // patch_size[1], data_dim[1])
         #print(data_dim[2] // patch_size[0], data_dim[2] // patch_size[0], data_dim[1])
-        self.blockDown = [nn.ModuleList() for i in range(depth)]
+        self.blockDown = nn.ModuleList(nn.ModuleList() for i in range(depth))
         self.blockMiddle = nn.ModuleList()
-        self.blockUp = [nn.ModuleList() for i in range(depth)]
+        self.blockUp = nn.ModuleList(nn.ModuleList() for i in range(depth))
         self.patchMerges = nn.ModuleList()
         self.patchUnmerges = nn.ModuleList()
         self.skip_connects = nn.ModuleList()
@@ -487,6 +525,7 @@ class FluidGPT(nn.Module):
             patch_grid_res = (data_dim[3] // (patch_size[0] * 2**i), data_dim[4] // (patch_size[1] * 2**i))
             for j in range(stage_depths[i]):
                 #print(j)
+                
                 if j % 3 == 0:
                     self.blockDown[i].append(
                         SwinStage(
@@ -504,7 +543,8 @@ class FluidGPT(nn.Module):
                         )
                     )
                     j += 1
-                elif j % 3 == 2:
+                
+                if j % 3 == 2:
                     self.blockDown[i].append(
                         TemporalBlock(
                             emb_dim=emb_dim * 2**i,
@@ -519,6 +559,7 @@ class FluidGPT(nn.Module):
                             norm_layer=norm_layer
                         )
                     )
+                
 
             self.patchMerges.append(PatchMerge(emb_dim * 2**i))
 
@@ -527,6 +568,7 @@ class FluidGPT(nn.Module):
         full_window_size = data_dim[3] // (patch_size[0] * 2**depth)
         #print('full_window_size', full_window_size)
         for i in range(stage_depths[depth]):
+            
             if i % 2 == 0:
 
                 self.blockMiddle.append(
@@ -545,6 +587,7 @@ class FluidGPT(nn.Module):
                         norm_layer=norm_layer
                     )
                 )
+            
             if i % 2 == 1:
                 self.blockMiddle.append(
                     TemporalBlock(
@@ -560,6 +603,7 @@ class FluidGPT(nn.Module):
                         norm_layer=norm_layer
                     )
                 )
+            
 
         for i in reversed(range(depth)):
             #print(i)
@@ -567,6 +611,7 @@ class FluidGPT(nn.Module):
             for j in range(stage_depths[depth + i + 1]):
                 #print(depth + i, j)
                 #print(i, emb_dim * 2**i)
+                
                 if j % 3 == 0:
                     self.blockUp[depth - i - 1].append(
                         SwinStage(
@@ -584,7 +629,8 @@ class FluidGPT(nn.Module):
                         )
                     )
                     j += 1
-                elif j % 3 == 2:
+                
+                if j % 3 == 2:
                     self.blockUp[depth - i - 1].append(
                         TemporalBlock(
                             emb_dim=emb_dim * 2**i,
@@ -599,6 +645,7 @@ class FluidGPT(nn.Module):
                             norm_layer=norm_layer
                         )
                     )
+                
                     
             self.patchUnmerges.append(PatchUnMerge(emb_dim * 2**(i+1)))
             self.skip_connects.append(skip_connect(emb_dim * 2**i)) if skip_connect is not None else None
@@ -606,6 +653,7 @@ class FluidGPT(nn.Module):
 
     def forward(self, x):
         # shape checks
+        #print('\nstarting pred...')
         if x.ndim != 5:
             raise ValueError(f"Input tensor must be 5D, but got {x.ndim}D")
         if x.shape[1] != self.embedding.T or x.shape[2] != self.embedding.C or x.shape[3] != self.embedding.H or x.shape[4] != self.embedding.W:
@@ -640,13 +688,15 @@ class FluidGPT(nn.Module):
 
         if self.gradient_flowthrough[1]:
             x = x + residual
-
+        print('\n___________________1_________________\n')
         # ===== UP =====
         for i, module_list in enumerate(self.blockUp):
             x = self.patchUnmerges[i](x)
+            print('\n______________________2________\n')
             #x = x + self.skip_connects[i](skips[self.depth - i - 1])
             skip = skips[self.depth - i - 1]
             x = x + (self.skip_connects[i](skip) if self.skip_connect is not None else skip)
+            print('\n______________________3________\n')
             if self.gradient_flowthrough[2]:
                 residual = x
                 for module in module_list:
@@ -655,7 +705,9 @@ class FluidGPT(nn.Module):
             else:
                 for module in module_list:
                     #print(module)
+                    print('\n______________________n________\n')
                     x = module(x)
+                    
 
 
         x = self.embedding.decode(x, proj=True)

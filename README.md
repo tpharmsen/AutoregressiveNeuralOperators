@@ -25,3 +25,6 @@ docker build -t _username_/_imagename_:_version_ .
 docker push _username_/_imagename_:_version_
 
 docker run --rm --gpus all --shm-size=6g _username_/_imagename_:_version_
+
+# debug current bug
+CUDA_LAUNCH_BLOCKING=1 python src/train.py

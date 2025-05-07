@@ -1,6 +1,6 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
 from einops import rearrange
 from einops.layers.torch import Rearrange
 import numpy as np

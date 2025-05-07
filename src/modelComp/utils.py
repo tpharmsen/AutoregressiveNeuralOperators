@@ -101,19 +101,21 @@ class ConvNeXtBlock(nn.Module):
         )
 
     def forward(self, x):
-        # x: (B, T, E, C), where E = H*W
-        B, T, E, C = x.shape
-        H = W = int(math.sqrt(E))
-        assert H * W == E, f"Expected E to be a perfect square, got E={E}"
+        # x: (B, T, N, E) where N = H * W, E = embedding dim
+        print(x.shape)
+        B, T, N, E = x.shape
+        H = W = int(math.sqrt(N))
+        assert H * W == N, f"N={N} is not a perfect square."
 
         residual = x
 
-        # Reshape to (B*T, C, H, W) for Conv2D
-        x = x.view(B * T, H, W, C).permute(0, 3, 1, 2)  # (B*T, C, H, W)
+        # Reshape to (B*T, E, H, W)
+        x = x.view(B * T, H, W, E).permute(0, 3, 1, 2)  # (B*T, E, H, W)
+        print(x.shape)
         x = self.dwconv(x)
 
-        # Back to (B*T, H, W, C) and flatten spatial
-        x = x.permute(0, 2, 3, 1).contiguous().view(B * T, H * W, C)
+        # Back to (B*T, H*W, E)
+        x = x.permute(0, 2, 3, 1).contiguous().view(B * T, N, E)
 
         x = self.norm(x)
         x = self.pwconv1(x)
@@ -123,8 +125,8 @@ class ConvNeXtBlock(nn.Module):
         if self.weight is not None:
             x = self.weight * x
 
-        # Reshape back to (B, T, E, C)
-        x = x.view(B, T, E, C)
+        # Reshape back to (B, T, N, E)
+        x = x.view(B, T, N, E)
         x = residual + x
         return x
 
