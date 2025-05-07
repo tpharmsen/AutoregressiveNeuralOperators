@@ -213,6 +213,7 @@ class WindowAttention(nn.Module):
         if qkv_bias:
             self.q_bias = nn.Parameter(torch.zeros(emb_dim))
             self.v_bias = nn.Parameter(torch.zeros(emb_dim))
+            print(self.q_bias.device, self.v_bias.device)
             # TODO: understand why not key bias
         else:
             self.q_bias = None
@@ -227,7 +228,8 @@ class WindowAttention(nn.Module):
         B, N, C = x.shape
         qkv_bias = None
         if self.q_bias is not None:
-            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
+            print(self.q_bias.device, self.v_bias.device)
+            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False, device=x.device), self.v_bias))
         #print(x.shape, self.qkv.weight.shape, qkv_bias.shape)
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
         #print('test')
@@ -402,7 +404,7 @@ class TemporalBlock(nn.Module):
 
         attn = (q @ k.transpose(-2, -1)) / (C // self.num_heads) ** 0.5
         if self.use_flex_attn:
-            max_log = torch.log(torch.tensor(1. / 0.01, device=attn.device))
+            max_log = torch.log(torch.tensor(1. / 0.01))#, device=attn.device))
             flex_attn = torch.clamp(self.flex_attn, max=max_log).exp()
             attn = attn * flex_attn
 

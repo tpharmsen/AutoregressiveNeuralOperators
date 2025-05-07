@@ -147,6 +147,7 @@ class MTTmodel(pl.LightningModule):
         return train_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
+        #print(batch[0].device)
         # Validation logic
         front, label = batch
         pred = self(front)
