@@ -86,7 +86,7 @@ class ConvNeXtBlock(nn.Module):
     def __init__(self, emb_dim, layer_scale_init_value=1e-6, layer_norm_eps=1e-5):
         super().__init__()
         self.dwconv = nn.Conv2d(
-            emb_dim, emb_dim, kernel_size=7, padding=3, groups=emb_dim
+            emb_dim, emb_dim, kernel_size=7, padding=3#, groups=emb_dim
         )  # depthwise conv
 
         self.norm = nn.LayerNorm(emb_dim, eps=layer_norm_eps)
@@ -102,7 +102,7 @@ class ConvNeXtBlock(nn.Module):
 
     def forward(self, x):
         # x: (B, T, N, E) where N = H * W, E = embedding dim
-        print(x.shape)
+        #print(x.shape)
         B, T, N, E = x.shape
         H = W = int(math.sqrt(N))
         assert H * W == N, f"N={N} is not a perfect square."
@@ -111,7 +111,7 @@ class ConvNeXtBlock(nn.Module):
 
         # Reshape to (B*T, E, H, W)
         x = x.view(B * T, H, W, E).permute(0, 3, 1, 2)  # (B*T, E, H, W)
-        print(x.shape)
+        #print(x.shape)
         x = self.dwconv(x)
 
         # Back to (B*T, H*W, E)

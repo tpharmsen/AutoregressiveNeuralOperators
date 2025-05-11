@@ -160,6 +160,8 @@ def create_gif2(stacked_true, stacked_pred, output_path, timesteps='all', vertic
 def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="output/rollout.gif"):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     timesteps, _, x_dim, y_dim = stacked_pred.shape
+    if timesteps > stacked_true.shape[0]:
+        timesteps = stacked_true.shape[0]
     stacked_pred, stacked_true = stacked_pred.squeeze(1).cpu().numpy(), stacked_true.squeeze(1).cpu().numpy()
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     titles = ["Pred", "True", "Diff"]
@@ -201,18 +203,20 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
     plt.close()
 
 def magnitude_vel(x):
-    magnitude = torch.sqrt(x[:, 0]**2 + x[:, 1]**2)
-    return magnitude.unsqueeze(1)
+    magnitude = torch.sqrt(x[:, :, 0]**2 + x[:, :, 1]**2)
+    return magnitude.unsqueeze(2)
 
-def rollout(front, model, length):
+def rollout(front, model, steps):
     model.eval()
     preds = []
     preds.append(front)
     with torch.no_grad():
         pred = model(front)
         preds.append(pred)
-        for i in range(length - 2):
+        for i in range(steps - 2):
             pred = model(pred)
             preds.append(pred)
-    preds = torch.cat(preds, dim=0)
+    #print(preds[0].shape)
+    preds = torch.cat(preds, dim=1)
+    #print(preds.shape)
     return preds

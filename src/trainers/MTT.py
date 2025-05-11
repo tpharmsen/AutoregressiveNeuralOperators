@@ -12,6 +12,7 @@ import wandb
 import yaml
 import random
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 import matplotlib.animation as animation
 import os
@@ -60,6 +61,7 @@ class MTT:
             logger=wandb_logger,#num_gpus,
             strategy="deepspeed",
             max_epochs=self.ct.epochs,
+            num_sanity_val_steps=0
         )
         
         trainer.fit(model, datamodule)
@@ -246,14 +248,18 @@ class MTTmodel(pl.LightningModule):
             dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
             traj_idx = self.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
             val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.get_single_traj(traj_idx)
-
-            front = val_traj[0].unsqueeze(0).to(device).to(torch.bfloat16)
-            stacked_pred = rollout(front, self.model, len(val_traj))
+            #print('val_traj:', val_traj.shape)
+            front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).to(device).to(torch.bfloat16)
+            #print('len:', len(val_traj) // self.cm.temporal_bundling)
+            stacked_pred = rollout(front, self.model, len(val_traj) // self.cm.temporal_bundling)
             stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
-            stacked_true = magnitude_vel(val_traj).float()# .to(torch.bfloat16)
+            #print('stacked_pred:', stacked_pred.shape)
+            stacked_true = val_traj.unsqueeze(0)
+            stacked_true = magnitude_vel(stacked_true).float()# .to(torch.bfloat16)
             stacked_pred = magnitude_vel(stacked_pred).float() 
+            #print('stacked_true:', stacked_true.shape)
             dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.name
-            animate_rollout(stacked_pred, stacked_true, dataset_name, output_path)
+            animate_rollout(stacked_pred.squeeze(0), stacked_true.squeeze(0), dataset_name, output_path)
 
     def make_plot(self, output_path, mode='val', device='cuda'):
         self.model.eval()
@@ -284,37 +290,48 @@ class MTTmodel(pl.LightningModule):
         pred = pred.float() #.to(torch.bfloat16)
         label = label.float() #.to(torch.bfloat16)
 
-        front_x, front_y = front[0, 0].cpu(), front[0, 1].cpu()
-        pred_x, pred_y = pred[0, 0].cpu(), pred[0, 1].cpu()
-        label_x, label_y = label[0, 0].cpu(), label[0, 1].cpu()
+        front_x, front_y = front[0, :, 0].cpu(), front[0, :, 1].cpu()
+        pred_x, pred_y = pred[0, :, 0].cpu(), pred[0, :, 1].cpu()
+        label_x, label_y = label[0, :, 0].cpu(), label[0, :, 1].cpu()
         diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
 
-        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
-        fig.suptitle(f"Epoch {self.trainer.current_epoch}")
+        tb = self.cm.temporal_bundling
+        cols_per_side = 4
+        spacer = 1
+        total_cols = cols_per_side * 2 + spacer  # 4 + 1 + 4 = 9
+
+        fig = plt.figure(figsize=(3 * total_cols, 4 * tb))
+        fig.suptitle(f"Epoch {self.trainer.current_epoch}", fontsize=20)
+        gs = gridspec.GridSpec(tb, total_cols, wspace=0.1, hspace=0.1)
 
         titles = ["Front", "Pred", "True", "Diff"]
-        axes[0, 0].imshow(front_x, cmap='viridis')
-        axes[0, 1].imshow(pred_x, cmap='viridis')
-        axes[0, 2].imshow(label_x, cmap='viridis')
-        axes[0, 3].imshow(diff_x, cmap='magma')
-        axes[1, 0].imshow(front_y, cmap='viridis')
-        axes[1, 1].imshow(pred_y, cmap='viridis')
-        axes[1, 2].imshow(label_y, cmap='viridis')
-        axes[1, 3].imshow(diff_y, cmap='magma')
 
-        for i in range(4):
-            axes[0, i].set_title(titles[i])
-            axes[1, i].set_title(titles[i])
-        axes[0, 0].set_ylabel(r"$v_x$")
-        axes[1, 0].set_ylabel(r"$v_y$")
-        for ax in axes.flat:
-            ax.set_xticks([])
-            ax.set_yticks([])
-            for spine in ax.spines.values():
-                spine.set_visible(False)
+        for t in range(tb):
+            for i, (img_x, img_y) in enumerate(zip(
+                [front_x[t], pred_x[t], label_x[t], diff_x[t]],
+                [front_y[t], pred_y[t], label_y[t], diff_y[t]]
+            )):
+                ax_x = fig.add_subplot(gs[t, i])
+                ax_y = fig.add_subplot(gs[t, i + cols_per_side + spacer])
 
-        plt.tight_layout()
-        plt.savefig(output_path)
+                ax_x.imshow(img_x, cmap='viridis' if i < 3 else 'magma')
+                ax_y.imshow(img_y, cmap='viridis' if i < 3 else 'magma')
+
+                ax_x.set_xticks([]); ax_x.set_yticks([])
+                ax_y.set_xticks([]); ax_y.set_yticks([])
+                for ax in (ax_x, ax_y):
+                    for spine in ax.spines.values():
+                        spine.set_visible(False)
+
+                if t == 0:
+                    ax_x.set_title(titles[i], fontsize=14)
+                    ax_y.set_title(titles[i], fontsize=14)
+            #fig.add_subplot(gs[t, 0]).set_ylabel(r"$v_x$", rotation=0, labelpad=20, fontsize=12)
+            #fig.add_subplot(gs[t, cols_per_side + spacer]).set_ylabel(r"$v_y$", rotation=0, labelpad=20, fontsize=12)
+        fig.text(0.25, 0.92, r"$v_x$", fontsize=20, ha='center')
+        fig.text(0.80, 0.92, r"$v_y$", fontsize=20, ha='center')
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(output_path, bbox_inches='tight')
         plt.close()
 
 
@@ -351,12 +368,13 @@ class MTTdata(pl.LightningDataModule):
 
             train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
-            val_forward_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
+            val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
 
             self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
             self.val_samplers.append(val_sampler)
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
+            #print('indices:', val_forward_sampler.indices)
 
         self.train_dataset = ConcatNormDataset(self.train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
@@ -381,14 +399,14 @@ class MTTdata(pl.LightningDataModule):
         val_SS_loader = DataLoader(
             self.val_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True, 
+            shuffle=False, 
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True,
+            shuffle=False,
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers
         )

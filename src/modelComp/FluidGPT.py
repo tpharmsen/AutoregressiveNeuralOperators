@@ -688,15 +688,15 @@ class FluidGPT(nn.Module):
 
         if self.gradient_flowthrough[1]:
             x = x + residual
-        print('\n___________________1_________________\n')
+        #print('\n___________________1_________________\n')
         # ===== UP =====
         for i, module_list in enumerate(self.blockUp):
             x = self.patchUnmerges[i](x)
-            print('\n______________________2________\n')
+            #print('\n______________________2________\n')
             #x = x + self.skip_connects[i](skips[self.depth - i - 1])
             skip = skips[self.depth - i - 1]
             x = x + (self.skip_connects[i](skip) if self.skip_connect is not None else skip)
-            print('\n______________________3________\n')
+            #print('\n______________________3________\n')
             if self.gradient_flowthrough[2]:
                 residual = x
                 for module in module_list:
@@ -705,7 +705,7 @@ class FluidGPT(nn.Module):
             else:
                 for module in module_list:
                     #print(module)
-                    print('\n______________________n________\n')
+                    #print('\n______________________n________\n')
                     x = module(x)
                     
 

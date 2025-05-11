@@ -77,6 +77,7 @@ class AmiraDatasetFromAM(Dataset):
         traj_idx = idx // self.lenpertraj
         ts_idx = idx % self.lenpertraj
         
+        #print(idx, traj_idx, ts_idx, self.lenpertraj, self.reader.traj, self.reader.ts, self.reader.dt, self.tb, self.fs)
         front = self.reader.data[traj_idx][ts_idx : ts_idx + self.idx_window : self.reader.dt]
         label = self.reader.data[traj_idx][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.reader.dt]
         return front, label
