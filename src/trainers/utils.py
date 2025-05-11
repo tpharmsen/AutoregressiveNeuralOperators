@@ -220,3 +220,66 @@ def rollout(front, model, steps):
     preds = torch.cat(preds, dim=1)
     #print(preds.shape)
     return preds
+
+def compute_energy_enstrophy_spectra(u, v, dataset_name="", Lx=1.0, Ly=1.0):
+
+    assert u.shape == v.shape, "u and v must have the same shape"
+    device = u.device
+    nx, ny = u.shape
+    dx = Lx / nx
+    dy = Ly / ny
+
+    if dataset_name == "pdebench-incomp": #only this dataset has other than periodic BC
+        # so we use hanning window
+        window_x = torch.hann_window(nx, periodic=False, device=device)
+        window_y = torch.hann_window(ny, periodic=False, device=device)
+        window = torch.outer(window_x, window_y)
+        u = u * window
+        v = v * window
+
+    # Wavenumbers
+    kx = torch.fft.fftfreq(nx, d=dx, device=device) * 2 * torch.pi
+    ky = torch.fft.fftfreq(ny, d=dy, device=device) * 2 * torch.pi
+    KX, KY = torch.meshgrid(kx, ky, indexing='ij')
+    K2 = KX**2 + KY**2
+    K = torch.sqrt(K2)
+
+    u_hat = torch.fft.fft2(u)
+    v_hat = torch.fft.fft2(v)
+
+    # Energy and enstrophy spectra
+    E_k = 0.5 * (torch.abs(u_hat)**2 + torch.abs(v_hat)**2)
+    w_hat = 1j * KX * v_hat - 1j * KY * u_hat
+    Z_k = 0.5 * torch.abs(w_hat)**2
+
+    K_flat = K.flatten()
+    E_flat = E_k.flatten()
+    Z_flat = Z_k.flatten()
+
+    k_max = K_flat.max()
+    n_bins = nx // 2
+    k_bins = torch.linspace(0, k_max, n_bins + 1, device=device)
+    k_bins_center = 0.5 * (k_bins[:-1] + k_bins[1:])
+
+    E_spectrum = torch.zeros(n_bins, device=device)
+    Z_spectrum = torch.zeros(n_bins, device=device)
+    counts = torch.zeros(n_bins, device=device)
+
+    # Bin points
+    bin_idx = torch.bucketize(K_flat, k_bins) - 1
+    valid = (bin_idx >= 0) & (bin_idx < n_bins)
+    bin_idx = bin_idx[valid]
+    E_flat = E_flat[valid]
+    Z_flat = Z_flat[valid]
+
+    for i in range(n_bins):
+        mask = bin_idx == i
+        E_spectrum[i] = E_flat[mask].sum()
+        Z_spectrum[i] = Z_flat[mask].sum()
+        counts[i] = mask.sum()
+
+    counts[counts == 0] = 1  # Avoid division by zero
+    E_spectrum /= counts
+    Z_spectrum /= counts
+
+    return k_bins_center, E_spectrum, Z_spectrum

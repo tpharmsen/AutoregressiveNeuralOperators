@@ -15,3 +15,4 @@ plotval_out: "plot_val.png"
 plotvalf_out: "plotf_val.png"
 anim_out: "anim_val.gif"
 checkpoint: 'checkpoint.pth'
+spectra_out: "energyenstrophyspectra.png"

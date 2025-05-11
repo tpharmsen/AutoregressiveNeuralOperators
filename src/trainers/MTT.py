@@ -22,13 +22,14 @@ from dataloaders import *
 from dataloaders import READER_MAPPER, DATASET_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
-from trainers.utils import animate_rollout, magnitude_vel, rollout
+from trainers.utils import animate_rollout, magnitude_vel, rollout, compute_energy_enstrophy_spectra
 from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#1F1F1F'
 plt.rcParams['axes.facecolor'] = '#1F1F1F'
 plt.rcParams['savefig.facecolor'] = '#1F1F1F'
+
 
 # following is a gpu mig bug fix
 if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
@@ -106,6 +107,7 @@ class MTTmodel(pl.LightningModule):
         self.out_1 = self.base_path + self.ct.plotval_out
         self.out_2 = self.base_path + self.ct.plotvalf_out
         self.out_3 = self.base_path + self.ct.anim_out
+        self.out_4 = self.base_path + self.ct.spectra_out
 
         self.train_losses = []
         self.val_SS_losses = []
@@ -221,7 +223,9 @@ class MTTmodel(pl.LightningModule):
                 self.make_plot(self.out_1, mode='val', device=device)
                 self.make_plot(self.out_0, mode='train', device=device)
                 self.make_plot(self.out_2, mode='val_forward', device=device)
-                self.make_anim(self.out_3, device=device)
+                stacked_pred, stacked_true, dataset_name = self.random_rollout(device=device)
+                self.make_anim(stacked_pred, stacked_true, dataset_name, self.out_3)
+                self.spectra_plot(stacked_pred, stacked_true, dataset_name, self.out_4)
             
             self.log_time = time.time() - self.log_time
             self.logger.experiment.log({
@@ -235,6 +239,7 @@ class MTTmodel(pl.LightningModule):
                 "val_plot": wandb.Image(self.out_1) if visuals else None,
                 "val_forward_plot": wandb.Image(self.out_2) if visuals else None,
                 "val_anim": wandb.Video(self.out_3, format="gif") if visuals else None,
+                "val_spectra": wandb.Image(self.out_4) if visuals else None,
                 "Log Time": self.log_time
             })
 
@@ -242,7 +247,76 @@ class MTTmodel(pl.LightningModule):
         self.val_SS_losses = []
         self.val_FS_losses = []
 
-    def make_anim(self, output_path, device='cuda'):
+    def spectra_plot(self, stacked_pred, stacked_true, dataset_name, output_path):
+        #clock = time.time()
+        stacked_pred, stacked_true = stacked_pred.squeeze(0), stacked_true.squeeze(0)
+        tmax = min(stacked_pred.shape[0], stacked_true.shape[0])
+        t1 = tmax // 4
+        tmax = tmax - 1
+        #print('maxt:', tmax)
+        #print('stacked_pred:', stacked_pred.shape)
+        #print('stacked_true:', stacked_true.shape)
+        #print()
+        #print('\nstarting spectra calculation ', time.time() - clock, '\n')
+        kinit, Einit, Zinit = compute_energy_enstrophy_spectra(stacked_pred[0,0], stacked_pred[0,1], dataset_name, Lx=1.0, Ly=1.0)
+        ktrue0, Etrue0, Ztrue0 = compute_energy_enstrophy_spectra(stacked_true[t1,0], stacked_true[t1,1], dataset_name, Lx=1.0, Ly=1.0)
+        kpred0, Epred0, Zpred0 = compute_energy_enstrophy_spectra(stacked_pred[t1,0], stacked_pred[t1,1], dataset_name, Lx=1.0, Ly=1.0)
+        ktrue1, Etrue1, Ztrue1 = compute_energy_enstrophy_spectra(stacked_true[tmax,0], stacked_true[tmax,1], dataset_name, Lx=1.0, Ly=1.0)
+        kpred1, Epred1, Zpred1 = compute_energy_enstrophy_spectra(stacked_pred[tmax,0], stacked_pred[tmax,1], dataset_name, Lx=1.0, Ly=1.0)
+        #print('\ncalculated spectra', time.time() - clock, '\n')
+
+        kinit, Einit, Zinit = kinit.cpu().numpy(), Einit.cpu().numpy(), Zinit.cpu().numpy()
+        ktrue0, Etrue0, Ztrue0 = ktrue0.cpu().numpy(), Etrue0.cpu().numpy(), Ztrue0.cpu().numpy()
+        kpred0, Epred0, Zpred0 = kpred0.cpu().numpy(), Epred0.cpu().numpy(), Zpred0.cpu().numpy()
+        ktrue1, Etrue1, Ztrue1 = ktrue1.cpu().numpy(), Etrue1.cpu().numpy(), Ztrue1.cpu().numpy()
+        kpred1, Epred1, Zpred1 = kpred1.cpu().numpy(), Epred1.cpu().numpy(), Zpred1.cpu().numpy()
+
+        fig, axs = plt.subplots(1, 2, figsize=(14, 5)) 
+        colors = ['#AA0140', '#D1205A', '#08457E', '#2D6FBF']
+    
+        ref_k = np.array([7,70])
+        ref_E_53 = (ref_k / ref_k[0])**(-5/3) * Etrue1[5]
+        ref_Z_1 = (ref_k / ref_k[0])**(-1) * Ztrue1[5]
+        
+        # energy spectrum with ref k^{-5/3}
+        axs[0].loglog(kinit, Einit, label='Init', color='gray')
+        axs[0].loglog(ktrue0, Etrue0, label=f'True (t={t1})', color=colors[0])
+        axs[0].loglog(kpred0, Epred0, label=f'Pred (t={t1})', color=colors[2])
+        axs[0].loglog(ktrue1, Etrue1, label=f'True (t={tmax})', color=colors[1])
+        axs[0].loglog(kpred1, Epred1, label=f'Pred (t={tmax})', color=colors[3])
+        
+        axs[0].loglog(ref_k, ref_E_53, 'k--', label=r'$k^{-5/3}$', color='white')
+        
+        axs[0].set_xlabel(r"Wavenumber $k$ [1/m]")
+        axs[0].set_ylabel(r"Energy [$\mathrm{m}^2/\mathrm{s}^2$]")
+        axs[0].set_title(r"Energy Spectrum ")
+        axs[0].legend()
+        axs[0].grid(True, color='gray')
+        
+        # now same for enstrophy
+        axs[1].loglog(kinit, Zinit, label='Init', color='gray')
+        axs[1].loglog(ktrue0, Ztrue0, label=f'True (t={t1})', color=colors[0])
+        axs[1].loglog(kpred0, Zpred0, label=f'Pred (t={t1})', color=colors[2])
+        axs[1].loglog(ktrue1, Ztrue1, label=f'True (t={tmax})', color=colors[1])
+        axs[1].loglog(kpred1, Zpred1, label=f'Pred (t={tmax})', color=colors[3])
+
+        axs[1].loglog(ref_k, ref_Z_1, 'k--', label=r'$k^{-1}$', color='white')
+        
+        axs[1].set_xlabel(r"Wavenumber $k$ [1/m]")
+        axs[1].set_ylabel(r"Enstrophy [$\mathrm{s}^{-2}/\mathrm{m}$]")
+        axs[1].set_title(r"Enstrophy Spectrum")
+        axs[1].legend()
+        axs[1].grid(True, color='gray')
+        
+        plt.suptitle("Isotropic Energy & Enstrophy Spectra with Theoretical Slopes, dataset: " + dataset_name, fontsize=20)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        #print('\nsaving spectra to:', output_path, '- ', time.time() - clock, '\n')
+        plt.savefig(output_path, bbox_inches='tight')
+        #print('\nsaved spectra to:', output_path, '- ', time.time() - clock, '\n')
+        plt.close()
+        
+
+    def random_rollout(self, device='cuda'):
         self.model.eval()
         with torch.no_grad():
             dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
@@ -254,12 +328,17 @@ class MTTmodel(pl.LightningModule):
             stacked_pred = rollout(front, self.model, len(val_traj) // self.cm.temporal_bundling)
             stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
             #print('stacked_pred:', stacked_pred.shape)
-            stacked_true = val_traj.unsqueeze(0)
-            stacked_true = magnitude_vel(stacked_true).float()# .to(torch.bfloat16)
-            stacked_pred = magnitude_vel(stacked_pred).float() 
+            stacked_true = val_traj.unsqueeze(0).float()
             #print('stacked_true:', stacked_true.shape)
             dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.name
-            animate_rollout(stacked_pred.squeeze(0), stacked_true.squeeze(0), dataset_name, output_path)
+            return stacked_pred, stacked_true, dataset_name
+        
+    def make_anim(self, stacked_pred, stacked_true, dataset_name, output_path):
+        stacked_pred = magnitude_vel(stacked_pred)
+        stacked_true = magnitude_vel(stacked_true)
+        #print('stacked_pred:', stacked_pred.shape)
+        #print('stacked_true:', stacked_true.shape)
+        animate_rollout(stacked_pred.squeeze(0), stacked_true.squeeze(0), dataset_name, output_path)
 
     def make_plot(self, output_path, mode='val', device='cuda'):
         self.model.eval()

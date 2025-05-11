@@ -8,13 +8,13 @@ datasets:
     file_ext: "am"
     timesample: 5
 
-  - name: "pdebench_comp"
+  - name: "pdebench-comp"
     path: "PDEBench-Comp/"
     dataset: "PDEBenchCompDataset"
     file_ext: "hdf5"
     timesample: 1
 
-  - name: "pdebench_incomp"
+  - name: "pdebench-incomp"
     path: "PDEBench-Incomp/"
     dataset: "PDEBenchIncompDataset"
     file_ext: "h5"

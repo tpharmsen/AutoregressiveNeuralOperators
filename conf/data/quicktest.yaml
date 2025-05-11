@@ -8,7 +8,7 @@ datasets:
     file_ext: "am"
     timesample: 5
     
-  - name: "pdebench_incomp"
+  - name: "pdebench-incomp"
     path: "PDEBench-Incomp/"
     dataset: "PDEBenchIncompDataset"
     file_ext: "h5"
