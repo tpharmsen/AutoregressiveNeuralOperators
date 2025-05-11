@@ -5,8 +5,8 @@ emb_dim: 96
 patch_size: 8
 hiddenout_dim: 256
 depth: 2
-stage_depths: [3,6,8,6,3]
-num_heads: [3,6,12,6,3]
+stage_depths: [6,6,10,6,6]
+num_heads: [6,6,12,6,6]
 window_size: 4
 use_flex_attn: True
 act: "swiglu"

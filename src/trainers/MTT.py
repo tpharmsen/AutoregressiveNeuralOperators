@@ -11,6 +11,8 @@ import time
 import wandb
 import yaml
 import random
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
@@ -144,9 +146,10 @@ class MTTmodel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # Training logic
         front, label = batch
+        #self.data_fetch_start_time = time.time() - self.data_fetch_start_time
         #self.forward_start_time = time.time()
         pred = self(front)
-        #print(pred.dtype)
+        #self.lossbackward_start_time = time.time()
 
         train_loss = F.mse_loss(pred, label)
         #self.log("train_loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -204,17 +207,16 @@ class MTTmodel(pl.LightningModule):
         # Start times for tracking
         self.data_fetch_start_time = time.time()
         self.forward_start_time = None
+        self.lossbackward_start_time = None
     
     def on_train_batch_end(self, outputs, batch, batch_idx):
-        data_fetch_duration = time.time() - self.data_fetch_start_time
-    
-        if self.forward_start_time is not None:
-            forward_duration = time.time() - self.forward_start_time
-        else:
-            forward_duration = -1
-    
-        print(f"Data Fetch: {data_fetch_duration:.7f}s, "
-              f"Forward Pass: {forward_duration:.7f}s")
+        #data_fetch_duration = time.time() - self.data_fetch_start_time
+        self.lossbackward_start_time = time.time() - self.lossbackward_start_time
+        self.forward_start_time =  self.lossbackward_start_time - self.forward_start_time
+           
+        print(f"Data Fetch: {self.data_fetch_start_time:.7f}s, "
+              f"Forward Pass: {self.forward_start_time:.7f}s"
+              f"backward pass: {self.lossbackward_start_time:.7f}s")
     """
     def on_train_epoch_start(self):
         #print(self.device)
@@ -276,7 +278,7 @@ class MTTmodel(pl.LightningModule):
         #print('stacked_true:', stacked_true.shape)
         #print()
         #print('\nstarting spectra calculation ', time.time() - clock, '\n')
-        kinit, Einit, Zinit = compute_energy_enstrophy_spectra(stacked_pred[0,0], stacked_pred[0,1], dataset_name, Lx=1.0, Ly=1.0)
+        kinit, Einit, Zinit = compute_energy_enstrophy_spectra(stacked_true[0,0], stacked_true[0,1], dataset_name, Lx=1.0, Ly=1.0)
         ktrue0, Etrue0, Ztrue0 = compute_energy_enstrophy_spectra(stacked_true[t1,0], stacked_true[t1,1], dataset_name, Lx=1.0, Ly=1.0)
         kpred0, Epred0, Zpred0 = compute_energy_enstrophy_spectra(stacked_pred[t1,0], stacked_pred[t1,1], dataset_name, Lx=1.0, Ly=1.0)
         ktrue1, Etrue1, Ztrue1 = compute_energy_enstrophy_spectra(stacked_true[tmax,0], stacked_true[tmax,1], dataset_name, Lx=1.0, Ly=1.0)

@@ -496,8 +496,8 @@ class SwinStage(nn.Module): # change name since stage also includes patch merge 
         return x
 
 class FluidGPT(nn.Module):
-    def __init__(self, emb_dim, data_dim, patch_size, hiddenout_dim, depth, 
-                 stage_depths, num_heads, window_size=8, mlp_ratio=4., 
+    def __init__(self, emb_dim=96, data_dim=[64,3,2,128,128], patch_size=(8,8), hiddenout_dim=128, depth=2, 
+                 stage_depths=[6,6,10,6,6], num_heads=[6,6,12,6,6], window_size=4, mlp_ratio=4., 
                  qkv_bias=True, drop=0., attn_drop=0., use_flex_attn=True, norm_layer=nn.LayerNorm,
                  act=nn.GELU, skip_connect=ConvNeXtBlock, gradient_flowthrough=[True, False, False]):
         super().__init__()
