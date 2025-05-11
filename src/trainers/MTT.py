@@ -138,13 +138,16 @@ class MTTmodel(pl.LightningModule):
             raise ValueError('MODEL NOT RECOGNIZED')        
 
     def forward(self, x):
+        #self.forward_start_time = time.time()
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
         # Training logic
         front, label = batch
+        #self.forward_start_time = time.time()
         pred = self(front)
         #print(pred.dtype)
+
         train_loss = F.mse_loss(pred, label)
         #self.log("train_loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
         #return train_loss
@@ -196,8 +199,23 @@ class MTTmodel(pl.LightningModule):
             "frequency": 1
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
+    """
+    def on_train_batch_start(self, batch, batch_idx, dataloader_idx=0):
+        # Start times for tracking
+        self.data_fetch_start_time = time.time()
+        self.forward_start_time = None
     
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        data_fetch_duration = time.time() - self.data_fetch_start_time
     
+        if self.forward_start_time is not None:
+            forward_duration = time.time() - self.forward_start_time
+        else:
+            forward_duration = -1
+    
+        print(f"Data Fetch: {data_fetch_duration:.7f}s, "
+              f"Forward Pass: {forward_duration:.7f}s")
+    """
     def on_train_epoch_start(self):
         #print(self.device)
         if not self.trainer.sanity_checking:
@@ -491,3 +509,35 @@ class MTTdata(pl.LightningDataModule):
         )
         return [val_SS_loader, val_FS_loader]
 
+class TrainingTimeTracker(pl.Callback):
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx=0):
+        # Start times for tracking
+        pl_module.data_fetch_start_time = time.time()
+        pl_module.forward_start_time = None
+        pl_module.backward_start_time = None
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        # Track data loading time
+        print(pl_module.data_fetch_start_time, pl_module.forward_start_time, pl_module.backward_start_time)
+        print()
+        data_fetch_duration = time.time() - pl_module.data_fetch_start_time
+        
+        # Track forward pass time (prediction)
+        forward_duration = time.time() - pl_module.forward_start_time
+        
+        # Track backward pass time (backpropagation)
+        backward_duration = time.time() - pl_module.backward_start_time 
+
+        # Print times
+        print(f"Batch {batch_idx} - Data Fetch: {data_fetch_duration:.7f}s, "
+              f"\nForward Pass: {forward_duration:.7f}s, "
+              f"\nBackward Pass: {backward_duration:.7f}s")
+    """
+    def on_forward(self, trainer, pl_module, batch, batch_idx):
+        # Time forward pass
+        pl_module.forward_start_time = time.time()
+
+    def on_backward(self, trainer, pl_module, loss, batch_idx):
+        # Time backward pass
+        pl_module.backward_start_time = time.time()
+    """
