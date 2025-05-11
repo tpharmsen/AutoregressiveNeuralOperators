@@ -1,10 +1,11 @@
-model_name: "swinUnet"
+model_name: "FluidGPT"
 in_channels: 2
+temporal_bundling: 3
 emb_dim: 96
 patch_size: 8
 hiddenout_dim: 256
 depth: 2
-stage_depths: [2,2,4,2,2]
+stage_depths: [3,6,8,6,3]
 num_heads: [3,6,12,6,3]
 window_size: 4
 use_flex_attn: True
