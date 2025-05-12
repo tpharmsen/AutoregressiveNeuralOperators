@@ -1,5 +1,7 @@
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
+from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
 import torch 
 import torch.nn as nn
 import torch.optim as optim
@@ -488,21 +490,39 @@ class MTTdata(pl.LightningDataModule):
         else:
             self.ct.norm_factor = None
 
+    def create_sampler(self, dataset, shuffle):
+        if dist.is_available() and dist.is_initialized():
+            return DistributedSampler(
+                dataset,
+                shuffle=shuffle,
+                drop_last=False,
+                rank=dist.get_rank(),
+                num_replicas=dist.get_world_size()
+            )
+        return None
+
     def train_dataloader(self):
+        train_sampler = self.create_sampler(self.train_dataset, shuffle=True)
+        
         return DataLoader(
             self.train_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True,
+            shuffle=(train_sampler is None),
+            sampler=train_sampler,
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers
         )
 
     def val_dataloader(self):
+        val_SS_sampler = self.create_sampler(self.val_dataset, shuffle=True)
+        val_FS_sampler = self.create_sampler(self.val_forward_dataset, shuffle=True)
+        
         val_SS_loader = DataLoader(
             self.val_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True, 
+            shuffle=(val_SS_sampler is None),
+            sampler=val_SS_sampler, 
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers
@@ -510,7 +530,8 @@ class MTTdata(pl.LightningDataModule):
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=True,
+            shuffle=(val_FS_sampler is None),
+            sampler=val_FS_sampler,
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers
