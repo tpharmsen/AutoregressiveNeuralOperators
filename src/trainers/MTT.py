@@ -223,9 +223,12 @@ class MTTmodel(pl.LightningModule):
               f"backward pass: {self.lossbackward_start_time:.7f}s")
     """
     def on_train_epoch_start(self):
-        #print(self.device)
-        if not self.trainer.sanity_checking:
-            self.epoch_time = time.time()
+        if not self.trainer.sanity_checking:#print(self.device)
+            dataloader = self.trainer.datamodule.train_dataloader()
+            if isinstance(dataloader.sampler, DistributedSampler):
+                dataloader.sampler.set_epoch(self.current_epoch)
+            
+                self.epoch_time = time.time()
 
     def on_validation_epoch_end(self):
         if not self.trainer.sanity_checking:
@@ -517,7 +520,7 @@ class MTTdata(pl.LightningDataModule):
     def val_dataloader(self):
         val_SS_sampler = self.create_sampler(self.val_dataset, shuffle=True)
         val_FS_sampler = self.create_sampler(self.val_forward_dataset, shuffle=True)
-        
+
         val_SS_loader = DataLoader(
             self.val_dataset,
             batch_size=self.ct.batch_size,
