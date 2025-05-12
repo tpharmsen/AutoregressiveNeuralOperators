@@ -5,7 +5,7 @@
 #SBATCH --partition=gpu_h100
 #SBATCH --time=02:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=4
 #SBATCH --gpus-per-node=4
 
 module load 2024
@@ -17,4 +17,4 @@ cd AutoregressiveNeuralOperators
 
 export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
 
-torchrun src/train.py --CB wandb_highfreq --CD 5set-fourier --CT deepspeed --CM swiglu --out torchruntest
+torchrun src/train.py --CB wandb_highfreq --CD 5set-fourier --CT deepspeed --CM swiglu --out torchruntest2
