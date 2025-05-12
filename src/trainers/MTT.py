@@ -476,6 +476,7 @@ class MTTdata(pl.LightningDataModule):
             self.val_samplers.append(val_sampler)
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
             #print('indices:', val_forward_sampler.indices)
+            print('dataset:', item['name'], 'done')
 
         self.train_dataset = ConcatNormDataset(self.train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
