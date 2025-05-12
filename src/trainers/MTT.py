@@ -37,6 +37,8 @@ plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     print('MIG GPU detected, using GPU 0')
+else:
+    print('No MIG GPU detected, using all available GPUs')
 
 #torch.set_float32_matmul_precision('medium')
 
@@ -296,7 +298,7 @@ class MTTmodel(pl.LightningModule):
     
         ref_k = np.array([7,70])
         ref_E_53 = (ref_k / ref_k[0])**(-5/3) * Etrue1[5]
-        ref_Z_1 = (ref_k / ref_k[0])**(-1) * Ztrue1[5]
+        ref_Z_3 = (ref_k / ref_k[0])**(-3) * Ztrue1[5]
         
         # energy spectrum with ref k^{-5/3}
         axs[0].loglog(kinit, Einit, label='Init', color='gray')
@@ -320,7 +322,7 @@ class MTTmodel(pl.LightningModule):
         axs[1].loglog(ktrue1, Ztrue1, label=f'True (t={tmax})', color=colors[1])
         axs[1].loglog(kpred1, Zpred1, label=f'Pred (t={tmax})', color=colors[3])
 
-        axs[1].loglog(ref_k, ref_Z_1, 'k--', label=r'$k^{-1}$', color='white')
+        axs[1].loglog(ref_k, ref_Z_3, 'k--', label=r'$k^{-3}$', color='white')
         
         axs[1].set_xlabel(r"Wavenumber $k$ [1/m]")
         axs[1].set_ylabel(r"Enstrophy [$\mathrm{s}^{-2}/\mathrm{m}$]")
@@ -491,55 +493,25 @@ class MTTdata(pl.LightningDataModule):
             batch_size=self.ct.batch_size,
             shuffle=True,
             pin_memory=self.ct.pin_memory, 
-            num_workers=self.ct.num_workers
+            num_workers=self.ct.num_workers,
+            persistent_workers=self.ct.persistent_workers
         )
 
     def val_dataloader(self):
         val_SS_loader = DataLoader(
             self.val_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=False, 
+            shuffle=True, 
             pin_memory=self.ct.pin_memory, 
-            num_workers=self.ct.num_workers
+            num_workers=self.ct.num_workers,
+            persistent_workers=self.ct.persistent_workers
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
             batch_size=self.ct.batch_size,
-            shuffle=False,
+            shuffle=True,
             pin_memory=self.ct.pin_memory, 
-            num_workers=self.ct.num_workers
+            num_workers=self.ct.num_workers,
+            persistent_workers=self.ct.persistent_workers
         )
         return [val_SS_loader, val_FS_loader]
-
-class TrainingTimeTracker(pl.Callback):
-    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx=0):
-        # Start times for tracking
-        pl_module.data_fetch_start_time = time.time()
-        pl_module.forward_start_time = None
-        pl_module.backward_start_time = None
-
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-        # Track data loading time
-        print(pl_module.data_fetch_start_time, pl_module.forward_start_time, pl_module.backward_start_time)
-        print()
-        data_fetch_duration = time.time() - pl_module.data_fetch_start_time
-        
-        # Track forward pass time (prediction)
-        forward_duration = time.time() - pl_module.forward_start_time
-        
-        # Track backward pass time (backpropagation)
-        backward_duration = time.time() - pl_module.backward_start_time 
-
-        # Print times
-        print(f"Batch {batch_idx} - Data Fetch: {data_fetch_duration:.7f}s, "
-              f"\nForward Pass: {forward_duration:.7f}s, "
-              f"\nBackward Pass: {backward_duration:.7f}s")
-    """
-    def on_forward(self, trainer, pl_module, batch, batch_idx):
-        # Time forward pass
-        pl_module.forward_start_time = time.time()
-
-    def on_backward(self, trainer, pl_module, loss, batch_idx):
-        # Time backward pass
-        pl_module.backward_start_time = time.time()
-    """
