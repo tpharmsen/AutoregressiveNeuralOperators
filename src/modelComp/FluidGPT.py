@@ -63,46 +63,28 @@ class LinearEmbedding(nn.Module):
     def encode(self, x, proj=True):
 
         B, T, C, H, W = x.shape
-        #print(1, x.shape)
-        #x = rearrange(x, "b t c h w -> (b t) c h w") #might change to .permute
-        #print(2, x.shape)
-        x = rearrange(x, 'b t c h w -> (b t) c h w')
-        #print('before patchify', x.shape)
-        x = self.patchify(x)  
-        #print('after patchify', x.shape)
-        #print(3, x.shape)
-        x = rearrange(x, '(b t) d n -> b t n d', b=B, t=T)
-        #print('after rearrange', x.shape)
-        #x = rearrange(x, "(b t) d pp -> b (t pp) d", b=B) # should think about this
-        #x = rearrange(x, "b d pp -> b pp d")
-        #print(4, x.shape)
 
-        # TODO: add Positional Encoding
+        x = rearrange(x, 'b t c h w -> (b t) c h w')
+
+        x = self.patchify(x)  
+
+        x = rearrange(x, '(b t) d n -> b t n d', b=B, t=T)
+
         if proj:
-            return self.pre_proj(x)#.transpose(1, 2)
+            return self.pre_proj(x)
         else:
-            return x#.transpose(1, 2)
+            return x
 
     def decode(self, x, proj=True):
-        #print('decode', x.shape)
         if proj:
             x = self.post_proj(x)  
-        #print('x shape', x.shape)
 
         B, T, N, D = x.shape
-        #x = rearrange(x, "b (t pp) d -> (b t) d pp", pp=self.patch_grid_res[0]*self.patch_grid_res[1]) #might change to .permute
         x = rearrange(x, 'b t n d -> (b t) d n')
-        #x = rearrange(x, 'b t n d -> (b t) n d')
-        #print('before unpatchify decode', x.shape)
-        #print(self.unpatchify)
-        #print()
+        
         x = self.unpatchify(x)  
-        #print()
-        #print(x.shape)
-        #print()
         x = rearrange(x, "(b t) c h w -> b t c h w", b=B, t=T)
-        #x = rearrange(x, '(b t) c h w -> b t c h w', t=T)
-        #print('end decoder: ', x.shape)
+
         return x
 
 class SpatiotemporalPositionalEncoding(nn.Module):
