@@ -17,4 +17,4 @@ cd AutoregressiveNeuralOperators
 
 export CUDA_HOME=/sw/arch/RHEL9/EB_production/2024/software/CUDA/12.6.0
 
-torchrun src/train.py --CB wandb_highfreq --CD 5set-fourier --CT deepspeed --CM swiglu --out torchruntest2
+python src/train.py --CB wandb_highfreq --CD 5set-fourier --CT deepspeed --CM swiglu --out torchruntest3
