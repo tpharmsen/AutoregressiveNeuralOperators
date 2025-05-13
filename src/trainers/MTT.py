@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
+from pytorch_lightning.utilities.rank_zero import rank_zero_only
 import torch 
 import torch.nn as nn
 import torch.optim as optim
@@ -230,6 +231,7 @@ class MTTmodel(pl.LightningModule):
             
                 self.epoch_time = time.time()
 
+    @rank_zero_only
     def on_validation_epoch_end(self):
         if not self.trainer.sanity_checking:
             epoch = self.trainer.current_epoch
