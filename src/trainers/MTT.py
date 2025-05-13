@@ -149,42 +149,28 @@ class MTTmodel(pl.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        # Training logic
+
         front, label = batch
         #self.data_fetch_start_time = time.time() - self.data_fetch_start_time
         #self.forward_start_time = time.time()
         pred = self(front)
         #self.lossbackward_start_time = time.time()
-
         train_loss = F.mse_loss(pred, label)
-        #self.log("train_loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        #return train_loss
         self.train_losses.append(train_loss.item())
         return train_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
-        #print(batch[0].device)
-        # Validation logic
+
         front, label = batch
         pred = self(front)
         val_loss = F.mse_loss(pred, label)
         if dataloader_idx == 0:
             self.val_SS_losses.append(val_loss.item())
-            #self.log("val_SS_loss", val_loss, on_step=False, on_epoch=True, prog_bar=False)
+            
         elif dataloader_idx == 1:
             self.val_FS_losses.append(val_loss.item())
-            #self.log("val_FS_loss", val_loss, on_step=False, on_epoch=True, prog_bar=False)
-        #return {'val_loss': val_loss, 'dataloader_idx': dataloader_idx}
+            
         return val_loss
-
-
-    def test_step(self, batch, batch_idx):
-        # Testing logic
-        x, y = batch
-        y_hat = self(x)
-        test_loss = F.mse_loss(y_hat, y)
-        #self.log("test_loss", test_loss, on_step=False, on_epoch=True, prog_bar=True)
-        return test_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
@@ -201,7 +187,6 @@ class MTTmodel(pl.LightningModule):
                 patience=self.ct.patience,
                 min_lr=1e-7
             ),
-            #"monitor": "val_SS_loss/dataloader_idx_0", 
             "monitor": "val_SS_loss",
             "interval": "epoch",
             "frequency": 1
@@ -451,8 +436,41 @@ class MTTdata(pl.LightningDataModule):
         self.cm = cm  
         self.ct = ct 
 
-    def prepare_data(self):
-        pass
+    def prepare_data(self): 
+        # Only called on rank 0
+        data_cache = []
+
+        for item in self.cd.datasets:
+            reader = get_dataset(
+                dataset_obj=READER_MAPPER[item['dataset']],
+                folderPath=str(self.cb.data_base + item["path"]),
+                file_ext=item["file_ext"],
+                resample_shape=self.cd.resample_shape,
+                resample_mode=self.cd.resample_mode,
+                timesample=item["timesample"]
+            )
+            reader.name = item['name']
+
+            # Wrap into datasets and optionally subsample
+            dataset_SS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
+            dataset_FS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
+
+            # Optional: Store indices now
+            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
+            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
+            val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
+
+            data_cache.append({
+                "name": item["name"],
+                "dataset_SS": dataset_SS,
+                "dataset_FS": dataset_FS,
+                "train_indices": train_sampler.indices,
+                "val_indices": val_sampler.indices,
+                "val_forward_indices": val_forward_sampler.indices
+            })
+
+        # Save to a shared file
+        torch.save(data_cache, f"{self.cb.data_base}/prepared_data.pt")
 
     def setup(self, stage=None):
         self.train_datasets = []
@@ -460,6 +478,27 @@ class MTTdata(pl.LightningDataModule):
         self.val_samplers = []
         self.val_forward_datasets = []
 
+        data_cache = torch.load(f"{self.cb.data_base}/prepared_data.pt")
+
+        for item in data_cache:
+            ds_SS = item["dataset_SS"]
+            ds_FS = item["dataset_FS"]
+
+            self.train_datasets.append(Subset(ds_SS, item["train_indices"]))
+            self.val_datasets.append(Subset(ds_SS, item["val_indices"]))
+            self.val_forward_datasets.append(Subset(ds_FS, item["val_forward_indices"]))
+            print("dataset:", item["name"], "done")
+
+        self.train_dataset = ConcatNormDataset(self.train_datasets)
+        self.val_dataset = ConcatNormDataset(self.val_datasets)
+        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
+
+        if self.ct.normalize:
+            unnorm_dataset = self.train_dataset.normalize_velocity()
+            self.ct.norm_factor = unnorm_dataset.item()
+        else:
+            self.ct.norm_factor = None
+        '''
         for item in self.cd.datasets:
             reader = get_dataset(
                 dataset_obj=READER_MAPPER[item['dataset']], 
@@ -494,6 +533,7 @@ class MTTdata(pl.LightningDataModule):
             self.ct.norm_factor = unnorm_dataset.item()
         else:
             self.ct.norm_factor = None
+        '''
 
     def create_sampler(self, dataset, shuffle):
         if dist.is_available() and dist.is_initialized():
