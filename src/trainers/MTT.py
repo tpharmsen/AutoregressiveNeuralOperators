@@ -479,7 +479,7 @@ class MTTdata(pl.LightningDataModule):
         self.val_samplers = []
         self.val_forward_datasets = []
 
-        data_cache = torch.load(f"{self.cb.data_base}/prepared_data.pt", map_location="cpu")
+        data_cache = torch.load(f"{self.cb.data_base}/prepared_data.pt", weights_only=False)
 
         for item in data_cache:
             ds_SS = item["dataset_SS"]
