@@ -466,13 +466,15 @@ class MTTdata(pl.LightningDataModule):
                 "dataset_FS": dataset_FS,
                 "train_indices": train_sampler.indices,
                 "val_indices": val_sampler.indices,
-                "val_forward_indices": val_forward_sampler.indices
+                "val_forward_indices": val_forward_sampler.indices,
+                "val_sampler": val_sampler
             })
 
         # Save to a shared file
         torch.save(data_cache, f"{self.cb.data_base}/prepared_data.pt")
         print("Data preparation done.")
 
+    @rank_zero_only
     def setup(self, stage=None):
         self.train_datasets = []
         self.val_datasets = []
@@ -488,6 +490,7 @@ class MTTdata(pl.LightningDataModule):
             self.train_datasets.append(Subset(ds_SS, item["train_indices"]))
             self.val_datasets.append(Subset(ds_SS, item["val_indices"]))
             self.val_forward_datasets.append(Subset(ds_FS, item["val_forward_indices"]))
+            self.val_samplers.append(item["val_sampler"])
             print("dataset:", item["name"], "done")
 
         self.train_dataset = ConcatNormDataset(self.train_datasets)
