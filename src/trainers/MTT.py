@@ -464,10 +464,10 @@ class MTTdata(pl.LightningDataModule):
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
             val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
 
-            self.train_datasets.append(Subset(dataset_SS, item["train_indices"]))
-            self.val_datasets.append(Subset(dataset_SS, item["val_indices"]))
-            self.val_forward_datasets.append(Subset(dataset_FS, item["val_forward_indices"]))
-            self.val_samplers.append(item["val_sampler"])
+            self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
+            self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
+            self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
+            self.val_samplers.append(val_sampler)
             print("dataset:", item["name"], "done")
 
             self.train_dataset = ConcatNormDataset(self.train_datasets)
