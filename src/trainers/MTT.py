@@ -491,7 +491,7 @@ class MTTdata(pl.LightningDataModule):
         })
 
         # Save to a shared file
-        torch.save(data_cache, self.cb.data_base + "tempprepdata.pt")
+        torch.save(data_cache[0], self.cb.data_base + "tempprepdata.pt")
         
         print("Data preparation done.")
 
@@ -505,6 +505,7 @@ class MTTdata(pl.LightningDataModule):
         data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu", weights_only=False)
 
         print(data_cache)
+        
         self.train_dataset = data_cache["train_dataset"]
         self.val_dataset = data_cache["val_dataset"]
         self.val_forward_dataset = data_cache["val_forward_dataset"]
@@ -512,7 +513,14 @@ class MTTdata(pl.LightningDataModule):
         self.val_sampler = data_cache["val_sampler"]
         self.val_forward_sampler = data_cache["val_forward_sampler"]
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
-
+        """
+        self.train_dataset = data_cache[0]["train_dataset"]
+        self.val_dataset = data_cache[0]["val_dataset"]
+        self.val_forward_dataset = data_cache[0]["val_forward_dataset"]
+        self.train_sampler = data_cache[0]["train_sampler"]
+        self.val_sampler = data_cache[0]["val_sampler"]
+        self.val_forward_sampler = data_cache[0]["val_forward_sampler"]
+        """
     def create_sampler(self, dataset, shuffle):
         if dist.is_available() and dist.is_initialized():
             return DistributedSampler(
