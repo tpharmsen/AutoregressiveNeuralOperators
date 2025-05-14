@@ -500,7 +500,7 @@ class MTTdata(pl.LightningDataModule):
             dist.barrier()
 
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
-        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu")
+        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt")#, map_location="cpu")
 
         print(data_cache)
         self.train_dataset = data_cache["train_dataset"]
