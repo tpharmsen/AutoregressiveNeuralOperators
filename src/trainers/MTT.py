@@ -437,6 +437,7 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
+        """
         # Only called on rank 0
         data_cache = []
 
@@ -472,6 +473,7 @@ class MTTdata(pl.LightningDataModule):
 
         # Save to a shared file
         torch.save(data_cache, f"{self.cb.data_base}/prepdata.pt")
+        """
         print("Data preparation done.")
 
     @rank_zero_only
@@ -502,6 +504,9 @@ class MTTdata(pl.LightningDataModule):
             self.ct.norm_factor = unnorm_dataset.item()
         else:
             self.ct.norm_factor = None
+
+        if dist.is_initialized():
+            dist.broadcast_object_list([data_cache], src=0)
         '''
         for item in self.cd.datasets:
             reader = get_dataset(
