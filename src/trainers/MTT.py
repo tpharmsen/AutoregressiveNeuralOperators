@@ -437,7 +437,7 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-        """
+        
         # Only called on rank 0
         data_cache = []
 
@@ -473,7 +473,7 @@ class MTTdata(pl.LightningDataModule):
 
         # Save to a shared file
         torch.save(data_cache, f"{self.cb.data_base}/prepdata.pt")
-        """
+        
         print("Data preparation done.")
 
     @rank_zero_only
