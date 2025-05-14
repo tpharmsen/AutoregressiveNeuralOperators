@@ -484,7 +484,7 @@ class MTTdata(pl.LightningDataModule):
         self.val_forward_datasets = []
 
         data_cache = torch.load(f"{self.cb.data_base}/prepdata.pt", weights_only=False)
-
+        print("Loaded data cache from file")
         for item in data_cache:
             ds_SS = item["dataset_SS"]
             ds_FS = item["dataset_FS"]
@@ -506,7 +506,8 @@ class MTTdata(pl.LightningDataModule):
             self.ct.norm_factor = None
 
         if dist.is_initialized():
-            dist.broadcast_object_list([data_cache], src=0)
+            print("Broadcasting data cache to all ranks")
+            dist.broadcast_object_list([self.train_dataset, self.val_dataset, self.val_forward_dataset], src=0)
         '''
         for item in self.cd.datasets:
             reader = get_dataset(
