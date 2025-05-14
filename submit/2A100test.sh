@@ -23,7 +23,7 @@ nvidia-smi
 
 torchrun --nproc_per_node=4 src/train.py \
     --CB wandb_highfreq \
-    --CD 5set-fourier \
+    --CD quick3 \
     --CT deepspeed \
     --CM swiglu \
     --out 2A100test
