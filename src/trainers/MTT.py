@@ -489,7 +489,7 @@ class MTTdata(pl.LightningDataModule):
                 })
 
         # Save to a shared file
-        torch.save(data_cache, f"{self.cb.data_base}tempprepdata.pt")
+        torch.save(data_cache, self.cb.data_base + "tempprepdata.pt")
         
         print("Data preparation done.")
 
@@ -500,7 +500,7 @@ class MTTdata(pl.LightningDataModule):
             dist.barrier()
 
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
-        data_cache = torch.load(f"{self.cb.data_base}tempprepdata.pt", map_location="cpu", weights_only=False)
+        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu", weights_only=False)
 
         print(data_cache)
         self.train_dataset = data_cache["train_dataset"]
