@@ -437,7 +437,10 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-        
+        self.train_datasets = []
+        self.val_datasets = []
+        self.val_samplers = []
+        self.val_forward_datasets = []
         # Only called on rank 0
         data_cache = []
 
@@ -461,89 +464,51 @@ class MTTdata(pl.LightningDataModule):
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
             val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
 
-            data_cache.append({
-                "name": item["name"],
-                "dataset_SS": dataset_SS,
-                "dataset_FS": dataset_FS,
-                "train_indices": train_sampler.indices,
-                "val_indices": val_sampler.indices,
-                "val_forward_indices": val_forward_sampler.indices,
-                "val_sampler": val_sampler
-            })
+            self.train_datasets.append(Subset(dataset_SS, item["train_indices"]))
+            self.val_datasets.append(Subset(dataset_SS, item["val_indices"]))
+            self.val_forward_datasets.append(Subset(dataset_FS, item["val_forward_indices"]))
+            self.val_samplers.append(item["val_sampler"])
+            print("dataset:", item["name"], "done")
+
+            self.train_dataset = ConcatNormDataset(self.train_datasets)
+            self.val_dataset = ConcatNormDataset(self.val_datasets)
+            self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
+
+            if self.ct.normalize:
+                unnorm_dataset = self.train_dataset.normalize_velocity()
+                self.ct.norm_factor = unnorm_dataset.item()
+            else:
+                self.ct.norm_factor = None
+                data_cache.append({
+                    "train_dataset": self.train_dataset,
+                    "val_dataset": self.val_dataset,
+                    "val_forward_dataset": self.val_forward_dataset,
+                    "train_sampler": train_sampler,
+                    "val_sampler": val_sampler,
+                    "val_forward_sampler": val_forward_sampler
+                })
 
         # Save to a shared file
         torch.save(data_cache, f"{self.cb.data_base}/prepdata2.pt")
         
         print("Data preparation done.")
 
-    @rank_zero_only
+
     def setup(self, stage=None):
-        self.train_datasets = []
-        self.val_datasets = []
-        self.val_samplers = []
-        self.val_forward_datasets = []
 
-        data_cache = torch.load(f"{self.cb.data_base}/prepdata2.pt", weights_only=False)
-        print("Loaded data cache from file")
-        for item in data_cache:
-            ds_SS = item["dataset_SS"]
-            ds_FS = item["dataset_FS"]
+        if dist.is_available() and dist.is_initialized():
+            dist.barrier()
 
-            self.train_datasets.append(Subset(ds_SS, item["train_indices"]))
-            self.val_datasets.append(Subset(ds_SS, item["val_indices"]))
-            self.val_forward_datasets.append(Subset(ds_FS, item["val_forward_indices"]))
-            self.val_samplers.append(item["val_sampler"])
-            print("dataset:", item["name"], "done")
+        print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
+        data_cache = torch.load(self.data_cache_path, map_location="cpu", weights_only=False)
 
-        self.train_dataset = ConcatNormDataset(self.train_datasets)
-        self.val_dataset = ConcatNormDataset(self.val_datasets)
-        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
-
-        if self.ct.normalize:
-            unnorm_dataset = self.train_dataset.normalize_velocity()
-            self.ct.norm_factor = unnorm_dataset.item()
-        else:
-            self.ct.norm_factor = None
-
-        if dist.is_initialized():
-            print("Broadcasting data cache to all ranks")
-            dist.broadcast_object_list([self.train_dataset, self.val_dataset, self.val_forward_dataset], src=0)
-        '''
-        for item in self.cd.datasets:
-            reader = get_dataset(
-                dataset_obj=READER_MAPPER[item['dataset']], 
-                folderPath=str(self.cb.data_base + item["path"]), 
-                file_ext=item["file_ext"], 
-                resample_shape=self.cd.resample_shape, 
-                resample_mode=self.cd.resample_mode, 
-                timesample=item["timesample"]
-            )
-            reader.name = item['name']
-
-            dataset_SS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling = self.cm.temporal_bundling, forward_steps = 1)
-            dataset_FS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling = self.cm.temporal_bundling, forward_steps = self.ct.forward_steps_loss)
-
-            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
-            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
-            val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
-
-            self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
-            self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
-            self.val_samplers.append(val_sampler)
-            self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
-            #print('indices:', val_forward_sampler.indices)
-            print('dataset:', item['name'], 'done')
-
-        self.train_dataset = ConcatNormDataset(self.train_datasets)
-        self.val_dataset = ConcatNormDataset(self.val_datasets)
-        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
-
-        if self.ct.normalize:
-            unnorm_dataset = self.train_dataset.normalize_velocity()
-            self.ct.norm_factor = unnorm_dataset.item()
-        else:
-            self.ct.norm_factor = None
-        '''
+        self.train_dataset = data_cache["train_dataset"]
+        self.val_dataset = data_cache["val_dataset"]
+        self.val_forward_dataset = data_cache["val_forward_dataset"]
+        self.train_sampler = data_cache["train_sampler"]
+        self.val_sampler = data_cache["val_sampler"]
+        self.val_forward_sampler = data_cache["val_forward_sampler"]
+        print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
 
     def create_sampler(self, dataset, shuffle):
         if dist.is_available() and dist.is_initialized():
