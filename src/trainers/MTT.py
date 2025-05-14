@@ -471,7 +471,7 @@ class MTTdata(pl.LightningDataModule):
             })
 
         # Save to a shared file
-        torch.save(data_cache, f"{self.cb.data_base}/prepared_data.pt")
+        torch.save(data_cache, f"{self.cb.data_base}/prepdata.pt")
         print("Data preparation done.")
 
     @rank_zero_only
@@ -481,7 +481,7 @@ class MTTdata(pl.LightningDataModule):
         self.val_samplers = []
         self.val_forward_datasets = []
 
-        data_cache = torch.load(f"{self.cb.data_base}/prepared_data.pt", weights_only=False)
+        data_cache = torch.load(f"{self.cb.data_base}/prepdata.pt", weights_only=False)
 
         for item in data_cache:
             ds_SS = item["dataset_SS"]
