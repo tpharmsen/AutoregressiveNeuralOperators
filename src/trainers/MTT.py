@@ -480,7 +480,7 @@ class MTTdata(pl.LightningDataModule):
         else:
             self.ct.norm_factor = None
 
-            
+
         data_cache.append({
             "train_dataset": self.train_dataset,
             "val_dataset": self.val_dataset,
@@ -502,7 +502,7 @@ class MTTdata(pl.LightningDataModule):
             dist.barrier()
 
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
-        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt")#, map_location="cpu")
+        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu", weights_only=False)
 
         print(data_cache)
         self.train_dataset = data_cache["train_dataset"]
