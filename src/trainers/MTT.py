@@ -502,12 +502,13 @@ class MTTdata(pl.LightningDataModule):
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
         data_cache = torch.load(f"{self.cb.data_base}/tempprepdata.pt", map_location="cpu", weights_only=False)
 
-        self.train_dataset = data_cache["train_dataset"]
-        self.val_dataset = data_cache["val_dataset"]
-        self.val_forward_dataset = data_cache["val_forward_dataset"]
-        self.train_sampler = data_cache["train_sampler"]
-        self.val_sampler = data_cache["val_sampler"]
-        self.val_forward_sampler = data_cache["val_forward_sampler"]
+        print(data_cache)
+        #self.train_dataset = data_cache["train_dataset"]
+        #self.val_dataset = data_cache["val_dataset"]
+        #self.val_forward_dataset = data_cache["val_forward_dataset"]
+        #self.train_sampler = data_cache["train_sampler"]
+        #self.val_sampler = data_cache["val_sampler"]
+        #self.val_forward_sampler = data_cache["val_forward_sampler"]
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
 
     def create_sampler(self, dataset, shuffle):
