@@ -470,23 +470,25 @@ class MTTdata(pl.LightningDataModule):
             self.val_samplers.append(val_sampler)
             print("dataset:", item["name"], "done")
 
-            self.train_dataset = ConcatNormDataset(self.train_datasets)
-            self.val_dataset = ConcatNormDataset(self.val_datasets)
-            self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
+        self.train_dataset = ConcatNormDataset(self.train_datasets)
+        self.val_dataset = ConcatNormDataset(self.val_datasets)
+        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
 
-            if self.ct.normalize:
-                unnorm_dataset = self.train_dataset.normalize_velocity()
-                self.ct.norm_factor = unnorm_dataset.item()
-            else:
-                self.ct.norm_factor = None
-                data_cache.append({
-                    "train_dataset": self.train_dataset,
-                    "val_dataset": self.val_dataset,
-                    "val_forward_dataset": self.val_forward_dataset,
-                    "train_sampler": train_sampler,
-                    "val_sampler": val_sampler,
-                    "val_forward_sampler": val_forward_sampler
-                })
+        if self.ct.normalize:
+            unnorm_dataset = self.train_dataset.normalize_velocity()
+            self.ct.norm_factor = unnorm_dataset.item()
+        else:
+            self.ct.norm_factor = None
+
+            
+        data_cache.append({
+            "train_dataset": self.train_dataset,
+            "val_dataset": self.val_dataset,
+            "val_forward_dataset": self.val_forward_dataset,
+            "train_sampler": train_sampler,
+            "val_sampler": val_sampler,
+            "val_forward_sampler": val_forward_sampler
+        })
 
         # Save to a shared file
         torch.save(data_cache, self.cb.data_base + "tempprepdata.pt")
