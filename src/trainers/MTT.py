@@ -485,11 +485,9 @@ class MTTdata(pl.LightningDataModule):
             "train_dataset": self.train_dataset,
             "val_dataset": self.val_dataset,
             "val_forward_dataset": self.val_forward_dataset,
-            "train_sampler": train_sampler,
-            "val_sampler": val_sampler,
-            "val_forward_sampler": val_forward_sampler
+            "val_samplers": self.val_samplers
         })
-
+        print(data_cache)
         # Save to a shared file
         torch.save(data_cache[0], self.cb.data_base + "tempprepdata.pt")
         
@@ -509,9 +507,7 @@ class MTTdata(pl.LightningDataModule):
         self.train_dataset = data_cache["train_dataset"]
         self.val_dataset = data_cache["val_dataset"]
         self.val_forward_dataset = data_cache["val_forward_dataset"]
-        self.train_sampler = data_cache["train_sampler"]
-        self.val_sampler = data_cache["val_sampler"]
-        self.val_forward_sampler = data_cache["val_forward_sampler"]
+        self.val_samplers = data_cache["val_samplers"]
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
         """
         self.train_dataset = data_cache[0]["train_dataset"]
