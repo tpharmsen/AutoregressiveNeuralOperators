@@ -22,7 +22,7 @@ echo "Running on host: $(hostname)"
 echo "CUDA devices visible: $CUDA_VISIBLE_DEVICES"
 nvidia-smi
 
-torchrun --nproc_per_node=4 src/train.py \
+srun src/train.py \
     --CB wandb_highfreq \
     --CD 5set-fourier \
     --CT deepspeed \
