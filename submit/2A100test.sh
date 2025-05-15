@@ -3,7 +3,7 @@
 #SBATCH --output=slurmlogs/%x_%j.out
 #SBATCH --error=slurmlogs/%x_%j.err
 #SBATCH --partition=gpu_a100
-#SBATCH --time=00:20:00
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
 #SBATCH --gpus-per-node=2
