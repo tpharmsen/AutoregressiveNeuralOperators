@@ -24,7 +24,7 @@ import os
 import subprocess
 
 from dataloaders import *
-from dataloaders import READER_MAPPER, DATASET_MAPPER
+from dataloaders import PREPROC_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
 from trainers.utils import animate_rollout, magnitude_vel, rollout, compute_energy_enstrophy_spectra
@@ -445,6 +445,7 @@ class MTTdata(pl.LightningDataModule):
         data_cache = []
 
         for item in self.cd.datasets:
+            """
             reader = get_dataset(
                 dataset_obj=READER_MAPPER[item['dataset']],
                 folderPath=str(self.cb.data_base + item["path"]),
@@ -468,8 +469,19 @@ class MTTdata(pl.LightningDataModule):
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
             self.val_samplers.append(val_sampler)
+            """
+            reader = get_dataset(
+                dataset_obj=PREPROC_MAPPER[item['ppclass']],
+                preproc_savepath=str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'),
+                folderPath=str(self.cb.data_base + item["path"]),
+                file_ext=item["file_ext"],
+                resample_shape=self.cd.resample_shape,
+                resample_mode=self.cd.resample_mode,
+                timesample=item["timesample"]
+            )
             print("dataset:", item["name"], "done")
-
+            print('test')
+        """
         self.train_dataset = ConcatNormDataset(self.train_datasets)
         self.val_dataset = ConcatNormDataset(self.val_datasets)
         self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
@@ -479,7 +491,7 @@ class MTTdata(pl.LightningDataModule):
             self.ct.norm_factor = unnorm_dataset.item()
         else:
             self.ct.norm_factor = None
-
+        
 
         data_cache.append({
             "train_dataset": self.train_dataset,
@@ -490,7 +502,7 @@ class MTTdata(pl.LightningDataModule):
         print(data_cache)
         # Save to a shared file
         torch.save(data_cache[0], self.cb.data_base + "tempprepdata.pt")
-        
+        """
         print("Data preparation done.")
 
 
