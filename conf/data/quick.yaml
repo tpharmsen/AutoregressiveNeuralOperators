@@ -4,6 +4,6 @@ resample_mode: "fourier"
 datasets:
   - name: "amira"
     path: "AmiraSet-test/"
-    dataset: "AmiraDatasetFromAM"
+    ppclass: "AmiraDatasetFromAM"
     file_ext: "am"
     timesample: 5

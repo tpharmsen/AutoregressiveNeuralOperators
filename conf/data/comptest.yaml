@@ -4,6 +4,6 @@ resample_mode: "fourier"
 datasets:
   - name: "pdebench-comp"
     path: "PDEBench-Comp-Turbulent/"
-    dataset: "PDEBenchCompDataset"
+    ppclass: "PDEBenchCompDataset"
     file_ext: "hdf5"
     timesample: 1

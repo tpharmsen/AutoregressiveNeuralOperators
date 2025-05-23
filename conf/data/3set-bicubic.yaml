@@ -4,19 +4,19 @@ resample_mode: "bicubic"
 datasets:
   - name: "amira"
     path: "AmiraSet/"
-    dataset: "AmiraDatasetFromAM"
+    ppclass: "AmiraDatasetFromAM"
     file_ext: "am"
     timesample: 5
         
   - name: "pdebench-incomp"
     path: "PDEBench-Incomp/"
-    dataset: "PDEBenchIncompDataset"
+    ppclass: "PDEBenchIncompDataset"
     file_ext: "h5"
     timesample: 10
 
   - name: "pdegym-gauss"
     path: "PDEGym-NSGauss"
-    dataset: "PDEGymDataset"
+    ppclass: "PDEGymDataset"
     file_ext: "nc"
     timesample: 1
 
