@@ -440,10 +440,6 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-        pass
-
-    def setup(self, stage=None):
-
         for item in self.cd.datasets:
             get_dataset(
                 dataset_obj=PREPROC_MAPPER[item['ppclass']],
@@ -456,7 +452,9 @@ class MTTdata(pl.LightningDataModule):
                 dataset_name=item["name"]
             )
             print("dataset", item["name"], "preprocessed")
-        
+
+    def setup(self, stage=None):
+
         dist.barrier()
 
         self.train_datasets = []
