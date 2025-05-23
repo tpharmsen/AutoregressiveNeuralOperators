@@ -4,7 +4,7 @@ resample_mode: "fourier"
 datasets:
   - name: "pdegym-gauss"
     path: "PDEGym-NSGauss"
-    ppclass: "PDEGymDataset"
+    ppclass: "PDEGymPreProc"
     file_ext: "nc"
     timesample: 1
 

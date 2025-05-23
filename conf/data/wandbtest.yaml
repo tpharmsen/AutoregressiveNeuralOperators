@@ -4,7 +4,7 @@ resample_mode: "bicubic"
 datasets:
   - name: "amira"
     path: "AmiraSet/"
-    ppclass: "AmiraDatasetFromAM"
+    ppclass: "AmiraPreProc"
     file_ext: "am"
     timesample: 5
     

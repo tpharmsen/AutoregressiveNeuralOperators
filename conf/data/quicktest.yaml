@@ -4,12 +4,12 @@ resample_mode: "fourier"
 datasets:
   - name: "amira"
     path: "AmiraSet/"
-    ppclass: "AmiraDatasetFromAM"
+    ppclass: "AmiraPreProc"
     file_ext: "am"
     timesample: 5
     
   - name: "pdebench-incomp"
     path: "PDEBench-Incomp/"
-    ppclass: "PDEBenchIncompDataset"
+    ppclass: "PDEBenchIncompPreProc"
     file_ext: "h5"
     timesample: 10
