@@ -122,6 +122,9 @@ class MTTmodel(pl.LightningModule):
         self.val_FS_losses = []
         self.epoch_time = None
         self.log_time = None
+
+        self.global_mean = self.trainer.datamodule.global_mean
+        self.global_std = self.trainer.datamodule.global_std
         
         self._initialize_model()   
         self.counter = 0
@@ -346,7 +349,7 @@ class MTTmodel(pl.LightningModule):
             stacked_true = val_traj.unsqueeze(0).float()
             #print('stacked_true:', stacked_true.shape)
             dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.name
-            stacked_pred, stacked_true = stacked_pred * global_std + global_mean, stacked_true * global_std + global_mean
+            stacked_pred, stacked_true = stacked_pred * self.global_std + self.global_mean, stacked_true * self.global_std + self.global_mean
     
             return stacked_pred, stacked_true, dataset_name
         
@@ -382,9 +385,9 @@ class MTTmodel(pl.LightningModule):
             else:
                 pred = self(front)
         
-        front = front.float() * global_std + global_mean #.to(torch.bfloat16)
-        pred = pred.float() * global_std + global_mean #.to(torch.bfloat16)
-        label = label.float() * global_std + global_mean #.to(torch.bfloat16)
+        front = front.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
+        pred = pred.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
+        label = label.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
 
         front_x, front_y = front[0, :, 0].cpu(), front[0, :, 1].cpu()
         pred_x, pred_y = pred[0, :, 0].cpu(), pred[0, :, 1].cpu()
@@ -492,13 +495,13 @@ class MTTdata(pl.LightningDataModule):
         sizes = np.array(sizes)
 
         # Two-line calculation
-        global_mean = np.sum(sizes * means) / np.sum(sizes)
-        global_std = np.sqrt(np.sum(sizes * (stds**2 + (means - global_mean)**2)) / np.sum(sizes))
+        self.global_mean = np.sum(sizes * means) / np.sum(sizes)
+        self.global_std = np.sqrt(np.sum(sizes * (stds**2 + (means - self.global_mean)**2)) / np.sum(sizes))
         if self.ct.normalize:
             for dataset_list in [self.train_datasets, self.val_datasets, self.val_forward_datasets]:
                 for subset in dataset_list:
-                    subset.dataset.avgnorm = global_mean
-                    subset.dataset.stdnorm = global_std
+                    subset.dataset.avgnorm = self.global_mean
+                    subset.dataset.stdnorm = self.global_std
                 
         self.train_dataset = ConcatDataset(self.train_datasets)
         self.val_dataset = ConcatDataset(self.val_datasets)
