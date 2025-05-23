@@ -336,7 +336,7 @@ class MTTmodel(pl.LightningModule):
         with torch.no_grad():
             dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
             traj_idx = self.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
-            val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.get_single_traj(traj_idx)
+            val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
             #print('val_traj:', val_traj.shape)
             front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).to(device).to(torch.bfloat16)
             #print('len:', len(val_traj) // self.cm.temporal_bundling)
@@ -345,7 +345,9 @@ class MTTmodel(pl.LightningModule):
             #print('stacked_pred:', stacked_pred.shape)
             stacked_true = val_traj.unsqueeze(0).float()
             #print('stacked_true:', stacked_true.shape)
-            dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.reader.name
+            dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.name
+            stacked_pred, stacked_true = stacked_pred * global_std + global_mean, stacked_true * global_std + global_mean
+    
             return stacked_pred, stacked_true, dataset_name
         
     def make_anim(self, stacked_pred, stacked_true, dataset_name, output_path):
@@ -380,9 +382,9 @@ class MTTmodel(pl.LightningModule):
             else:
                 pred = self(front)
         
-        front = front.float() #.to(torch.bfloat16)
-        pred = pred.float() #.to(torch.bfloat16)
-        label = label.float() #.to(torch.bfloat16)
+        front = front.float() * global_std + global_mean #.to(torch.bfloat16)
+        pred = pred.float() * global_std + global_mean #.to(torch.bfloat16)
+        label = label.float() * global_std + global_mean #.to(torch.bfloat16)
 
         front_x, front_y = front[0, :, 0].cpu(), front[0, :, 1].cpu()
         pred_x, pred_y = pred[0, :, 0].cpu(), pred[0, :, 1].cpu()
@@ -438,30 +440,36 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-        self.train_datasets = []
-        self.val_datasets = []
-        self.val_samplers = []
-        self.val_forward_datasets = []
-        # Only called on rank 0
-        data_cache = []
+        pass
+
+    def setup(self, stage=None):
 
         for item in self.cd.datasets:
-            """
-            reader = get_dataset(
-                dataset_obj=READER_MAPPER[item['dataset']],
+            get_dataset(
+                dataset_obj=PREPROC_MAPPER[item['ppclass']],
+                preproc_savepath=str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'),
                 folderPath=str(self.cb.data_base + item["path"]),
                 file_ext=item["file_ext"],
                 resample_shape=self.cd.resample_shape,
                 resample_mode=self.cd.resample_mode,
-                timesample=item["timesample"]
+                timesample=item["timesample"],
+                dataset_name=item["name"]
             )
-            reader.name = item['name']
+            print("dataset", item["name"], "preprocessed")
+        
+        dist.barrier()
 
-            # Wrap into datasets and optionally subsample
-            dataset_SS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
-            dataset_FS = DATASET_MAPPER[item['dataset']](reader, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
+        self.train_datasets = []
+        self.val_datasets = []
+        self.val_samplers = []
+        self.val_forward_datasets = []
+        
+        means, stds, sizes = [], [], []
+                
+        for item in self.cd.datasets:
+            dataset_SS = DiskDataset(str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'), temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
+            dataset_FS = DiskDataset(str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'), temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
 
-            # Optional: Store indices now
             train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
             val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
@@ -470,48 +478,35 @@ class MTTdata(pl.LightningDataModule):
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
             self.val_samplers.append(val_sampler)
-            """
-            get_dataset(
-                dataset_obj=PREPROC_MAPPER[item['ppclass']],
-                preproc_savepath=str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'),
-                folderPath=str(self.cb.data_base + item["path"]),
-                file_ext=item["file_ext"],
-                resample_shape=self.cd.resample_shape,
-                resample_mode=self.cd.resample_mode,
-                timesample=item["timesample"]
-            )
-            print("dataset:", item["name"], "done")
-            print('test')
-        """
-        self.train_dataset = ConcatNormDataset(self.train_datasets)
-        self.val_dataset = ConcatNormDataset(self.val_datasets)
-        self.val_forward_dataset = ConcatNormDataset(self.val_forward_datasets)
+            
+            mean_i = dataset_SS.avg
+            std_i = dataset_SS.std
+            N_i = np.prod(dataset_SS.datashape)
 
+            means.append(mean_i)
+            stds.append(std_i)
+            sizes.append(N_i)
+            print("dataset", item["name"], "loaded", "- mean and std and elem:", dataset_SS.avg, dataset_SS.std, np.prod(dataset_SS.datashape))
+            print()
+
+        means = np.array(means)
+        stds = np.array(stds)
+        sizes = np.array(sizes)
+
+        # Two-line calculation
+        global_mean = np.sum(sizes * means) / np.sum(sizes)
+        global_std = np.sqrt(np.sum(sizes * (stds**2 + (means - global_mean)**2)) / np.sum(sizes))
         if self.ct.normalize:
-            unnorm_dataset = self.train_dataset.normalize_velocity()
-            self.ct.norm_factor = unnorm_dataset.item()
-        else:
-            self.ct.norm_factor = None
-        
-
-        data_cache.append({
-            "train_dataset": self.train_dataset,
-            "val_dataset": self.val_dataset,
-            "val_forward_dataset": self.val_forward_dataset,
-            "val_samplers": self.val_samplers
-        })
-        print(data_cache)
-        # Save to a shared file
-        torch.save(data_cache[0], self.cb.data_base + "tempprepdata.pt")
+            for dataset_list in [self.train_datasets, self.val_datasets, self.val_forward_datasets]:
+                for subset in dataset_list:
+                    subset.dataset.avgnorm = global_mean
+                    subset.dataset.stdnorm = global_std
+                
+        self.train_dataset = ConcatDataset(self.train_datasets)
+        self.val_dataset = ConcatDataset(self.val_datasets)
+        self.val_forward_dataset = ConcatDataset(self.val_forward_datasets)
+        print("concatdataset done")
         """
-        print("Data preparation done.")
-
-
-    def setup(self, stage=None):
-
-        if dist.is_available() and dist.is_initialized():
-            dist.barrier()
-
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
         data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu", weights_only=False)
 
@@ -522,7 +517,7 @@ class MTTdata(pl.LightningDataModule):
         self.val_forward_dataset = data_cache["val_forward_dataset"]
         self.val_samplers = data_cache["val_samplers"]
         print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
-        """
+        
         self.train_dataset = data_cache[0]["train_dataset"]
         self.val_dataset = data_cache[0]["val_dataset"]
         self.val_forward_dataset = data_cache[0]["val_forward_dataset"]
@@ -530,6 +525,7 @@ class MTTdata(pl.LightningDataModule):
         self.val_sampler = data_cache[0]["val_sampler"]
         self.val_forward_sampler = data_cache[0]["val_forward_sampler"]
         """
+
     def create_sampler(self, dataset, shuffle):
         if dist.is_available() and dist.is_initialized():
             return DistributedSampler(

@@ -8,11 +8,11 @@ import netCDF4 as nc
 
 
 class PDEGymPreProc(Dataset):
-    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5):
+    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5, dataset_name='pdegym'):
         self.data_list = []
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
-        self.name = None
+        self.name = dataset_name
         self.vel_scale = None
         self.dt = timesample
         

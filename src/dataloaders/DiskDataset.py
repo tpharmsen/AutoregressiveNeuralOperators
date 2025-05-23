@@ -22,6 +22,8 @@ class DiskDataset(Dataset):
         self.fs = forward_steps
         self.lenpertraj = self.ts - (1 + self.fs) * self.dt * self.tb + self.dt
         self.idx_window = self.dt * self.tb
+        self.avgnorm = None
+        self.stdnorm = None
         
     def __len__(self):
         return self.traj * self.lenpertraj
@@ -33,5 +35,13 @@ class DiskDataset(Dataset):
         with h5py.File(self.filepath, 'r') as f:
             front = f['data'][traj_idx][ts_idx : ts_idx + self.idx_window : self.dt]
             label = f['data'][traj_idx][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.dt]
-
+        if self.avgnorm is not None:
+            #print('normalising\n')
+            front = (front - self.avgnorm) / self.stdnorm
+            label = (label - self.avgnorm) / self.stdnorm
         return torch.tensor(front), torch.tensor(label)
+
+    def get_single_traj(self, idx):
+        with h5py.File(self.filepath, 'r') as f:
+            full = f['data'][idx][::self.dt]
+        return torch.tensor(full)

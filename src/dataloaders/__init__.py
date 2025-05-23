@@ -2,7 +2,7 @@ from .AmiraPreProc import AmiraPreProc
 from .PDEBenchCompPreProc import PDEBenchCompPreProc
 from .PDEBenchIncompPreProc import PDEBenchIncompPreProc
 from .PDEGymPreProc import PDEGymPreProc
-
+from .DiskDataset import DiskDataset
 from .ConcatNormDataset import ConcatNormDataset
 
 # Optional: Define what gets imported when using `from dataloaders import *`

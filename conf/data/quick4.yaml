@@ -2,13 +2,13 @@ resample_shape: 128
 resample_mode: "fourier"
 
 datasets:
-  - name: "amira"
+  - name: "amira-tiny"
     path: "AmiraSet-test/"
     ppclass: "AmiraPreProc"
     file_ext: "am"
     timesample: 5
 
-  - name: "pdegym-gauss"
+  - name: "pdegym-gauss-tiny"
     path: "PDEGym-NSGauss-test2"
     ppclass: "PDEGymPreProc"
     file_ext: "nc"

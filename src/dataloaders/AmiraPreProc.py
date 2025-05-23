@@ -7,13 +7,13 @@ from dataloaders.utils import spatial_resample
 
 
 class AmiraPreProc(Dataset):
-    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5):
+    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5, dataset_name='amira'):
         self.data_list = []
         self.traj_list = []
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
-        self.name = 'amira'
+        self.name = dataset_name
         self.vel_scale = None
         self.dt = timesample
         
@@ -32,6 +32,7 @@ class AmiraPreProc(Dataset):
         self.traj = int(sum(self.traj_list))
         self.avg = float(self.data.mean())
         self.std = float(self.data.std())
+
         # save the data in quick readable format in h5py
         with h5py.File(preproc_savepath, 'w') as f:
             f.create_dataset('data', data=self.data.numpy())

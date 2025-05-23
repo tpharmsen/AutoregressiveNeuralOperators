@@ -3,7 +3,7 @@
 #SBATCH --output=slurmlogs/%x_%j.out
 #SBATCH --error=slurmlogs/%x_%j.err
 #SBATCH --partition=gpu_a100
-#SBATCH --time=00:10:00
+#SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
 #SBATCH --gpus-per-node=2
@@ -21,7 +21,7 @@ echo "Running on host: $(hostname)"
 echo "CUDA devices visible: $CUDA_VISIBLE_DEVICES"
 nvidia-smi
 
-torchrun --nproc_per_node=2 src/train.py \
+srun src/train.py \
     --CB wandb_highfreq \
     --CD quick3 \
     --CT deepspeed \

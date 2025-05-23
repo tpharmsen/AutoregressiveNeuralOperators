@@ -2,7 +2,7 @@ resample_shape: 128
 resample_mode: "fourier"
 
 datasets:
-  - name: "pdegym-gauss"
+  - name: "pdegym-gauss-quick3"
     path: "PDEGym-NSGauss-test"
     ppclass: "PDEGymPreProc"
     file_ext: "nc"

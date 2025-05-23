@@ -8,13 +8,13 @@ from dataloaders.utils import spatial_resample
 
 
 class PDEBenchCompPreProc(Dataset):
-    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5):
+    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5, dataset_name='pdebenchcomp'):
         self.data_list = []
         self.traj_list = []
         self.ts = None
         self.resample_shape = resample_shape
         self.resample_mode = resample_mode
-        self.name = None
+        self.name = dataset_name
         self.vel_scale = None
         self.dt = timesample
         
