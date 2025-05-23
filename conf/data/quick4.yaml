@@ -1,0 +1,15 @@
+resample_shape: 128
+resample_mode: "fourier"
+
+datasets:
+  - name: "amira"
+    path: "AmiraSet-test/"
+    ppclass: "AmiraPreProc"
+    file_ext: "am"
+    timesample: 5
+
+  - name: "pdegym-gauss"
+    path: "PDEGym-NSGauss-test2"
+    ppclass: "PDEGymPreProc"
+    file_ext: "nc"
+    timesample: 1
