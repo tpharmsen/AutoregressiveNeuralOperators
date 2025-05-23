@@ -15,4 +15,4 @@ conda activate grad312
 conda env list
 cd AutoregressiveNeuralOperators
 
-python src/train.py --CB wandb.yaml --CD memorytest.yaml --out memoryMax
+srun python src/train.py --CB wandb.yaml --CD memorytest.yaml --out memoryMax

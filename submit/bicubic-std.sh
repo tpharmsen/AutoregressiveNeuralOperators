@@ -15,4 +15,4 @@ conda activate grad312
 conda env list
 cd AutoregressiveNeuralOperators
 
-python src/train.py --CB wandb.yaml --CD 3set-bicubic.yaml --out /bicubic --name bicubic
+srun python src/train.py --CB wandb.yaml --CD 3set-bicubic.yaml --out /bicubic --name bicubic
