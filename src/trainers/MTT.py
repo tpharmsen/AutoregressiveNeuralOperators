@@ -167,7 +167,7 @@ class MTTmodel(pl.LightningModule):
         val_loss = F.mse_loss(pred, label)
         if dataloader_idx == 0:
             self.val_SS_losses.append(val_loss.item())
-            
+            self.log("val_SS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
         elif dataloader_idx == 1:
             self.val_FS_losses.append(val_loss.item())
             
@@ -231,9 +231,11 @@ class MTTmodel(pl.LightningModule):
             self.global_mean = self.trainer.datamodule.global_mean
             self.global_std = self.trainer.datamodule.global_std
 
+            '''
             self.log_dict({
                 "val_SS_loss": val_SS_loss,
             }, prog_bar=False)
+            '''
 
             visuals = self.cb.viz and epoch % self.cb.viz_freq == 0
             if visuals:
