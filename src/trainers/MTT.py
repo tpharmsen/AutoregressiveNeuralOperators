@@ -122,9 +122,6 @@ class MTTmodel(pl.LightningModule):
         self.val_FS_losses = []
         self.epoch_time = None
         self.log_time = None
-
-        self.global_mean = self.trainer.datamodule.global_mean
-        self.global_std = self.trainer.datamodule.global_std
         
         self._initialize_model()   
         self.counter = 0
@@ -230,6 +227,9 @@ class MTTmodel(pl.LightningModule):
             train_loss = np.mean(self.train_losses)
             val_SS_loss = np.mean(self.val_SS_losses)
             val_FS_loss = np.mean(self.val_FS_losses)
+
+            self.global_mean = self.trainer.datamodule.global_mean
+            self.global_std = self.trainer.datamodule.global_std
 
             self.log_dict({
                 "val_SS_loss": val_SS_loss,
