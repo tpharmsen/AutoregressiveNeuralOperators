@@ -188,7 +188,7 @@ class MTTmodel(pl.LightningModule):
                 patience=self.ct.patience,
                 min_lr=1e-7
             ),
-            "monitor": "val_SS_loss",
+            "monitor": "val_SS_loss/dataloader_idx_0",
             "interval": "epoch",
             "frequency": 1
         }
