@@ -61,12 +61,13 @@ class MTT:
         print(f"Number of GPUs available: {num_gpus}")
         #print(num_gpus)
         #print()
+        print(torch.cuda.get_device_name(0))
         wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
         trainer = pl.Trainer(
             precision="bf16-mixed",
             accelerator="gpu",
             devices= 'auto',
-            logger=wandb_logger,#num_gpus,
+            logger=wandb_logger,
             strategy="deepspeed",
             max_epochs=self.ct.epochs,
             num_sanity_val_steps=0
@@ -470,7 +471,7 @@ class MTTdata(pl.LightningDataModule):
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
             self.val_samplers.append(val_sampler)
             """
-            reader = get_dataset(
+            get_dataset(
                 dataset_obj=PREPROC_MAPPER[item['ppclass']],
                 preproc_savepath=str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'),
                 folderPath=str(self.cb.data_base + item["path"]),

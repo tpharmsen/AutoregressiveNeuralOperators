@@ -7,7 +7,7 @@ from .ConcatNormDataset import ConcatNormDataset
 
 # Optional: Define what gets imported when using `from dataloaders import *`
 __all__ = [
-    "DiskDataset"
+    "DiskDataset",
     "AmiraPreProc", 
     "PDEBenchCompPreProc",
     "PDEBenchIncompPreProc",
