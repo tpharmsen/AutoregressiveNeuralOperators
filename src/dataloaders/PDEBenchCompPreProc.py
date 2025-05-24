@@ -50,7 +50,7 @@ class PDEBenchCompPreProc(Dataset):
                         self.data_list.append(batch)
                         self.traj_list.append(batch.shape[0])
         
-        self.data = torch.stack(self.data_list, dim=0)
+        self.data = torch.concat(self.data_list, dim=0)
         #print(self.data.shape)
         self.traj = int(sum(self.traj_list))
         self.avg = float(self.data.mean())

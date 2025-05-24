@@ -2,31 +2,31 @@ resample_shape: 128
 resample_mode: "fourier"
 
 datasets:
-  - name: "amira"
+  - name: "amira-s5"
     path: "AmiraSet/"
     ppclass: "AmiraPreProc"
     file_ext: "am"
     timesample: 5
 
-  - name: "pdebench-comp"
+  - name: "pdebench-comp-s5"
     path: "PDEBench-Comp/"
     ppclass: "PDEBenchCompPreProc"
     file_ext: "hdf5"
     timesample: 1
 
-  - name: "pdebench-incomp"
+  - name: "pdebench-incomp-s5"
     path: "PDEBench-Incomp/"
     ppclass: "PDEBenchIncompPreProc"
     file_ext: "h5"
     timesample: 10
 
-  - name: "pdegym-gauss"
+  - name: "pdegym-gauss-s5"
     path: "PDEGym-NSGauss"
     ppclass: "PDEGymPreProc"
     file_ext: "nc"
     timesample: 1
 
-  - name: "pdegym-sines"
+  - name: "pdegym-sines-s5"
     path: "PDEGym-NSSines"
     ppclass: "PDEGymPreProc"
     file_ext: "nc"

@@ -446,17 +446,22 @@ class MTTdata(pl.LightningDataModule):
 
     def prepare_data(self): 
         for item in self.cd.datasets:
-            get_dataset(
-                dataset_obj=PREPROC_MAPPER[item['ppclass']],
-                preproc_savepath=str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'),
-                folderPath=str(self.cb.data_base + item["path"]),
-                file_ext=item["file_ext"],
-                resample_shape=self.cd.resample_shape,
-                resample_mode=self.cd.resample_mode,
-                timesample=item["timesample"],
-                dataset_name=item["name"]
-            )
-            print("dataset", item["name"], "preprocessed")
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.pt')
+
+            if not os.path.exists(preproc_savepath):
+                get_dataset(
+                    dataset_obj=PREPROC_MAPPER[item['ppclass']],
+                    preproc_savepath=preproc_savepath,
+                    folderPath=str(self.cb.data_base + item["path"]),
+                    file_ext=item["file_ext"],
+                    resample_shape=self.cd.resample_shape,
+                    resample_mode=self.cd.resample_mode,
+                    timesample=item["timesample"],
+                    dataset_name=item["name"]
+                )
+                print("dataset", item["name"], "preprocessed")
+            else:
+                print("dataset", item["name"], "already exists, skipping preproccessing")
 
     def setup(self, stage=None):
 
@@ -470,8 +475,9 @@ class MTTdata(pl.LightningDataModule):
         means, stds, sizes = [], [], []
                 
         for item in self.cd.datasets:
-            dataset_SS = DiskDataset(str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'), temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
-            dataset_FS = DiskDataset(str(self.cb.data_base + 'preproc_' + item["name"] + '.pt'), temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.pt')
+            dataset_SS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
+            dataset_FS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
 
             train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
@@ -550,7 +556,8 @@ class MTTdata(pl.LightningDataModule):
             sampler=train_sampler,
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
-            persistent_workers=self.ct.persistent_workers
+            persistent_workers=self.ct.persistent_workers,
+            prefetch_factor=self.ct.prefetch_factor
         )
 
     def val_dataloader(self):
@@ -564,7 +571,8 @@ class MTTdata(pl.LightningDataModule):
             sampler=val_SS_sampler, 
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
-            persistent_workers=self.ct.persistent_workers
+            persistent_workers=self.ct.persistent_workers,
+            prefetch_factor=self.ct.prefetch_factor
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
@@ -573,6 +581,7 @@ class MTTdata(pl.LightningDataModule):
             sampler=val_FS_sampler,
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
-            persistent_workers=self.ct.persistent_workers
+            persistent_workers=self.ct.persistent_workers,
+            prefetch_factor=self.ct.prefetch_factor
         )
         return [val_SS_loader, val_FS_loader]

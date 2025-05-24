@@ -8,6 +8,8 @@ from dataloaders.utils import spatial_resample
 class DiskDataset(Dataset):
     def __init__(self, preproc_path, temporal_bundling = 1, forward_steps = 1):
         self.filepath = preproc_path
+        self._file = None
+
         with h5py.File(self.filepath, 'r') as f:
             self.avg = float(f['avg'][()])
             self.std = float(f['std'][()])
@@ -25,23 +27,34 @@ class DiskDataset(Dataset):
         self.avgnorm = None
         self.stdnorm = None
         
+    def _get_file(self):
+        if self._file is None:
+            self._file = h5py.File(self.filepath, 'r')
+        return self._file
+
+        
     def __len__(self):
         return self.traj * self.lenpertraj
 
     def __getitem__(self, idx):
+        
+        f = self._get_file()
         traj_idx = idx // self.lenpertraj
         ts_idx = idx % self.lenpertraj
         
-        with h5py.File(self.filepath, 'r') as f:
-            front = f['data'][traj_idx][ts_idx : ts_idx + self.idx_window : self.dt]
-            label = f['data'][traj_idx][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.dt]
+        front = f['data'][traj_idx][ts_idx : ts_idx + self.idx_window : self.dt]
+        label = f['data'][traj_idx][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.dt]
         if self.avgnorm is not None:
             #print('normalising\n')
             front = (front - self.avgnorm) / self.stdnorm
             label = (label - self.avgnorm) / self.stdnorm
         return torch.tensor(front), torch.tensor(label)
 
+    def __del__(self):
+        if self._file is not None:
+            self._file.close()
+
     def get_single_traj(self, idx):
-        with h5py.File(self.filepath, 'r') as f:
-            full = f['data'][idx][::self.dt]
+        f = self._get_file()
+        full = f['data'][idx][::self.dt]
         return torch.tensor(full)
