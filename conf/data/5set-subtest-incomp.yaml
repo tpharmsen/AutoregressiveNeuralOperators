@@ -1,0 +1,10 @@
+resample_shape: 128
+resample_mode: "fourier"
+
+datasets:
+  - name: "pdebench-incomp-s5"
+    path: "PDEBench-Incomp/"
+    ppclass: "PDEBenchIncompPreProc"
+    file_ext: "h5"
+    timesample: 10
+

@@ -48,7 +48,7 @@ class DiskDataset(Dataset):
             #print('normalising\n')
             front = (front - self.avgnorm) / self.stdnorm
             label = (label - self.avgnorm) / self.stdnorm
-        return torch.tensor(front), torch.tensor(label)
+        return torch.tensor(front, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
 
     def __del__(self):
         if self._file is not None:
@@ -57,4 +57,4 @@ class DiskDataset(Dataset):
     def get_single_traj(self, idx):
         f = self._get_file()
         full = f['data'][idx][::self.dt]
-        return torch.tensor(full)
+        return torch.tensor(full, dtype=torch.float32)

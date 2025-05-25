@@ -68,7 +68,7 @@ class MTT:
             accelerator="gpu",
             devices= 'auto',
             logger=wandb_logger,
-            strategy="deepspeed",
+            strategy=self.ct.strategy,
             max_epochs=self.ct.epochs,
             num_sanity_val_steps=0
         )
@@ -343,7 +343,10 @@ class MTTmodel(pl.LightningModule):
             traj_idx = self.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
             val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
             #print('val_traj:', val_traj.shape)
-            front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).to(device).to(torch.bfloat16)
+            if self.ct.strategy == "deepspeed":
+                front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).to(device).to(torch.bfloat16)
+            else:
+                front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).float().to(device)#.to(torch.bfloat16)
             #print('len:', len(val_traj) // self.cm.temporal_bundling)
             stacked_pred = rollout(front, self.model, len(val_traj) // self.cm.temporal_bundling)
             stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
@@ -376,8 +379,11 @@ class MTTmodel(pl.LightningModule):
 
         front, label = next(loader)
         front, label = front.to(device), label.to(device)
-        front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
-
+        if self.ct.strategy == "deepspeed":
+            front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
+        else:
+            front, label = front[0].unsqueeze(0).float(), label[0].unsqueeze(0).float()  # .to(torch.bfloat16)
+        #front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
         with torch.no_grad():
             pred = self(front)
             if mode == 'val_forward':
@@ -446,7 +452,7 @@ class MTTdata(pl.LightningDataModule):
 
     def prepare_data(self): 
         for item in self.cd.datasets:
-            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.pt')
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.h5')
 
             if not os.path.exists(preproc_savepath):
                 get_dataset(
@@ -475,7 +481,7 @@ class MTTdata(pl.LightningDataModule):
         means, stds, sizes = [], [], []
                 
         for item in self.cd.datasets:
-            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.pt')
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.h5')
             dataset_SS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
             dataset_FS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
 
