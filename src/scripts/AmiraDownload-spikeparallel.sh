@@ -19,7 +19,7 @@ download_file() {
         echo "File $filepath already exists. Skipping."
     else
         echo "Downloading ${fname}.am..."
-        wget -q -O "$filepath" "https://libdrive.ethz.ch/index.php/s/lv7dV40oYlkWJiC/download?path=%2F&files=${fname}.am"
+        wget -O "$filepath" "https://libdrive.ethz.ch/index.php/s/lv7dV40oYlkWJiC/download?path=%2F&files=${fname}.am"
     fi
 }
 
@@ -29,4 +29,4 @@ export -f download_file
 seq 0 $((n - 1)) | \
     awk -v step="$step" '{ print int($1 * step) }' | \
     sort -nu | \
-    xargs -n1 -P8 -I{} bash -c 'download_file "$@"' _ {}
+    xargs -n1 -P16 -I{} bash -c 'download_file "$@"' _ {}
