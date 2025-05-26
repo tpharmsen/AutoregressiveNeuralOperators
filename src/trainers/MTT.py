@@ -1,8 +1,8 @@
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
+import lightning as pl
+from lightning.loggers import WandbLogger
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
-from pytorch_lightning.utilities.rank_zero import rank_zero_only
+from lightning.utilities.rank_zero import rank_zero_only
 import torch 
 import torch.nn as nn
 import torch.optim as optim
