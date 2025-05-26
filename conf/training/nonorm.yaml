@@ -7,11 +7,15 @@ inj_noise: False
 train_ratio: 0.8
 normalize: False
 pin_memory: True
-num_workers: 4
+num_workers: 8
 forward_steps_loss: 4
+persistent_workers: True
+prefetch_factor: 4
+strategy: "ddp"
 
-plottrain_out: "plot_train_nonorm.png"
-plotval_out: "plot_val_nonorm.png"
+plottrain_out: "plot_train.png"
+plotval_out: "plot_val.png"
 plotvalf_out: "plotf_val.png"
-anim_out: "anim_out_nonorm.gif"
+anim_out: "anim_val.gif"
 checkpoint: 'checkpoint.pth'
+spectra_out: "energyenstrophyspectra.png"
