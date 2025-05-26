@@ -1,7 +1,7 @@
 #wget https://libdrive.ethz.ch/index.php/s/lv7dV40oYlkWJiC/download?path=%2F&files=0000.am 0000 t/m 7999
 #wget https://libdrive.ethz.ch/index.php/s/lv7dV40oYlkWJiC/download?path=%2F"&"files=0000.am
 
-cd datasets/prjs1359
+cd ../../data/fluidgpt
 mkdir -p AmiraSet 
 
 n=500  # number of elements to select
