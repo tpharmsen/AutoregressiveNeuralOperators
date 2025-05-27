@@ -451,6 +451,8 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
+        pass
+        """
         for item in self.cd.datasets:
             preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.h5')
 
@@ -468,7 +470,7 @@ class MTTdata(pl.LightningDataModule):
                 print("dataset", item["name"], "preprocessed")
             else:
                 print("dataset", item["name"], "already exists, skipping preproccessing")
-
+        """
     def setup(self, stage=None):
 
         dist.barrier()
@@ -481,9 +483,9 @@ class MTTdata(pl.LightningDataModule):
         means, stds, sizes = [], [], []
                 
         for item in self.cd.datasets:
-            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.h5')
-            dataset_SS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
-            dataset_FS = DiskDataset(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])# + '.h5')
+            dataset_SS = DiskDatasetDiv(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
+            dataset_FS = DiskDatasetDiv(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
 
             train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
             val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
