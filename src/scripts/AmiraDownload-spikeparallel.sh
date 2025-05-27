@@ -3,7 +3,7 @@
 cd ../../data/fluidgpt || exit
 mkdir -p AmiraSet
 
-n=500  # number of elements to select
+n=1000  # number of elements to select
 max=7999
 
 # Compute interval step
