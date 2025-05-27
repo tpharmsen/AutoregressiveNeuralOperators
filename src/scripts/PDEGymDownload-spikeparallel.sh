@@ -2,7 +2,7 @@
 
 
 DATASETS=("NS-Gauss" "NS-Sines" "NS-PwC" "NS-SL" "NS-SVS" "NS-BB")
-BASE_DIR="../../data/fluidgpt"  
+BASE_DIR="../../../data/fluidgpt"  
 
 NUM_PARALLEL=6
 
