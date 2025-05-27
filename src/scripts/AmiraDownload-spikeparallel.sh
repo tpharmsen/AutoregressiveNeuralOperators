@@ -3,7 +3,7 @@
 cd ../../data/fluidgpt || exit
 mkdir -p AmiraSet
 
-n=1000  # number of elements to select
+n=7999  # number of elements to select
 max=7999
 
 # Compute interval step
@@ -29,4 +29,4 @@ export -f download_file
 seq 0 $((n - 1)) | \
     awk -v step="$step" '{ print int($1 * step) }' | \
     sort -nu | \
-    xargs -n1 -P16 -I{} bash -c 'download_file "$@"' _ {}
+    xargs -n1 -P6 -I{} bash -c 'download_file "$@"' _ {}
