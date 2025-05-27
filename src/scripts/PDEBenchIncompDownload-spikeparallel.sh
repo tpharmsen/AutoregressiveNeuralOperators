@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CSV_FILE="src/scripts/pdebench_data_urls.csv"
-SAVE_DIR="datasets/prjs1359/PDEBench-Incomp"
+SAVE_DIR="/data/fluidgpt/PDEBench-Incomp"
 
 # Create target directory
 mkdir -p "$SAVE_DIR"
