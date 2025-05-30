@@ -57,4 +57,6 @@ class DiskDataset(Dataset):
     def get_single_traj(self, idx):
         f = self._get_file()
         full = f['data'][idx][::self.dt]
+        if self.avgnorm is not None:
+            full = (full - self.avgnorm) / self.stdnorm
         return torch.tensor(full, dtype=torch.float32)

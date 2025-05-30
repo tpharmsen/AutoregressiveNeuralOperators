@@ -452,7 +452,7 @@ class MTTdata(pl.LightningDataModule):
 
     def prepare_data(self): 
         pass
-        """
+        
         for item in self.cd.datasets:
             preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"] + '.h5')
 
@@ -470,7 +470,7 @@ class MTTdata(pl.LightningDataModule):
                 print("dataset", item["name"], "preprocessed")
             else:
                 print("dataset", item["name"], "already exists, skipping preproccessing")
-        """
+        
     def setup(self, stage=None):
 
         dist.barrier()
