@@ -1,4 +1,5 @@
 from .AmiraPreProc import AmiraPreProc
+from .AmiraPreProcDiv import AmiraPreProcDiv
 from .PDEBenchCompPreProc import PDEBenchCompPreProc
 from .PDEBenchIncompPreProc import PDEBenchIncompPreProc
 from .PDEGymPreProc import PDEGymPreProc
@@ -12,6 +13,7 @@ __all__ = [
     "DiskDataset",
     "DiskDatasetDiv",
     "AmiraPreProc", 
+    "AmiraPreProcDiv",
     "PDEBenchCompPreProc",
     "PDEBenchIncompPreProc",
     "PDEGymPreProc",
@@ -19,7 +21,8 @@ __all__ = [
     "ConcatNormDataset",
 ]
 PREPROC_MAPPER = {"AmiraPreProc": AmiraPreProc,
-                  "PDEBenchCompPreProc": PDEBenchCompPreProc,
+                "AmiraPreProcDiv": AmiraPreProcDiv,
+                "PDEBenchCompPreProc": PDEBenchCompPreProc,
                 "PDEBenchIncompPreProc": PDEBenchIncompPreProc,
                 "PDEGymPreProcDiv": PDEGymPreProcDiv,
                 "PDEGymPreProc": PDEGymPreProc

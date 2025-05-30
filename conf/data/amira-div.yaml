@@ -2,7 +2,7 @@ resample_shape: 128
 resample_mode: "fourier"
 
 datasets:
-  - name: "amira-s5"
+  - name: "amira-s6"
     path: "AmiraSet/"
     ppclass: "AmiraPreProcDiv"
     file_ext: "am"
