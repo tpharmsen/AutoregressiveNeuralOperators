@@ -451,7 +451,7 @@ class MTTdata(pl.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-        pass
+        #pass
         
         for item in self.cd.datasets:
             print('preprocessing', item["name"], "...")
