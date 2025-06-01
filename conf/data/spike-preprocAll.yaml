@@ -19,7 +19,7 @@ datasets:
     ppclass: "PDEBenchIncompPreProc"
     file_ext: "h5"
     timesample: 10
-
+    
   - name: "pdegym-gauss"
     path: "PDEGym-Gauss"
     ppclass: "PDEGymPreProcDiv"
