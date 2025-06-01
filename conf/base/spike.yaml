@@ -1,4 +1,4 @@
-data_base: "/data/fluidgpt/"
+data_base: "../../data/fluidgpt/"
 device: "cuda"
 save_path: "output/"
 folder_out: "0/"

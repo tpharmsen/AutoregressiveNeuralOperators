@@ -458,9 +458,9 @@ class MTTdata(pl.LightningDataModule):
         print("prepare_data function")
         
         for item in self.cd.datasets:
-            print('preprocessing', item["name"], "...")
+            
             preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])# + '.h5')
-            #print('preproc_savepath:', preproc_savepath)
+            print('preprocessing', item["name"], "at path", preproc_savepath, "...")
             if not os.path.exists(preproc_savepath):
                 get_dataset(
                     dataset_obj=PREPROC_MAPPER[item['ppclass']],
