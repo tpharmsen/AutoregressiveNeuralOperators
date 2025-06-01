@@ -464,9 +464,10 @@ class MTTdata(pl.LightningDataModule):
             print('folderpath:', str(self.cb.data_base + item["path"]))
 
             try: 
-                print(os.path.exists(preproc_savepath))
+                #print(os.path.exists(preproc_savepath))
+                print(os.path.exists(str(self.cb.data_base + item["path"])))
             except:
-                print('unable to do os.path.exists')
+                print('unable to do')
             if not os.path.exists(preproc_savepath):
                 get_dataset(
                     dataset_obj=PREPROC_MAPPER[item['ppclass']],
