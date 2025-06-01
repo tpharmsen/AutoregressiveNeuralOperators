@@ -463,16 +463,6 @@ class MTTdata(pl.LightningDataModule):
             print('preprocessing', item["name"], "at path", preproc_savepath, "...")
             print('folderpath:', str(self.cb.data_base + item["path"]))
 
-            try: 
-                #print(os.path.exists(preproc_savepath))
-                print(os.path.exists(str(self.cb.data_base + item["path"])))
-                print(os.path.exists("../../data"))
-                print(os.path.exists("../"))
-                print(os.path.exists("/data/fluidgpt"))
-                print(os.path.exists(""))
-                print(os.path.exists("conf/"))
-            except:
-                print('unable to do')
             if not os.path.exists(preproc_savepath):
                 get_dataset(
                     dataset_obj=PREPROC_MAPPER[item['ppclass']],
