@@ -3,7 +3,7 @@ resample_mode: "fourier"
 
 datasets:
   - name: "pdegym-gauss"
-    path: "PDEGym-NSGauss"
+    path: "PDEGym-Gauss"
     ppclass: "PDEGymPreProcDiv"
     file_ext: "nc"
     timesample: 1
