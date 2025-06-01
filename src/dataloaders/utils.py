@@ -107,6 +107,7 @@ def spatial_resample(data, target_shape, mode):
 
 def get_dataset(dataset_obj, folderPath, preproc_savepath, file_ext, resample_shape, resample_mode, timesample, dataset_name):
     subdir = Path(folderPath)
+    print(subdir)
     assert subdir.exists(), 'subdir doesnt exist'
     files = list(subdir.glob("*." + str(file_ext)))
     return dataset_obj(files, preproc_savepath, resample_shape, resample_mode, timesample, dataset_name)
