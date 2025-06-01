@@ -1,0 +1,39 @@
+resample_shape: 128
+resample_mode: "fourier"
+
+datasets:
+  - name: "pdegym-gauss"
+    path: "PDEGym-Gauss"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+
+  - name: "pdegym-sines"
+    path: "PDEGym-Sines"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+    
+  - name: "pdegym-sl"
+    path: "PDEGym-SL"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+
+  - name: "pdegym-svs"
+    path: "PDEGym-SVS"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+
+  - name: "pdegym-pwc"
+    path: "PDEGym-PwC"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+
+  - name: "pdegym-bb"
+    path: "PDEGym-BB"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1

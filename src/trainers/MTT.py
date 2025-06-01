@@ -573,7 +573,7 @@ class MTTdata(pl.LightningDataModule):
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers,
-            prefetch_factor=self.ct.prefetch_factor
+            prefetch_factor=self.ct.prefetch_factor if self.ct.num_workers > 0 else None
         )
 
     def val_dataloader(self):
@@ -588,7 +588,7 @@ class MTTdata(pl.LightningDataModule):
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers,
-            prefetch_factor=self.ct.prefetch_factor
+            prefetch_factor=self.ct.prefetch_factor if self.ct.num_workers > 0 else None
         )
         val_FS_loader = DataLoader(
             self.val_forward_dataset,
@@ -598,6 +598,6 @@ class MTTdata(pl.LightningDataModule):
             pin_memory=self.ct.pin_memory, 
             num_workers=self.ct.num_workers,
             persistent_workers=self.ct.persistent_workers,
-            prefetch_factor=self.ct.prefetch_factor
+            prefetch_factor=self.ct.prefetch_factor if self.ct.num_workers > 0 else None
         )
         return [val_SS_loader, val_FS_loader]
