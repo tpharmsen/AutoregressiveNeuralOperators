@@ -462,6 +462,11 @@ class MTTdata(pl.LightningDataModule):
             preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])# + '.h5')
             print('preprocessing', item["name"], "at path", preproc_savepath, "...")
             print('folderpath:', str(self.cb.data_base + item["path"]))
+
+            try: 
+                print(os.path.exists(preproc_savepath))
+            except:
+                print('unable to do os.path.exists')
             if not os.path.exists(preproc_savepath):
                 get_dataset(
                     dataset_obj=PREPROC_MAPPER[item['ppclass']],
