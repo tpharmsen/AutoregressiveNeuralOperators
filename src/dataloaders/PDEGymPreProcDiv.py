@@ -24,6 +24,8 @@ class PDEGymPreProcDiv(Dataset):
         self.dt = timesample
         self.trajectories = []
 
+        print(preproc_save_dir)
+        print(filepaths)
         if preproc_save_dir.endswith('.h5'):
             preproc_save_dir = preproc_save_dir[:-3]
         print(f"Preprocessing and saving to {preproc_save_dir}")
