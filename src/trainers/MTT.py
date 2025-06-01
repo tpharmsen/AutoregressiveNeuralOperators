@@ -54,8 +54,11 @@ class MTT:
 
         #print('init\n')
     def train(self):
+        #print("booting up...")
         model = MTTmodel(self.cb, self.cd, self.cm, self.ct)
+        #print('model loaded')
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
+        #print('data loaded')
         
         num_gpus = torch.cuda.device_count()
         print(f"Number of GPUs available: {num_gpus}")
@@ -449,9 +452,10 @@ class MTTdata(pl.LightningDataModule):
         self.cd = cd 
         self.cm = cm  
         self.ct = ct 
+        print('datamodule initialised')
 
     def prepare_data(self): 
-        #pass
+        print("prepare_data function")
         
         for item in self.cd.datasets:
             print('preprocessing', item["name"], "...")
@@ -473,6 +477,7 @@ class MTTdata(pl.LightningDataModule):
                 print("dataset", item["name"], "already exists, skipping preproccessing")
         
     def setup(self, stage=None):
+        print("setup function")
 
         dist.barrier()
 
