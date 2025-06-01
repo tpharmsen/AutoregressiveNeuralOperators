@@ -4,22 +4,22 @@ resample_mode: "fourier"
 datasets:
   - name: "amira"
     path: "AmiraSet/"
-    ppclass: "AmiraPreProc"
+    ppclass: "AmiraPreProcDiv"
     file_ext: "am"
     timesample: 5
 
   - name: "pdebench-comp"
     path: "PDEBench-Comp/"
-    ppclass: "PDEBenchCompPreProc"
+    ppclass: "PDEBenchCompPreProcDiv"
     file_ext: "hdf5"
     timesample: 1
 
   - name: "pdebench-incomp"
     path: "PDEBench-Incomp/"
-    ppclass: "PDEBenchIncompPreProc"
+    ppclass: "PDEBenchIncompPreProcDiv"
     file_ext: "h5"
     timesample: 10
-    
+
   - name: "pdegym-gauss"
     path: "PDEGym-Gauss"
     ppclass: "PDEGymPreProcDiv"
