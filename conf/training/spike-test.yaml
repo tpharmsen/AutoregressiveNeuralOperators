@@ -1,4 +1,4 @@
-epochs: 30
+epochs: 100
 batch_size: 64
 init_lr: 1.0e-4
 patience: 5
