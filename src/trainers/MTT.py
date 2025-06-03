@@ -363,10 +363,10 @@ class MTTmodel(pl.LightningModule):
             stacked_true = val_traj.unsqueeze(0).float()
             #print('stacked_true:', stacked_true.shape)
             dataset_name = str(self.trainer.datamodule.val_datasets[dataset_idx].dataset.name)
-            print('dataset_name:', dataset_name)
+            #print('dataset_name:', dataset_name)
             stacked_pred, stacked_true = stacked_pred * self.global_std + self.global_mean, stacked_true * self.global_std + self.global_mean
-            print('stacked_pred:', stacked_pred.shape)
-            print('stacked_true:', stacked_true.shape)
+            #print('stacked_pred:', stacked_pred.shape)
+            #print('stacked_true:', stacked_true.shape)
             return stacked_pred, stacked_true, dataset_name
         
     def make_anim(self, stacked_pred, stacked_true, dataset_name, output_path):
