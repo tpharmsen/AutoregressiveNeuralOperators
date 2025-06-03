@@ -56,7 +56,7 @@ class PDEBenchCompPreProcDiv(Dataset):
                             save_path = preproc_save_dir / f"traj{traj_counter:05d}.h5"
                             with h5py.File(save_path, 'w') as hf:
                                 hf.create_dataset('data', data=data.numpy())
-                            print(data.shape)
+                            #print(data.shape)
                             global_sum += data.sum().item()
                             global_sq_sum += (data ** 2).sum().item()
                             global_count += data.numel()
