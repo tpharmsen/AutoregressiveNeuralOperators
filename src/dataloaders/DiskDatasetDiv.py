@@ -21,12 +21,14 @@ class DiskDatasetDiv(Dataset):
             self.avg = float(f['avg'][()])
             self.std = float(f['std'][()])
             self.resample_shape = int(f['resample_shape'][()])
-            self.resample_mode = str(f['resample_mode'][()])
+            self.resample_mode = str(f['resample_mode'][()].decode('utf-8'))
             self.dt = int(f['timesample'][()])
-            self.name = str(f['name'][()])
+            self.name = str(f['name'][()].decode('utf-8'))
             self.traj = int(f['traj'][()])
             self.ts = int(f['ts'][()])
             self.datashape = tuple(f['datashape'][()])
+        print(f"Dataset {self.name} loaded with {self.traj} trajectories, each with {self.ts} time steps.")
+        print(f"reshape method: {self.resample_mode}, shape: {self.resample_shape}")
         self.tb = temporal_bundling
         self.fs = forward_steps
         self.lenpertraj = self.ts - (1 + self.fs) * self.dt * self.tb + self.dt
