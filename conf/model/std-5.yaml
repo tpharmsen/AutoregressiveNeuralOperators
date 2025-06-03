@@ -1,6 +1,6 @@
 model_name: "FluidGPT"
 in_channels: 2
-temporal_bundling: 6
+temporal_bundling: 5
 emb_dim: 96
 patch_size: 8
 hiddenout_dim: 256
