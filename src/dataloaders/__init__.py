@@ -1,7 +1,9 @@
 from .AmiraPreProc import AmiraPreProc
 from .AmiraPreProcDiv import AmiraPreProcDiv
 from .PDEBenchCompPreProc import PDEBenchCompPreProc
+from .PDEBenchCompPrepProcDiv import PDEBenchCompPreProcDiv
 from .PDEBenchIncompPreProc import PDEBenchIncompPreProc
+from .PDEBenchIncompPreProcDiv import PDEBenchIncompPreProcDiv
 from .PDEGymPreProc import PDEGymPreProc
 from .PDEGymPreProcDiv import PDEGymPreProcDiv
 from .DiskDataset import DiskDataset
@@ -23,7 +25,9 @@ __all__ = [
 PREPROC_MAPPER = {"AmiraPreProc": AmiraPreProc,
                 "AmiraPreProcDiv": AmiraPreProcDiv,
                 "PDEBenchCompPreProc": PDEBenchCompPreProc,
+                "PDEBenchCompPreProcDiv": PDEBenchCompPreProcDiv,
                 "PDEBenchIncompPreProc": PDEBenchIncompPreProc,
+                "PDEBenchIncompPreProcDiv": PDEBenchIncompPreProcDiv,
                 "PDEGymPreProcDiv": PDEGymPreProcDiv,
                 "PDEGymPreProc": PDEGymPreProc
                   }
