@@ -28,8 +28,8 @@ PREPROC_MAPPER = {"AmiraPreProc": AmiraPreProc,
                 "PDEBenchCompPreProcDiv": PDEBenchCompPreProcDiv,
                 "PDEBenchIncompPreProc": PDEBenchIncompPreProc,
                 "PDEBenchIncompPreProcDiv": PDEBenchIncompPreProcDiv,
-                "PDEGymPreProcDiv": PDEGymPreProcDiv,
-                "PDEGymPreProc": PDEGymPreProc
+                "PDEGymPreProc": PDEGymPreProc,
+                "PDEGymPreProcDiv": PDEGymPreProcDiv
                   }
 """
 DATASET_MAPPER = {"AmiraDatasetFromAM": AmiraDatasetFromAM,
