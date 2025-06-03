@@ -166,12 +166,18 @@ class MTTmodel(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx):
 
         front, label = batch
-        pred = self(front)
-        val_loss = F.mse_loss(pred, label)
+        
         if dataloader_idx == 0:
+            pred = self(front)
+            val_loss = F.mse_loss(pred, label)
             self.val_SS_losses.append(val_loss.item())
             self.log("val_SS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
         elif dataloader_idx == 1:
+            # a few forward steps for the forward step loss
+            pred = front
+            for _ in range(self.ct.forward_steps_loss):
+                pred = self.model(pred)
+            val_loss = F.mse_loss(pred, label)
             self.val_FS_losses.append(val_loss.item())
             
         return val_loss

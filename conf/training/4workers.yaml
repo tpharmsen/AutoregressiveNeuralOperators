@@ -8,7 +8,7 @@ train_ratio: 0.8
 normalize: True
 pin_memory: True
 num_workers: 4
-forward_steps_loss: 4
+forward_steps_loss: 3
 persistent_workers: True
 prefetch_factor: 4
 strategy: "ddp"
