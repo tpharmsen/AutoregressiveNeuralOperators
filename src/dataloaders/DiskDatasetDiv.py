@@ -27,8 +27,8 @@ class DiskDatasetDiv(Dataset):
             self.traj = int(f['traj'][()])
             self.ts = int(f['ts'][()])
             self.datashape = tuple(f['datashape'][()])
-        print(f"Dataset {self.name} loaded with {self.traj} trajectories, each with {self.ts} time steps.")
-        print(f"reshape method: {self.resample_mode}, shape: {self.resample_shape}")
+        #print(f"Dataset {self.name} loaded with {self.traj} trajectories, each with {self.ts} time steps.")
+        #print(f"reshape method: {self.resample_mode}, shape: {self.resample_shape}")
         self.tb = temporal_bundling
         self.fs = forward_steps
         self.lenpertraj = self.ts - (1 + self.fs) * self.dt * self.tb + self.dt
