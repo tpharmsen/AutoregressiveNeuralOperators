@@ -356,9 +356,11 @@ class MTTmodel(pl.LightningModule):
             #print('stacked_pred:', stacked_pred.shape)
             stacked_true = val_traj.unsqueeze(0).float()
             #print('stacked_true:', stacked_true.shape)
-            dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.name
+            dataset_name = str(self.trainer.datamodule.val_datasets[dataset_idx].dataset.name)
+            print('dataset_name:', dataset_name)
             stacked_pred, stacked_true = stacked_pred * self.global_std + self.global_mean, stacked_true * self.global_std + self.global_mean
-    
+            print('stacked_pred:', stacked_pred.shape)
+            print('stacked_true:', stacked_true.shape)
             return stacked_pred, stacked_true, dataset_name
         
     def make_anim(self, stacked_pred, stacked_true, dataset_name, output_path):
@@ -372,16 +374,37 @@ class MTTmodel(pl.LightningModule):
         self.model.eval()
 
         if mode == 'val':
-            loader = iter(self.trainer.datamodule.val_dataloader()[0])
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.val_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.val_datasets[dataset_idx].dataset.__getitem__(sample)
+            #loader = iter(self.trainer.datamodule.val_dataloader()[0])
+            #for front, label in self.trainer.datamodule.val_dataloader()[0]:
+                #front, label = front.to(device), label.to(device)
+                #break
         elif mode == 'train':
-            loader = iter(self.trainer.datamodule.train_dataloader())
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.train_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.train_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.train_datasets[dataset_idx].dataset.__getitem__(sample)
+            #for front, label in self.trainer.datamodule.train_dataloader():
+                #front, label = front.to(device), label.to(device)
+                #break
+            #loader = iter(self.trainer.datamodule.train_dataloader())
         elif mode == 'val_forward':
-            loader = iter(self.trainer.datamodule.val_dataloader()[1])
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_forward_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.val_forward_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.val_forward_datasets[dataset_idx].dataset.__getitem__(sample)
+            #for front, label in self.trainer.datamodule.val_dataloader()[1]:
+                #front, label = front.to(device), label.to(device)
+                #break
+            #loader = iter(self.trainer.datamodule.val_dataloader()[1])
         else:
             raise ValueError('PLOTMODE NOT RECOGNIZED')
 
-        front, label = next(loader)
-        front, label = front.to(device), label.to(device)
+        #front, label = next(loader)
+        front, label = front.to(device).unsqueeze(0), label.to(device).unsqueeze(0)
         if self.ct.strategy == "deepspeed":
             front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
         else:
@@ -485,8 +508,10 @@ class MTTdata(pl.LightningDataModule):
 
         self.train_datasets = []
         self.val_datasets = []
-        self.val_samplers = []
         self.val_forward_datasets = []
+        self.train_samplers = []
+        self.val_samplers = []
+        self.val_forward_samplers = []
         
         means, stds, sizes = [], [], []
                 
@@ -502,7 +527,10 @@ class MTTdata(pl.LightningDataModule):
             self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
             self.val_forward_datasets.append(Subset(dataset_FS, val_forward_sampler.indices))
+            self.train_samplers.append(train_sampler)
             self.val_samplers.append(val_sampler)
+            self.val_forward_samplers.append(val_forward_sampler)
+            
             
             mean_i = dataset_SS.avg
             std_i = dataset_SS.std
