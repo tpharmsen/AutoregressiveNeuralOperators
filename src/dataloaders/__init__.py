@@ -1,7 +1,7 @@
 from .AmiraPreProc import AmiraPreProc
 from .AmiraPreProcDiv import AmiraPreProcDiv
 from .PDEBenchCompPreProc import PDEBenchCompPreProc
-from .PDEBenchCompPrepProcDiv import PDEBenchCompPreProcDiv
+from .PDEBenchCompPreProcDiv import PDEBenchCompPreProcDiv
 from .PDEBenchIncompPreProc import PDEBenchIncompPreProc
 from .PDEBenchIncompPreProcDiv import PDEBenchIncompPreProcDiv
 from .PDEGymPreProc import PDEGymPreProc
@@ -17,7 +17,9 @@ __all__ = [
     "AmiraPreProc", 
     "AmiraPreProcDiv",
     "PDEBenchCompPreProc",
+    "PDEBenchCompPreProcDiv",
     "PDEBenchIncompPreProc",
+    "PDEBenchIncompPreProcDiv",
     "PDEGymPreProc",
     "PDEGymPreProcDiv",
     "ConcatNormDataset",
