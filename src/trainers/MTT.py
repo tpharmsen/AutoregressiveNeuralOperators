@@ -131,8 +131,8 @@ class MTTmodel(pl.LightningModule):
 
     def _initialize_model(self):
         if self.cm.model_name == "FluidGPT":
-            from modelComp.FluidGPT import FluidGPT
-            self.model = FluidGPT(emb_dim=96,
+            from modelComp.FluidGPT_B import FluidGPT_B
+            self.model = FluidGPT_B(emb_dim=96,
                             data_dim=[self.ct.batch_size, self.cm.temporal_bundling, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(self.cm.patch_size, self.cm.patch_size),
                             hiddenout_dim=self.cm.hiddenout_dim,

@@ -82,7 +82,7 @@ if __name__ == "__main__":
     elif args.trainer == "MTT":
         from trainers.MTT import MTT
         trainer = MTT(cb, cd, cm, ct)
-    elif args.trainer == "FlowMatching":
+    elif args.trainer == "FlowMatching" or args.trainer == "FM":
         from trainers.FlowMatching import FlowMatching
         trainer = FlowMatching(cb, cd, cm, ct)
     else:

@@ -23,6 +23,16 @@ def window_reverse(windows, window_size, H, W):
     x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
     return x
 
+def gen_t_embedding(self, t, max_positions=10000):
+        t = t * max_positions
+        half_dim = self.channels_t // 2
+        emb = math.log(max_positions) / (half_dim - 1)
+        emb = torch.arange(half_dim, device=t.device).float().mul(-emb).exp()
+        emb = t[:, None] * emb[None, :]
+        emb = torch.cat([emb.sin(), emb.cos()], dim=1)
+        if self.channels_t % 2 == 1:  # zero pad
+            emb = nn.functional.pad(emb, (0, 1), mode='constant')
+        return emb
 
 
 class LinearEmbedding(nn.Module):
@@ -496,7 +506,8 @@ class FluidGPT(nn.Module):
         self.patchMerges = nn.ModuleList()
         self.patchUnmerges = nn.ModuleList()
         self.skip_connects = nn.ModuleList()
-        # TODO: implement act 
+        # flowmatching t project
+        self.flow_t_proj = nn.Linear(emb_dim, emb_dim) 
 
         self.depth = depth
         self.middleblocklen = stage_depths[depth]
@@ -633,7 +644,7 @@ class FluidGPT(nn.Module):
             self.skip_connects.append(skip_connect(emb_dim * 2**i)) if skip_connect is not None else None
             #print(len(self.blockUp))
 
-    def forward(self, x):
+    def forward(self, x, t):
         # shape checks
         #print('\nstarting pred...')
         if x.ndim != 5:
@@ -645,7 +656,13 @@ class FluidGPT(nn.Module):
         #print('block up', self.blockUp)
         x = self.embedding.encode(x, proj=True)
         x = self.pos_encoding(x)
-        
+
+
+        # flowmatchin stuff
+        t = self.gen_t_embedding(t)
+        t = self.t_proj(t)
+        x = x + t
+
         # ===== DOWN =====
         for i, module_list in enumerate(self.blockDown):
             
