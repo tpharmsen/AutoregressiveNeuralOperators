@@ -48,18 +48,22 @@ class PDEBenchCompPreProcDiv(Dataset):
 
                         batch = spatial_resample(batch, self.resample_shape, self.resample_mode)
                         #print(batch.shape)
+                        if self.ts is None:
+                            self.ts = batch.shape[1]
+                            #print(self.ts)
                         for i in range(batch.shape[0]):
                             data = batch[i]  
                             save_path = preproc_save_dir / f"traj{traj_counter:05d}.h5"
                             with h5py.File(save_path, 'w') as hf:
                                 hf.create_dataset('data', data=data.numpy())
-                            #print(data.shape)
+                            print(data.shape)
                             global_sum += data.sum().item()
                             global_sq_sum += (data ** 2).sum().item()
                             global_count += data.numel()
-
-                    self.trajectories.append(batch)
-                    traj_counter += 1
+                            traj_counter += 1
+                        #print(batch.shape)
+                    #self.trajectories.append(batch)
+                    
 
         # Compute dataset-wide stats
         avg = global_sum / global_count
@@ -75,8 +79,6 @@ class PDEBenchCompPreProcDiv(Dataset):
             f.create_dataset('resample_mode', data=self.resample_mode)
             f.create_dataset('timesample', data=self.dt)
             f.create_dataset('name', data=self.name)
-            f.create_dataset('traj', data=total_trajectories)
-            f.create_dataset('ts', data=len(self.trajectories[0]))
-            f.create_dataset('datashape', data=tuple([total_trajectories, 21,2, resample_shape, resample_shape]))
-
-        self.total_trajectories = total_trajectories
+            f.create_dataset('traj', data=traj_counter)
+            f.create_dataset('ts', data=self.ts)
+            f.create_dataset('datashape', data=tuple([traj_counter, self.ts,2, resample_shape, resample_shape]))

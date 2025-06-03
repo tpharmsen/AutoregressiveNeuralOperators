@@ -14,6 +14,9 @@ class DiskDatasetDiv(Dataset):
             self.filepath = self.filepath[:-3]
         metafile = Path(self.filepath)
         metafile = metafile / 'meta.h5'
+        #check if metafile exists
+        if not metafile.exists():
+            raise FileNotFoundError(f"Metadata file {metafile} does not exist. Please preprocess the data first.")
         with h5py.File(metafile, 'r') as f:
             self.avg = float(f['avg'][()])
             self.std = float(f['std'][()])

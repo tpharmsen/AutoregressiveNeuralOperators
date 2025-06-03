@@ -7,7 +7,7 @@ from dataloaders.utils import spatial_resample
 
 
 class PDEBenchIncompPreProcDiv(Dataset):
-    def __init__(self, filepaths, preproc_savepath, resample_shape=128, resample_mode='fourier', timesample=5, dataset_name='pdebenchincomp'):
+    def __init__(self, filepaths, preproc_save_dir, resample_shape=128, resample_mode='fourier', timesample=5, dataset_name='pdebenchincomp'):
         self.data_list = []
         self.traj_list = []
         self.ts = None
@@ -17,38 +17,53 @@ class PDEBenchIncompPreProcDiv(Dataset):
         self.vel_scale = None
         self.dt = timesample
         
+        preproc_save_dir = Path(preproc_save_dir)
+        preproc_save_dir.mkdir(parents=True, exist_ok=True)
+
+        global_sum, global_sq_sum, global_count = 0.0, 0.0, 0
+        traj_counter = 0
+
         for filepath in filepaths:
             with h5py.File(filepath, "r") as f:
                 keys = list(f.keys())
                 #print(f"Keys in {filepath}: {keys}")
                 
                 if "velocity" in keys:
-                    data = torch.from_numpy(f['velocity'][:].astype(np.float32))
+                    raw_data = torch.from_numpy(f['velocity'][:].astype(np.float32))
                     #print(data.shape)
-                    data = data.permute(0, 1, 4, 2, 3)  
+                    raw_data = raw_data.permute(0, 1, 4, 2, 3)  
                     
-                    data = spatial_resample(data, self.resample_shape, self.resample_mode)
+                    raw_data = spatial_resample(raw_data, self.resample_shape, self.resample_mode)
                     if self.ts is None:
-                        self.ts = data.shape[1]
-                    elif self.ts != data.shape[1]:
-                        raise ValueError("Mismatch in timestep dimensions across files.")
+                        self.ts = raw_data.shape[1]
+                        #print(self.ts)
+                    for i in range(raw_data.shape[0]):
+                        data = raw_data[i]  
+                        save_path = preproc_save_dir / f"traj{traj_counter:05d}.h5"
+                        with h5py.File(save_path, 'w') as hf:
+                            hf.create_dataset('data', data=data.numpy())
+                        print(data.shape)
+                        global_sum += data.sum().item()
+                        global_sq_sum += (data ** 2).sum().item()
+                        global_count += data.numel()
+                        traj_counter += 1
                     
-                    self.data_list.append(data)
-                    self.traj_list.append(data.shape[0])
         
-        self.data = torch.cat(self.data_list, dim=0)
-        self.traj = sum(self.traj_list)
-        self.avg = float(self.data.mean())
-        self.std = float(self.data.std())
-        # save the data in quick readable format in h5py
-        with h5py.File(preproc_savepath, 'w') as f:
-            f.create_dataset('data', data=self.data.numpy())
-            f.create_dataset('avg', data=self.avg)
-            f.create_dataset('std', data=self.std)
+        
+        # Compute dataset-wide stats
+        avg = global_sum / global_count
+        std = (global_sq_sum / global_count - avg ** 2) ** 0.5
+        total_trajectories = traj_counter
+
+        # Save metadata in a separate file
+        meta_path = preproc_save_dir / 'meta.h5'
+        with h5py.File(meta_path, 'w') as f:
+            f.create_dataset('avg', data=avg)
+            f.create_dataset('std', data=std)
             f.create_dataset('resample_shape', data=self.resample_shape)
             f.create_dataset('resample_mode', data=self.resample_mode)
             f.create_dataset('timesample', data=self.dt)
             f.create_dataset('name', data=self.name)
-            f.create_dataset('traj', data=self.traj)
+            f.create_dataset('traj', data=traj_counter)
             f.create_dataset('ts', data=self.ts)
-            f.create_dataset('datashape', data=self.data.shape)
+            f.create_dataset('datashape', data=tuple([traj_counter, self.ts,2, resample_shape, resample_shape]))
