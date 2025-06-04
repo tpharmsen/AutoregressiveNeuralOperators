@@ -1,6 +1,6 @@
 data_base: "/data/fluidgpt/"
 device: "cuda"
-save_path: "output/"
+save_path: "/data/fluidgpt/output/"
 folder_out: "0/"
 save_on: 0
 wandb: 0

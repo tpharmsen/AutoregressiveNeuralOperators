@@ -210,15 +210,21 @@ def rollout(front, model, steps):
     model.eval()
     preds = []
     preds.append(front)
+    #print(front.shape)
+    #print(f"\nRollout steps: {steps}")
     with torch.no_grad():
         pred = model(front)
         preds.append(pred)
+        #print(pred.shape)
         for i in range(steps - 2):
+            #print(i)
             pred = model(pred)
             preds.append(pred)
-    #print(preds[0].shape)
+            #print(pred.shape)
+    #print(f"Rollout steps: {len(preds)}")
     preds = torch.cat(preds, dim=1)
     #print(preds.shape)
+    #print()
     return preds
 
 def compute_energy_enstrophy_spectra(u, v, dataset_name="", Lx=1.0, Ly=1.0):
