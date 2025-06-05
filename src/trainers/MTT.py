@@ -22,6 +22,7 @@ import numpy as np
 import matplotlib.animation as animation
 import os
 import subprocess
+import platform
 
 from dataloaders import *
 from dataloaders import PREPROC_MAPPER
@@ -71,7 +72,7 @@ class MTT:
             accelerator="gpu",
             devices= 'auto',
             logger=wandb_logger,
-            strategy=self.ct.strategy,
+            strategy = "auto" if platform.system() == "Windows" else self.ct.strategy,
             max_epochs=self.ct.epochs,
             num_sanity_val_steps=0
         )
