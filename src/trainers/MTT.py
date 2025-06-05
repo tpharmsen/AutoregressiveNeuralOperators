@@ -384,6 +384,7 @@ class MTTmodel(pl.LightningModule):
             indices = list(self.trainer.datamodule.val_samplers[dataset_idx].indices)
             sample = random.choice(indices)
             front, label = self.trainer.datamodule.val_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.name
             #loader = iter(self.trainer.datamodule.val_dataloader()[0])
             #for front, label in self.trainer.datamodule.val_dataloader()[0]:
                 #front, label = front.to(device), label.to(device)
@@ -393,6 +394,7 @@ class MTTmodel(pl.LightningModule):
             indices = list(self.trainer.datamodule.train_samplers[dataset_idx].indices)
             sample = random.choice(indices)
             front, label = self.trainer.datamodule.train_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.train_datasets[dataset_idx].dataset.name
             #for front, label in self.trainer.datamodule.train_dataloader():
                 #front, label = front.to(device), label.to(device)
                 #break
@@ -402,6 +404,7 @@ class MTTmodel(pl.LightningModule):
             indices = list(self.trainer.datamodule.val_forward_samplers[dataset_idx].indices)
             sample = random.choice(indices)
             front, label = self.trainer.datamodule.val_forward_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.val_forward_datasets[dataset_idx].dataset.name
             #for front, label in self.trainer.datamodule.val_dataloader()[1]:
                 #front, label = front.to(device), label.to(device)
                 #break
@@ -440,7 +443,7 @@ class MTTmodel(pl.LightningModule):
         total_cols = cols_per_side * 2 + spacer  # 4 + 1 + 4 = 9
 
         fig = plt.figure(figsize=(3 * total_cols, 4 * tb))
-        fig.suptitle(f"Epoch {self.trainer.current_epoch}", fontsize=20)
+        fig.suptitle(f"Epoch {self.trainer.current_epoch} on dataset {dataset_name}", fontsize=20)
         gs = gridspec.GridSpec(tb, total_cols, wspace=0.1, hspace=0.1)
 
         titles = ["Front", "Pred", "True", "Diff"]
