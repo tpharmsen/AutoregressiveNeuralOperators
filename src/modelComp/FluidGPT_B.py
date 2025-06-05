@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
+import lightning as L
 from einops import rearrange
 from einops.layers.torch import Rearrange
 import numpy as np

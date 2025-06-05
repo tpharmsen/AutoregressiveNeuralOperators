@@ -1,4 +1,4 @@
-import lightning as pl
+import lightning as L
 from lightning.pytorch.loggers import WandbLogger
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
@@ -66,7 +66,7 @@ class MTT:
         #print()
         print(torch.cuda.get_device_name(0))
         wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
-        trainer = pl.Trainer(
+        trainer = L.Trainer(
             precision="bf16-mixed",
             accelerator="gpu",
             devices= 'auto',
@@ -104,7 +104,7 @@ class MTT:
         return wandb_config
 
 
-class MTTmodel(pl.LightningModule):
+class MTTmodel(L.LightningModule):
     def __init__(self, cb, cd, cm, ct):
         super().__init__()
 
@@ -477,7 +477,7 @@ class MTTmodel(pl.LightningModule):
         plt.close()
 
 
-class MTTdata(pl.LightningDataModule):
+class MTTdata(L.LightningDataModule):
     def __init__(self, cb, cd, cm, ct):
         super().__init__()
         self.cb = cb
