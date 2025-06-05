@@ -9,3 +9,4 @@ PyYAML
 h5py
 einops
 ipykernel
+ffmpeg-python
