@@ -75,4 +75,6 @@ class DiskDatasetDiv(Dataset):
         filename = filename / f'traj{idx:05d}.h5'
         with h5py.File(filename, 'r') as f:
             full = f['data'][::self.dt]
+        if self.avgnorm is not None:
+            full = (full - self.avgnorm) / self.stdnorm
         return torch.tensor(full, dtype=torch.float32)
