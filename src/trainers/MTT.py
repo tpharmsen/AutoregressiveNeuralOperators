@@ -68,11 +68,11 @@ class MTT:
         print(torch.cuda.get_device_name(0))
         wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
         trainer = L.Trainer(
-            precision="bf16-mixed",
+            precision="bf16-mixed" if platform.system() != "Windows" else "16-mixed",
             accelerator="gpu",
             devices= 'auto',
             logger=wandb_logger,
-            strategy = "auto" if platform.system() == "Windows" else self.ct.strategy,
+            strategy = self.ct.strategy if platform.system() != "Windows" else "auto",
             max_epochs=self.ct.epochs,
             num_sanity_val_steps=0
         )
@@ -514,7 +514,7 @@ class MTTdata(L.LightningDataModule):
     def setup(self, stage=None):
         print("setup function")
 
-        dist.barrier()
+        #dist.barrier()
 
         self.train_datasets = []
         self.val_datasets = []
