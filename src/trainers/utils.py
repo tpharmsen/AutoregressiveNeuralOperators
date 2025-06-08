@@ -170,7 +170,7 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
 
     for ax, title in zip(axes, titles):
         #print(ax, title)
-        img = ax.imshow(np.zeros((x_dim, y_dim)), cmap='viridis', vmin=vmin, vmax=vmax)
+        img = ax.imshow(np.zeros((x_dim, y_dim)), cmap='viridis', vmin=0, vmax=vmax)#, vmin=vmin, vmax=vmax)
         ax.set_title(title)
         for ax in axes.flat:
             ax.set_xticks([])
@@ -185,19 +185,26 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
     def init():
         imgs[0].set_data(stacked_pred[0])
         imgs[1].set_data(stacked_true[0])
-        #imgs[2].set_data(torch.zeros([stacked_true.shape[0], stacked_true.shape[1]]))
         return imgs
 
     def update(frame):
+        #vmin_frame = min(stacked_pred[frame].min(), stacked_true[frame].min())
+        vmax_frame = max(stacked_pred[frame].max(), stacked_true[frame].max())
+
+        for img in imgs:
+            #img.set_clim(vmin_frame, vmax_frame)
+            img.set_clim(vmin=0, vmax=vmax_frame)
+
         imgs[0].set_data(stacked_pred[frame])
         imgs[1].set_data(stacked_true[frame])
         imgs[2].set_data(np.abs(stacked_true[frame] - stacked_pred[frame]))
 
-        fig.suptitle(f"Dataset: {dataset_name}, timestep {frame + 1}")
-        #fig.suptitle(f"Dataset: -, timestep {frame + 1}")
+        fig.suptitle(f"Dataset: {dataset_name}, timestep {frame + 1}\n"
+                     #f"vmin: {vmin_frame:.4f}, vmax: {vmax_frame:.4f}")
+                        f"vmax: {vmax_frame:.3f}")
         return imgs
 
-    ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=50)
+    ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=100)
     #print(output_path)
     ani.save(output_path, writer="ffmpeg")
     plt.close()

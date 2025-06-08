@@ -3,6 +3,7 @@ from lightning.pytorch.loggers import WandbLogger
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning.pytorch.callbacks import ModelCheckpoint
 import torch 
 import torch.nn as nn
 import torch.optim as optim
@@ -23,6 +24,7 @@ import matplotlib.animation as animation
 import os
 import subprocess
 import platform
+import json
 
 from dataloaders import *
 from dataloaders import PREPROC_MAPPER
@@ -44,7 +46,7 @@ if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
 else:
     print('No MIG GPU detected, using all available GPUs')
 
-#torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('medium')
 
 class MTT:
     def __init__(self, cb, cd, cm, ct):
@@ -53,20 +55,37 @@ class MTT:
         self.cm = cm
         self.ct = ct
 
-        #print('init\n')
     def train(self):
-        #print("booting up...")
         model = MTTmodel(self.cb, self.cd, self.cm, self.ct)
-        #print('model loaded')
         datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
-        #print('data loaded')
         
         num_gpus = torch.cuda.device_count()
-        print(f"Number of GPUs available: {num_gpus}")
-        #print(num_gpus)
-        #print()
-        print(torch.cuda.get_device_name(0))
-        wandb_logger = WandbLogger(project="FluidGPT", config = self.build_wandb_config(), name=self.cb.wandb_name, save_dir=self.cb.save_path + self.cb.folder_out)
+        print(f"Number of GPUs: {num_gpus} of type {torch.cuda.get_device_name(0)}")
+        wandb_logger = WandbLogger(project="FluidGPT", 
+                                   config = self.build_wandb_config(), 
+                                   name=self.cb.wandb_name, 
+                                   save_dir=self.cb.save_path + self.cb.folder_out
+                                   )
+        
+        callbacks = []
+        if self.cb.save_on:
+            
+            self.checkpoint_path = self.cb.save_path + self.cb.folder_out + self.cm.model_name + '/' + str(wandb_logger.experiment.id)
+            if not os.path.exists(self.checkpoint_path):
+                os.makedirs(self.checkpoint_path)
+            if not os.path.exists(self.cb.save_path + self.cb.folder_out):
+                os.makedirs(self.cb.save_path + self.cb.folder_out)
+            manualCheckpoint = ModelCheckpoint(
+                dirpath= self.checkpoint_path,
+                filename="{epoch:04d}",  
+                save_top_k=-1,           
+                every_n_epochs=1,       
+                save_weights_only=False,
+            )       
+            callbacks.append(manualCheckpoint)
+        else:
+            manualCheckpoint = None
+
         trainer = L.Trainer(
             precision="bf16-mixed" if platform.system() != "Windows" else "16-mixed",
             accelerator="gpu",
@@ -74,9 +93,13 @@ class MTT:
             logger=wandb_logger,
             strategy = self.ct.strategy if platform.system() != "Windows" else "auto",
             max_epochs=self.ct.epochs,
-            num_sanity_val_steps=0
+            num_sanity_val_steps=0, 
+            callbacks=callbacks
         )
-        
+        if self.cb.save_on:
+            print(f"Manual checkpointing and zero-shot split saving at {self.checkpoint_path}")
+        else:
+            print("No manual checkpointing or zero-shot split saving enabled")
         trainer.fit(model, datamodule)
 
     def build_wandb_config(self):
@@ -103,8 +126,7 @@ class MTT:
                 wandb_config[f"{prefix}.{key}"] = value
 
         return wandb_config
-
-
+    
 class MTTmodel(L.LightningModule):
     def __init__(self, cb, cd, cm, ct):
         super().__init__()
@@ -154,12 +176,9 @@ class MTTmodel(L.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-
         front, label = batch
-        #self.data_fetch_start_time = time.time() - self.data_fetch_start_time
-        #self.forward_start_time = time.time()
+
         pred = self(front)
-        #self.lossbackward_start_time = time.time()
         train_loss = F.mse_loss(pred, label)
         self.train_losses.append(train_loss.item())
         return train_loss
@@ -203,22 +222,7 @@ class MTTmodel(L.LightningModule):
             "frequency": 1
         }
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
-    """
-    def on_train_batch_start(self, batch, batch_idx, dataloader_idx=0):
-        # Start times for tracking
-        self.data_fetch_start_time = time.time()
-        self.forward_start_time = None
-        self.lossbackward_start_time = None
-    
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        #data_fetch_duration = time.time() - self.data_fetch_start_time
-        self.lossbackward_start_time = time.time() - self.lossbackward_start_time
-        self.forward_start_time =  self.lossbackward_start_time - self.forward_start_time
-           
-        print(f"Data Fetch: {self.data_fetch_start_time:.7f}s, "
-              f"Forward Pass: {self.forward_start_time:.7f}s"
-              f"backward pass: {self.lossbackward_start_time:.7f}s")
-    """
+
     def on_train_epoch_start(self):
         if not self.trainer.sanity_checking:#print(self.device)
             dataloader = self.trainer.datamodule.train_dataloader()
@@ -485,18 +489,15 @@ class MTTdata(L.LightningDataModule):
         self.cd = cd 
         self.cm = cm  
         self.ct = ct 
-        print('datamodule initialised')
 
     def prepare_data(self): 
-        print("prepare_data function")
-        
+                
         for item in self.cd.datasets:
             
-            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])# + '.h5')
-            print('preprocessing', item["name"], "at path", preproc_savepath, "...")
-            print('folderpath:', str(self.cb.data_base + item["path"]))
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])
 
             if not os.path.exists(preproc_savepath):
+                print("preprocessing dataset", item["name"] , "at path", preproc_savepath, "...")
                 get_dataset(
                     dataset_obj=PREPROC_MAPPER[item['ppclass']],
                     preproc_savepath=preproc_savepath,
@@ -507,14 +508,10 @@ class MTTdata(L.LightningDataModule):
                     timesample=item["timesample"],
                     dataset_name=item["name"]
                 )
-                print("dataset", item["name"], "preprocessed")
             else:
-                print("dataset", item["name"], "already exists, skipping preproccessing")
+                print("folder", item["name"], "already exists, skipping preproccessing")
         
     def setup(self, stage=None):
-        print("setup function")
-
-        #dist.barrier()
 
         self.train_datasets = []
         self.val_datasets = []
@@ -526,13 +523,15 @@ class MTTdata(L.LightningDataModule):
         means, stds, sizes = [], [], []
                 
         for item in self.cd.datasets:
-            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])# + '.h5')
+            preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])
             dataset_SS = DiskDatasetDiv(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=1)
             dataset_FS = DiskDatasetDiv(preproc_savepath, temporal_bundling=self.cm.temporal_bundling, forward_steps=self.ct.forward_steps_loss)
 
-            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", forward_steps=1)
-            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", forward_steps=1)
-            val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", forward_steps=self.ct.forward_steps_loss)
+            # generate random seed
+            random_seed = random.randint(0, 10000)
+            train_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="train", seed=random_seed, forward_steps=1)
+            val_sampler = ZeroShotSampler(dataset_SS, train_ratio=self.ct.train_ratio, split="val", seed=random_seed, forward_steps=1)
+            val_forward_sampler = ZeroShotSampler(dataset_FS, train_ratio=self.ct.train_ratio, split="val", seed=random_seed, forward_steps=self.ct.forward_steps_loss)
 
             self.train_datasets.append(Subset(dataset_SS, train_sampler.indices))
             self.val_datasets.append(Subset(dataset_SS, val_sampler.indices))
@@ -542,6 +541,27 @@ class MTTdata(L.LightningDataModule):
             self.val_forward_samplers.append(val_forward_sampler)
             
             
+            split = {
+                "name": item["name"],
+                "seed": random_seed,
+                "train_trajs": train_sampler.train_trajs,
+                "val_trajs": val_sampler.val_trajs,
+                "val_forward_trajs": val_forward_sampler.val_trajs,
+                "train_idxs": train_sampler.indices,
+                "val_idxs": val_sampler.indices,
+                "val_forward_idxs": val_forward_sampler.indices,
+            }
+            if self.cb.save_on:
+                for callback in self.trainer.callbacks:
+                    if isinstance(callback, ModelCheckpoint):
+                        save_split_path = os.path.join(callback.dirpath, "traj_split_" + item["name"] + ".json")
+                if save_split_path is None:
+                    raise ValueError("ModelCheckpoint callback not found, unable to save trajectory split.")
+                with open(save_split_path, "w") as f:
+                    json.dump(split, f, indent=0)
+                if wandb.run is not None:
+                    wandb.save(save_split_path)
+            
             mean_i = dataset_SS.avg
             std_i = dataset_SS.std
             N_i = np.prod(dataset_SS.datashape)
@@ -549,14 +569,12 @@ class MTTdata(L.LightningDataModule):
             means.append(mean_i)
             stds.append(std_i)
             sizes.append(N_i)
-            print("dataset", item["name"], "loaded", "- mean and std and elem:", dataset_SS.avg, dataset_SS.std, np.prod(dataset_SS.datashape))
-            print()
+            print("dataset", item["name"], "loaded,", np.prod(dataset_SS.datashape), "elements")
 
         means = np.array(means)
         stds = np.array(stds)
         sizes = np.array(sizes)
 
-        # Two-line calculation
         self.global_mean = np.sum(sizes * means) / np.sum(sizes)
         self.global_std = np.sqrt(np.sum(sizes * (stds**2 + (means - self.global_mean)**2)) / np.sum(sizes))
         if self.ct.normalize:
@@ -568,26 +586,7 @@ class MTTdata(L.LightningDataModule):
         self.train_dataset = ConcatDataset(self.train_datasets)
         self.val_dataset = ConcatDataset(self.val_datasets)
         self.val_forward_dataset = ConcatDataset(self.val_forward_datasets)
-        print("concatdataset done")
-        """
-        print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Loading data from cache...")
-        data_cache = torch.load(self.cb.data_base + "tempprepdata.pt", map_location="cpu", weights_only=False)
-
-        print(data_cache)
-        
-        self.train_dataset = data_cache["train_dataset"]
-        self.val_dataset = data_cache["val_dataset"]
-        self.val_forward_dataset = data_cache["val_forward_dataset"]
-        self.val_samplers = data_cache["val_samplers"]
-        print(f"Rank {dist.get_rank() if dist.is_initialized() else 0}: Data loaded.")
-        
-        self.train_dataset = data_cache[0]["train_dataset"]
-        self.val_dataset = data_cache[0]["val_dataset"]
-        self.val_forward_dataset = data_cache[0]["val_forward_dataset"]
-        self.train_sampler = data_cache[0]["train_sampler"]
-        self.val_sampler = data_cache[0]["val_sampler"]
-        self.val_forward_sampler = data_cache[0]["val_forward_sampler"]
-        """
+        print("datasets ready")
 
     def create_sampler(self, dataset, shuffle):
         if dist.is_available() and dist.is_initialized():
@@ -639,3 +638,5 @@ class MTTdata(L.LightningDataModule):
             prefetch_factor=self.ct.prefetch_factor if self.ct.num_workers > 0 else None
         )
         return [val_SS_loader, val_FS_loader]
+
+

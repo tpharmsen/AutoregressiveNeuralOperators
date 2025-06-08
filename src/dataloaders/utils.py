@@ -8,9 +8,9 @@ class ZeroShotSampler(torch.utils.data.Sampler):
         torch.manual_seed(seed) 
         num_train = int(dataset.traj * train_ratio)
         shuffled_trajs = torch.randperm(dataset.traj).tolist() 
-        train_trajs = shuffled_trajs[:num_train]
+        self.train_trajs = shuffled_trajs[:num_train]
         self.val_trajs = shuffled_trajs[num_train:]
-        train_indices = [t * dataset.lenpertraj + ts for t in train_trajs for ts in range(0, dataset.lenpertraj, forward_steps)] # we take only every forward_steps timestep for quickness
+        train_indices = [t * dataset.lenpertraj + ts for t in self.train_trajs for ts in range(0, dataset.lenpertraj, forward_steps)] # we take only every forward_steps timestep for quickness
         val_indices = [t * dataset.lenpertraj + ts for t in self.val_trajs for ts in range(0, dataset.lenpertraj, forward_steps)]
         self.indices = train_indices if split == "train" else val_indices
     def __iter__(self):
