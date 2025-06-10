@@ -79,6 +79,10 @@ class FMmodel(MTTmodel):
                             )
         else:
             raise ValueError('MODEL NOT RECOGNIZED') 
+        
+    def forward(self, x, t):
+        return self.model(x, t)
+        
     def random_fft_perturb(x, perturbation_strength=1.0):
         x_fft = torch.fft.fftshift(torch.fft.fft2(x, dim=(-2, -1)))
         x_fft = x_fft * torch.exp(1j * torch.randn_like(x_fft) * perturbation_strength)
@@ -88,43 +92,36 @@ class FMmodel(MTTmodel):
     def training_step(self, batch, batch_idx):
         front, label = batch
 
-        pred = self(front)
-        train_loss = F.mse_loss(pred, label)
+        xnoise = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+        target = label - xnoise
+        t = torch.rand(label.size(0))
+        xt = (1 - t[:, None, None, None, None]) * xnoise + t[:, None, None, None, None] * label
+        pred = self(xt, t)
+
+        train_loss = F.mse_loss(pred, target, reduction='mean')
         self.train_losses.append(train_loss.item())
-        #return train_loss
-        xnoise = random_fft_perturb(front, perturbation_strength=ratio)
-        target = y - xnoise
-        #t = torch.zeros(y.size(0), device=y.device)
-        t = torch.rand(y.size(0), device=y.device)
-        xt = (1 - t[:, None, None, None, None]) * xnoise + t[:, None, None, None, None] * y
-        pred = model(xt, t)
-
-        #loss = F.mse_loss(pred, target)
-        loss = ((pred - target)**2).mean()
-        #loss = (F.mse_loss(pred, target, reduction='none')).mean()
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        losses.append(loss.item())
-        epoch_losses.append(loss.item())
-        return 
+        return train_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
 
         front, label = batch
-        
+        steps = self.cm.integration_steps
         if dataloader_idx == 0:
-            pred = self(front)
-            val_loss = F.mse_loss(pred, label)
+            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+            for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
+                pred = self(xt, t.expand(xt.size(0)))
+                xt = xt + (1 / steps) * pred
+            val_loss = F.mse_loss(pred, label, reduction='mean')
             self.val_SS_losses.append(val_loss.item())
             self.log("val_SS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
         elif dataloader_idx == 1:
             # a few forward steps for the forward step loss
-            pred = front
+            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
             for _ in range(self.ct.forward_steps_loss):
-                pred = self.model(pred)
-            val_loss = F.mse_loss(pred, label)
+                for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
+                    pred = self(xt, t.expand(xt.size(0)))
+                    xt = xt + (1 / steps) * pred
+            val_loss = F.mse_loss(xt, label, reduction='mean')
             self.val_FS_losses.append(val_loss.item())
             #self.log("val_FS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
             

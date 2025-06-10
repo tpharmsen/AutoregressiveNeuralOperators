@@ -168,7 +168,7 @@ class FluidGPT_FM(nn.Module):
             self.skip_connects.append(skip_connect(emb_dim * 2**i)) if skip_connect is not None else None
             #print(len(self.blockUp))
 
-    def forward(self, x):
+    def forward(self, x, t):
         # shape checks
         #print('\nstarting pred...')
         if x.ndim != 5:

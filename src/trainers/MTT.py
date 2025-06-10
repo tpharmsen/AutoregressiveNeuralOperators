@@ -175,7 +175,6 @@ class MTTmodel(L.LightningModule):
             raise ValueError('MODEL NOT RECOGNIZED')        
 
     def forward(self, x):
-        #self.forward_start_time = time.time()
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
@@ -245,7 +244,7 @@ class MTTmodel(L.LightningModule):
             train_loss = np.mean(self.train_losses)
             val_SS_loss = np.mean(self.val_SS_losses)
             val_FS_loss = np.mean(self.val_FS_losses)
-            self.log("val_SS_loss_checkpointing", val_SS_loss)
+            self.log("val_SS_loss_checkpoint", val_SS_loss)
 
             self.global_mean = self.trainer.datamodule.global_mean
             self.global_std = self.trainer.datamodule.global_std
@@ -255,8 +254,7 @@ class MTTmodel(L.LightningModule):
                 "val_SS_loss": val_SS_loss,
             }, prog_bar=False)
             '''
-            self.log("checkpoint_val_SS_loss", val_SS_loss, on_epoch=True, prog_bar=False, sync_dist=True)
-
+            
             visuals = self.cb.viz and epoch % self.cb.viz_freq == 0
             if visuals:
                 device = 'cuda' if torch.cuda.is_available() else 'cpu'
