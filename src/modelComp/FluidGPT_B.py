@@ -669,7 +669,6 @@ class FluidGPT_B(nn.Module):
                     x = module(x)
                     
 
-
         x = self.embedding.decode(x, proj=True)
         return x
 

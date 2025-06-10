@@ -77,9 +77,9 @@ class MTT:
                 os.makedirs(self.cb.save_path + self.cb.folder_out)
             manualCheckpoint = ModelCheckpoint(
                 dirpath= self.checkpoint_path,
-                filename = "{epoch:04d}",
+                filename = "{epoch:04d}-{val_SS_loss_checkpoint:.6f}",
                 #filename=r"{epoch:04d}-val_SS_loss_dataloader_idx_0={val_SS_loss/dataloader_idx_0:.4f}",
-                monitor="val_SS_loss/dataloader_idx_0",
+                monitor="val_SS_loss_checkpoint",#/dataloader_idx_0",
                 mode="min",  
                 save_top_k=5,           
                 every_n_epochs=1,       
@@ -245,6 +245,7 @@ class MTTmodel(L.LightningModule):
             train_loss = np.mean(self.train_losses)
             val_SS_loss = np.mean(self.val_SS_losses)
             val_FS_loss = np.mean(self.val_FS_losses)
+            self.log("val_SS_loss_checkpointing", val_SS_loss)
 
             self.global_mean = self.trainer.datamodule.global_mean
             self.global_std = self.trainer.datamodule.global_std

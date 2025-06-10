@@ -6,5 +6,5 @@ save_on: 0
 wandb: 0
 wandb_name: "base"
 
-viz: True
+viz: False
 viz_freq: 1

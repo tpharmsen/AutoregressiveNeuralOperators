@@ -1,0 +1,10 @@
+data_base: "datasets/prjs1359/"
+device: "cuda"
+save_path: "output/"
+folder_out: "0/"
+save_on: 1
+wandb: 1
+wandb_name: "wandb_test"
+
+viz: False
+viz_freq: 1
