@@ -80,8 +80,8 @@ if __name__ == "__main__":
         from trainers.STT import STT
         trainer = STT(cb, cd, cm, ct)
     elif args.trainer == "MTT":
-        from trainers.MTT import MTT
-        trainer = MTT(cb, cd, cm, ct)
+        from trainers.MTT import MTTtrainer
+        trainer = MTTtrainer(cb, cd, cm, ct)
     elif args.trainer == "FlowMatching" or args.trainer == "FM":
         from trainers.FlowMatching import FlowMatching
         trainer = FlowMatching(cb, cd, cm, ct)

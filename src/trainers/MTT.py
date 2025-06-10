@@ -48,7 +48,9 @@ else:
 
 torch.set_float32_matmul_precision('medium')
 
-class MTT:
+print("\nRunning MTT trainer\n")
+
+class MTTtrainer(L.LightningModule):
     def __init__(self, cb, cd, cm, ct):
         self.cb = cb
         self.cd = cd

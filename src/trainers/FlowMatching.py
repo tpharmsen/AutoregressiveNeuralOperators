@@ -30,12 +30,12 @@ from dataloaders import *
 from dataloaders import PREPROC_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
-from trainers.utils import animate_rollout, magnitude_vel, rollout, compute_energy_enstrophy_spectra
+from trainers.utils import animate_rollout, magnitude_vel, compute_energy_enstrophy_spectra
 from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
 
-from trainers.MTT import MTT as MTTbase
+from trainers.MTT import MTTtrainer
 from trainers.MTT import MTTmodel, MTTdata
-from utils import rollout_prb
+from trainers.utils import rollout_prb
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#1F1F1F'
@@ -52,9 +52,12 @@ else:
 
 torch.set_float32_matmul_precision('medium')
 
-class FlowMatching(MTTbase):
+print("\nRunning FM trainer\n")
+"""
+class FlowMatching(MTTtrainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        print('Initializing FlowMatching Trainer')
 
 
 class FMmodel(MTTmodel):
@@ -62,6 +65,7 @@ class FMmodel(MTTmodel):
         super().__init__(*args, **kwargs)
     
     def _initialize_model(self):
+        print(self.cm.model_name)
         if self.cm.model_name == "FluidGPT_FM":
             from modelComp.FluidGPT_FM import FluidGPT_FM
             self.model = FluidGPT_FM(emb_dim=96,
@@ -249,3 +253,5 @@ class FMmodel(MTTmodel):
 class FMdata(MTTdata):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+"""
