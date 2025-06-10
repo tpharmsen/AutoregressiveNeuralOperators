@@ -54,13 +54,13 @@ torch.set_float32_matmul_precision('medium')
 
 print("\nRunning FM trainer\n")
 """
-class FlowMatching(MTTtrainer):
+class FMTtrainer(MTTtrainer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print('Initializing FlowMatching Trainer')
 
 
-class FMmodel(MTTmodel):
+class FMTmodel(MTTmodel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
@@ -250,7 +250,7 @@ class FMmodel(MTTmodel):
         plt.close()
 
     
-class FMdata(MTTdata):
+class FMTdata(MTTdata):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

@@ -83,8 +83,8 @@ if __name__ == "__main__":
         from trainers.MTT import MTTtrainer
         trainer = MTTtrainer(cb, cd, cm, ct)
     elif args.trainer == "FlowMatching" or args.trainer == "FM":
-        from trainers.FlowMatching import FlowMatching
-        trainer = FlowMatching(cb, cd, cm, ct)
+        from trainers.FMT import FMTtrainer
+        trainer = FMTtrainer(cb, cd, cm, ct)
     else:
         raise ValueError("Trainer not set")
 
