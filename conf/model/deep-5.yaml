@@ -1,0 +1,14 @@
+model_name: "FluidGPT"
+in_channels: 2
+temporal_bundling: 5
+emb_dim: 24
+patch_size: 4
+hiddenout_dim: 256
+depth: 3
+stage_depths: [3,3,3,4,3,3,3]
+num_heads: [3,6,6,12,6,6,3]
+window_size: 4
+use_flex_attn: True
+act: "gelu"
+skipblock: "convnext"
+gradient_flowthrough: [True, False, False]

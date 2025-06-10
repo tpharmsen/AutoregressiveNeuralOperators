@@ -1,0 +1,21 @@
+epochs: 100
+batch_size: 128
+init_lr: 5.0e-4
+patience: 2
+weight_decay: 0.01
+inj_noise: False
+train_ratio: 0.8
+normalize: True
+pin_memory: True
+num_workers: 16
+forward_steps_loss: 3
+persistent_workers: True
+prefetch_factor: 4
+strategy: "ddp"
+
+plottrain_out: "plot_train.png"
+plotval_out: "plot_val.png"
+plotvalf_out: "plotf_val.png"
+anim_out: "anim_val.gif"
+checkpoint: 'checkpoint.pth'
+spectra_out: "energyenstrophyspectra.png"
