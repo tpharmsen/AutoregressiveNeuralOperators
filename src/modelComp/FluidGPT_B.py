@@ -44,9 +44,9 @@ class LinearEmbedding(nn.Module):
         self.patchify = nn.Unfold(kernel_size=patch_size, stride=patch_size)
         self.unpatchify = nn.Fold(output_size=(self.H, self.W), kernel_size=patch_size, stride=patch_size)
         self.pre_proj = nn.Sequential(
-            nn.Linear(self.C * self.pH * self.pW, self.emb_dim * 2 if act == SwiGLU else self.emb_dim),
+            nn.Linear(self.C * self.pH * self.pW, self.hiddenout_dim * 2 if act == SwiGLU else self.hiddenout_dim),
             act(),
-            nn.Linear(self.emb_dim, self.emb_dim),
+            nn.Linear(self.hiddenout_dim, self.emb_dim),
         )
 
         self.post_proj = nn.Sequential(
@@ -57,19 +57,12 @@ class LinearEmbedding(nn.Module):
             nn.Linear(self.hiddenout_dim, self.C * self.pH * self.pW),
         )
 
-    #def get_pos_embeddings(self, t_len):
-    #    return (self.time_embed[:, :t_len] + self.patch_position_embeddings).view(1, -1, self.emb_dim)  # (1, t*p*p, d)
-
     def encode(self, x, proj=True):
 
         B, T, C, H, W = x.shape
-
         x = rearrange(x, 'b t c h w -> (b t) c h w')
-
         x = self.patchify(x)  
-
         x = rearrange(x, '(b t) d n -> b t n d', b=B, t=T)
-
         if proj:
             return self.pre_proj(x)
         else:
@@ -81,7 +74,6 @@ class LinearEmbedding(nn.Module):
 
         B, T, N, D = x.shape
         x = rearrange(x, 'b t n d -> (b t) d n')
-        
         x = self.unpatchify(x)  
         x = rearrange(x, "(b t) c h w -> b t c h w", b=B, t=T)
 
@@ -233,20 +225,8 @@ class WindowAttention(nn.Module):
             attn = attn * flex_attn
         '''
         if self.use_flex_attn:
-            #print('windowattn')
-            #print(attn.shape, self.flex_attn.shape, x.device, torch.tensor(1. / 0.01))
-            #clamp_max = torch.tensor(100.)
-            #print(clamp_max)
-            #clamp_max = torch.log(clamp_max)
-            #print(clamp_max, clamp_max.shape, self.flex_attn.shape)
-            #flex_attn = torch.clamp(self.flex_attn, max=clamp_max).exp()
-            #print(flex_attn.shape, self.flex_attn.shape)
-            #flex_attn = flex_attn.expand(attn.shape)  # Match shape exactly to attn
             flex_attn = torch.clamp(self.flex_attn, max=self.flex_limit).exp()
-                        
-            #print(flex_attn.shape, self.flex_attn.shape)
             attn = attn * flex_attn
-        #print('attn', attn.shape)
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
         relative_position_bias = relative_position_bias_table[self.relative_position_index.view(-1)].view(
@@ -297,6 +277,7 @@ class SpatialSwinBlock(nn.Module): #change name to something else
         mlp_hidden_dim = int(emb_dim * mlp_ratio)
         self.mlp = MLP(in_features=emb_dim, hidden_features=mlp_hidden_dim, act=act, drop=drop)
 
+        """
         if self.shift_size > 0:
             # calculate attention mask for SW-MSA (from original swin paper source code)
             H, W = self.patch_grid_res
@@ -320,6 +301,10 @@ class SpatialSwinBlock(nn.Module): #change name to something else
         else:
             attn_mask = None
 
+        
+        """
+        # We want our patches to be able to attend to wrapped around patches, unlike the original swin transformer. 
+        attn_mask = None
         self.register_buffer("attn_mask", attn_mask)
 
     def forward(self, x):
@@ -416,14 +401,7 @@ class TemporalBlock(nn.Module):
         #attn = (q @ k.transpose(-2, -1)) / (C // self.num_heads) ** 0.5
         attn = F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1)
         if self.use_flex_attn:
-            #print('temporalattn')
-            #print(attn.shape, self.flex_attn.shape)
-            #clamp_max = torch.log(torch.tensor(1. / 0.01, device=self.flex_attn.device))
-            #print(clamp_max, clamp_max.shape, self.flex_attn.shape)
-            #flex_attn = torch.clamp(self.flex_attn, max=clamp_max).exp()
-            #print(flex_attn.shape, self.flex_attn.shape)
-            #flex_attn = flex_attn.expand(attn.shape)  # Match shape exactly to attn
-            #print(flex_attn.shape, self.flex_attn.shape)
+
             flex_attn = torch.clamp(self.flex_attn, max=self.flex_limit2).exp()
             attn = attn * flex_attn
         
