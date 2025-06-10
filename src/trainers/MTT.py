@@ -57,9 +57,13 @@ class MTTtrainer(L.LightningModule):
         self.cm = cm
         self.ct = ct
 
+    def init_modules(self):
+        self.modelmodule = MTTmodel(self.cb, self.cd, self.cm, self.ct)
+        self.datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
+
     def train(self):
-        model = MTTmodel(self.cb, self.cd, self.cm, self.ct)
-        datamodule = MTTdata(self.cb, self.cd, self.cm, self.ct)
+        self.init_modules()
+        self.modelmodule._initialize_model()
         
         num_gpus = torch.cuda.device_count()
         print(f"Number of GPUs: {num_gpus} of type {torch.cuda.get_device_name(0)}")
@@ -105,7 +109,7 @@ class MTTtrainer(L.LightningModule):
             print(f"Manual checkpointing and zero-shot split saving at {self.checkpoint_path}")
         else:
             print("No manual checkpointing or zero-shot split saving enabled")
-        trainer.fit(model, datamodule)
+        trainer.fit(self.modelmodule, self.datamodule)
 
     def build_wandb_config(self):
         wandb_config = {}
@@ -154,7 +158,7 @@ class MTTmodel(L.LightningModule):
         self.epoch_time = None
         self.log_time = None
         
-        self._initialize_model()   
+        #self._initialize_model()   
         self.counter = 0
 
     def _initialize_model(self):

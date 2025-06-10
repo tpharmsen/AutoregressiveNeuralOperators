@@ -1,73 +1,26 @@
-import lightning as L
-from lightning.pytorch.loggers import WandbLogger
-from torch.utils.data.distributed import DistributedSampler
-import torch.distributed as dist
-from lightning.pytorch.utilities.rank_zero import rank_zero_only
-from lightning.pytorch.callbacks import ModelCheckpoint
-import torch 
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, CosineAnnealingLR, SequentialLR, ConstantLR
-from datetime import datetime
-import time
-import wandb
-import yaml
-import random
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import numpy as np
-import matplotlib.animation as animation
-import os
-import subprocess
-import platform
-import json
-
-from dataloaders import *
-from dataloaders import PREPROC_MAPPER
-from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
-#from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
-from trainers.utils import animate_rollout, magnitude_vel, compute_energy_enstrophy_spectra
-from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
-
-from trainers.MTT import MTTtrainer
-from trainers.MTT import MTTmodel, MTTdata
+from trainers.MTT import MTTtrainer, MTTmodel, MTTdata
 from trainers.utils import rollout_prb
 
-plt.style.use('dark_background')
-plt.rcParams['figure.facecolor'] = '#1F1F1F'
-plt.rcParams['axes.facecolor'] = '#1F1F1F'
-plt.rcParams['savefig.facecolor'] = '#1F1F1F'
 
-
-# following is a gpu mig bug fix
-if "MIG" in subprocess.check_output(["nvidia-smi", "-L"], text=True):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    print('MIG GPU detected, using GPU 0')
-else:
-    print('No MIG GPU detected, using all available GPUs')
-
-torch.set_float32_matmul_precision('medium')
-
-print("\nRunning FM trainer\n")
-"""
 class FMTtrainer(MTTtrainer):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(FMTtrainer, self).__init__(*args, **kwargs)
         print('Initializing FlowMatching Trainer')
-
+    
+    def init_modules(self):
+        print('Initializing FlowMatching Modules')
+        self.modelmodule = FMTmodel(self.cb, self.cd, self.cm, self.ct)
+        self.datamodule = FMTdata(self.cb, self.cd, self.cm, self.ct)
 
 class FMTmodel(MTTmodel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
     def _initialize_model(self):
+        print()
         print(self.cm.model_name)
         if self.cm.model_name == "FluidGPT_FM":
-            from modelComp.FluidGPT_FM import FluidGPT_FM
+            from modelComp.FluidGPT_FM import FluidGPT_FM   
             self.model = FluidGPT_FM(emb_dim=96,
                             data_dim=[self.ct.batch_size, self.cm.temporal_bundling, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(self.cm.patch_size, self.cm.patch_size),
@@ -241,8 +194,6 @@ class FMTmodel(MTTmodel):
                 if t == 0:
                     ax_x.set_title(titles[i], fontsize=14)
                     ax_y.set_title(titles[i], fontsize=14)
-            #fig.add_subplot(gs[t, 0]).set_ylabel(r"$v_x$", rotation=0, labelpad=20, fontsize=12)
-            #fig.add_subplot(gs[t, cols_per_side + spacer]).set_ylabel(r"$v_y$", rotation=0, labelpad=20, fontsize=12)
         fig.text(0.25, 0.92, r"$v_x$", fontsize=20, ha='center')
         fig.text(0.80, 0.92, r"$v_y$", fontsize=20, ha='center')
         plt.tight_layout(rect=[0, 0, 1, 0.96])
@@ -254,4 +205,3 @@ class FMTdata(MTTdata):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-"""
