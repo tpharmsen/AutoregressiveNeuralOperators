@@ -204,7 +204,7 @@ def animate_rollout(stacked_pred, stacked_true, dataset_name, output_path="outpu
                         f"vmax: {vmax_frame:.3f}")
         return imgs
 
-    ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=100)
+    ani = animation.FuncAnimation(fig, update, frames=timesteps, init_func=init, blit=False, interval=75)
     #print(output_path)
     ani.save(output_path, writer="ffmpeg")
     plt.close()

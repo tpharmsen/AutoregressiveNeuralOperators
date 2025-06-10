@@ -77,8 +77,11 @@ class MTT:
                 os.makedirs(self.cb.save_path + self.cb.folder_out)
             manualCheckpoint = ModelCheckpoint(
                 dirpath= self.checkpoint_path,
-                filename="{epoch:04d}",  
-                save_top_k=-1,           
+                filename = "{epoch:04d}",
+                #filename=r"{epoch:04d}-val_SS_loss_dataloader_idx_0={val_SS_loss/dataloader_idx_0:.4f}",
+                monitor="val_SS_loss/dataloader_idx_0",
+                mode="min",  
+                save_top_k=5,           
                 every_n_epochs=1,       
                 save_weights_only=False,
             )       
@@ -199,6 +202,7 @@ class MTTmodel(L.LightningModule):
                 pred = self.model(pred)
             val_loss = F.mse_loss(pred, label)
             self.val_FS_losses.append(val_loss.item())
+            #self.log("val_FS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
             
         return val_loss
 
@@ -250,6 +254,7 @@ class MTTmodel(L.LightningModule):
                 "val_SS_loss": val_SS_loss,
             }, prog_bar=False)
             '''
+            self.log("checkpoint_val_SS_loss", val_SS_loss, on_epoch=True, prog_bar=False, sync_dist=True)
 
             visuals = self.cb.viz and epoch % self.cb.viz_freq == 0
             if visuals:
