@@ -30,7 +30,7 @@ from dataloaders import *
 from dataloaders import PREPROC_MAPPER
 from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
 #from trainers.utils import make_plot, animate_rollout, magnitude_vel, rollout
-from trainers.utils import animate_rollout, magnitude_vel, rollout, compute_energy_enstrophy_spectra
+from trainers.utils import animate_rollout, magnitude_vel, rollout_det, compute_energy_enstrophy_spectra
 from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
 
 plt.style.use('dark_background')
@@ -366,7 +366,7 @@ class MTTmodel(L.LightningModule):
             else:
                 front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).float().to(device)#.to(torch.bfloat16)
             #print('len:', len(val_traj) // self.cm.temporal_bundling)
-            stacked_pred = rollout(front, self.model, len(val_traj) // self.cm.temporal_bundling)
+            stacked_pred = rollout_det(front, self.model, len(val_traj) // self.cm.temporal_bundling)
             stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
             #print('stacked_pred:', stacked_pred.shape)
             stacked_true = val_traj.unsqueeze(0).float()

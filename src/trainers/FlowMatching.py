@@ -35,6 +35,7 @@ from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
 
 from trainers.MTT import MTT as MTTbase
 from trainers.MTT import MTTmodel, MTTdata
+from utils import rollout_prb
 
 plt.style.use('dark_background')
 plt.rcParams['figure.facecolor'] = '#1F1F1F'
@@ -126,6 +127,123 @@ class FMmodel(MTTmodel):
             #self.log("val_FS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
             
         return val_loss
+
+
+    def random_rollout(self, device='cuda'):
+        self.model.eval()
+        with torch.no_grad():
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
+            traj_idx = self.trainer.datamodule.val_samplers[dataset_idx].random_val_traj()
+            val_traj = self.trainer.datamodule.val_datasets[dataset_idx].dataset.get_single_traj(traj_idx)
+            #print('val_traj:', val_traj.shape)
+            if self.ct.strategy == "deepspeed":
+                front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).to(device).to(torch.bfloat16)
+            else:
+                front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).float().to(device)#.to(torch.bfloat16)
+            #print('len:', len(val_traj) // self.cm.temporal_bundling)
+            stacked_pred = rollout_prb(front, self.model, len(val_traj) // self.cm.temporal_bundling)
+            stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
+            #print('stacked_pred:', stacked_pred.shape)
+            stacked_true = val_traj.unsqueeze(0).float()
+            #print('stacked_true:', stacked_true.shape)
+            dataset_name = str(self.trainer.datamodule.val_datasets[dataset_idx].dataset.name)
+            #print('dataset_name:', dataset_name)
+            stacked_pred, stacked_true = stacked_pred * self.global_std + self.global_mean, stacked_true * self.global_std + self.global_mean
+            #print('stacked_pred:', stacked_pred.shape)
+            #print('stacked_true:', stacked_true.shape)
+            return stacked_pred, stacked_true, dataset_name
+        
+    def make_plot(self, output_path, mode='val', device='cuda'):
+        self.model.eval()
+
+        if mode == 'val':
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.val_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.val_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.val_datasets[dataset_idx].dataset.name
+        elif mode == 'train':
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.train_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.train_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.train_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.train_datasets[dataset_idx].dataset.name
+        elif mode == 'val_forward':
+            dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_forward_datasets), (1,)).item()
+            indices = list(self.trainer.datamodule.val_forward_samplers[dataset_idx].indices)
+            sample = random.choice(indices)
+            front, label = self.trainer.datamodule.val_forward_datasets[dataset_idx].dataset.__getitem__(sample)
+            dataset_name = self.trainer.datamodule.val_forward_datasets[dataset_idx].dataset.name
+        else:
+            raise ValueError('PLOTMODE NOT RECOGNIZED')
+
+        front, label = front.to(device).unsqueeze(0), label.to(device).unsqueeze(0)
+        if self.ct.strategy == "deepspeed":
+            front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
+        else:
+            front, label = front[0].unsqueeze(0).float(), label[0].unsqueeze(0).float()  # .to(torch.bfloat16)
+        #front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
+        with torch.no_grad():
+            steps = self.cm.integration_steps
+            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+            if mode == 'val_forward':
+                for _ in range(self.ct.forward_steps_loss):
+                    for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
+                        pred = self(xt, t.expand(xt.size(0)))
+                        xt = xt + (1 / steps) * pred
+            else:
+                for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
+                    pred = self(xt, t.expand(xt.size(0)))
+                    xt = xt + (1 / steps) * pred
+
+        
+        front = front.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
+        pred = pred.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
+        label = label.float() * self.global_std + self.global_mean #.to(torch.bfloat16)
+
+        front_x, front_y = front[0, :, 0].cpu(), front[0, :, 1].cpu()
+        pred_x, pred_y = pred[0, :, 0].cpu(), pred[0, :, 1].cpu()
+        label_x, label_y = label[0, :, 0].cpu(), label[0, :, 1].cpu()
+        diff_x, diff_y = (label_x - pred_x).abs(), (label_y - pred_y).abs()
+
+        tb = self.cm.temporal_bundling
+        cols_per_side = 4
+        spacer = 1
+        total_cols = cols_per_side * 2 + spacer  # 4 + 1 + 4 = 9
+
+        fig = plt.figure(figsize=(3 * total_cols, 4 * tb))
+        fig.suptitle(f"Epoch {self.trainer.current_epoch} on dataset {dataset_name}", fontsize=20)
+        gs = gridspec.GridSpec(tb, total_cols, wspace=0.1, hspace=0.1)
+
+        titles = ["Front", "Pred", "True", "Diff"]
+
+        for t in range(tb):
+            for i, (img_x, img_y) in enumerate(zip(
+                [front_x[t], pred_x[t], label_x[t], diff_x[t]],
+                [front_y[t], pred_y[t], label_y[t], diff_y[t]]
+            )):
+                ax_x = fig.add_subplot(gs[t, i])
+                ax_y = fig.add_subplot(gs[t, i + cols_per_side + spacer])
+
+                ax_x.imshow(img_x, cmap='viridis' if i < 3 else 'magma')
+                ax_y.imshow(img_y, cmap='viridis' if i < 3 else 'magma')
+
+                ax_x.set_xticks([]); ax_x.set_yticks([])
+                ax_y.set_xticks([]); ax_y.set_yticks([])
+                for ax in (ax_x, ax_y):
+                    for spine in ax.spines.values():
+                        spine.set_visible(False)
+
+                if t == 0:
+                    ax_x.set_title(titles[i], fontsize=14)
+                    ax_y.set_title(titles[i], fontsize=14)
+            #fig.add_subplot(gs[t, 0]).set_ylabel(r"$v_x$", rotation=0, labelpad=20, fontsize=12)
+            #fig.add_subplot(gs[t, cols_per_side + spacer]).set_ylabel(r"$v_y$", rotation=0, labelpad=20, fontsize=12)
+        fig.text(0.25, 0.92, r"$v_x$", fontsize=20, ha='center')
+        fig.text(0.80, 0.92, r"$v_y$", fontsize=20, ha='center')
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close()
 
     
 class FMdata(MTTdata):

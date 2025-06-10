@@ -213,25 +213,33 @@ def magnitude_vel(x):
     magnitude = torch.sqrt(x[:, :, 0]**2 + x[:, :, 1]**2)
     return magnitude.unsqueeze(2)
 
-def rollout(front, model, steps):
+def rollout_det(front, model, steps):
     model.eval()
     preds = []
     preds.append(front)
-    #print(front.shape)
-    #print(f"\nRollout steps: {steps}")
+
     with torch.no_grad():
         pred = model(front)
         preds.append(pred)
-        #print(pred.shape)
         for i in range(steps - 2):
-            #print(i)
             pred = model(pred)
             preds.append(pred)
-            #print(pred.shape)
-    #print(f"Rollout steps: {len(preds)}")
+
     preds = torch.cat(preds, dim=1)
-    #print(preds.shape)
-    #print()
+    return preds
+
+def rollout_prb(front, model, steps, perturb_func, perturbation_strength):
+    model.eval()
+    preds = []
+    preds.append(front)
+    with torch.no_grad():
+        xt = perturb_func(front, perturbation_strength=perturbation_strength)
+        for _ in range(steps - 1):
+            for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
+                pred = model(xt, t.expand(xt.size(0)))
+                xt = xt + (1 / steps) * pred
+            preds.append(xt)
+    preds = torch.cat(preds, dim=1)
     return preds
 
 def compute_energy_enstrophy_spectra(u, v, dataset_name="", Lx=1.0, Ly=1.0):
