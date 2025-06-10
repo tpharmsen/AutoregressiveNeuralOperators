@@ -1,10 +1,43 @@
+import lightning as L
+from lightning.pytorch.loggers import WandbLogger
+from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
+from lightning.pytorch.callbacks import ModelCheckpoint
+import torch 
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, CosineAnnealingLR, SequentialLR, ConstantLR
+from datetime import datetime
+import time
+import wandb
+import yaml
+import random
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import numpy as np
+import matplotlib.animation as animation
+import os
+import subprocess
+import platform
+import json
+
+from dataloaders import *
+from dataloaders import PREPROC_MAPPER
+from dataloaders.utils import get_dataset, ZeroShotSampler, spatial_resample
+from trainers.utils import animate_rollout, magnitude_vel, compute_energy_enstrophy_spectra
+from modelComp.utils import ACT_MAPPER, SKIPBLOCK_MAPPER
+
 from trainers.MTT import MTTtrainer, MTTmodel, MTTdata
 from trainers.utils import rollout_prb
 
-
 class FMTtrainer(MTTtrainer):
     def __init__(self, *args, **kwargs):
-        super(FMTtrainer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         print('Initializing FlowMatching Trainer')
     
     def init_modules(self):
@@ -41,7 +74,7 @@ class FMTmodel(MTTmodel):
     def forward(self, x, t):
         return self.model(x, t)
         
-    def random_fft_perturb(x, perturbation_strength=1.0):
+    def random_fft_perturb(self, x, perturbation_strength):
         x_fft = torch.fft.fftshift(torch.fft.fft2(x, dim=(-2, -1)))
         x_fft = x_fft * torch.exp(1j * torch.randn_like(x_fft) * perturbation_strength)
         x_recon = torch.fft.ifft2(torch.fft.ifftshift(x_fft)).real
@@ -49,35 +82,42 @@ class FMTmodel(MTTmodel):
 
     def training_step(self, batch, batch_idx):
         front, label = batch
+        total_loss = 0.0
 
-        xnoise = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
-        target = label - xnoise
-        t = torch.rand(label.size(0))
-        xt = (1 - t[:, None, None, None, None]) * xnoise + t[:, None, None, None, None] * label
-        pred = self(xt, t)
+        for _ in range(self.ct.train_steps_per_batch):
+            xnoise = self.random_fft_perturb(front, self.ct.perturbation_strength)
+            target = label - xnoise
+            t = torch.rand(label.size(0), device=label.device)
+            xt = (1 - t[:, None, None, None, None]) * xnoise + t[:, None, None, None, None] * label
+            pred = self(xt, t)
 
-        train_loss = F.mse_loss(pred, target, reduction='mean')
-        self.train_losses.append(train_loss.item())
-        return train_loss
+            train_loss = F.mse_loss(pred, target, reduction='mean')
+            self.train_losses.append(train_loss.item())
+            # not sure if correct loss is returned
+            total_loss += train_loss
+
+        avg_loss = total_loss / self.ct.train_steps_per_batch
+        return avg_loss
+        #return train_loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
 
         front, label = batch
-        steps = self.cm.integration_steps
+        steps = self.ct.int_steps
         if dataloader_idx == 0:
-            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+            xt = self.random_fft_perturb(front, self.ct.perturbation_strength)
             for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
-                pred = self(xt, t.expand(xt.size(0)))
+                pred = self(xt, t.to(label.device).expand(xt.size(0)))
                 xt = xt + (1 / steps) * pred
             val_loss = F.mse_loss(pred, label, reduction='mean')
             self.val_SS_losses.append(val_loss.item())
             self.log("val_SS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
         elif dataloader_idx == 1:
             # a few forward steps for the forward step loss
-            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+            xt = self.random_fft_perturb(front, self.ct.perturbation_strength)
             for _ in range(self.ct.forward_steps_loss):
                 for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
-                    pred = self(xt, t.expand(xt.size(0)))
+                    pred = self(xt, t.to(label.device).expand(xt.size(0)))
                     xt = xt + (1 / steps) * pred
             val_loss = F.mse_loss(xt, label, reduction='mean')
             self.val_FS_losses.append(val_loss.item())
@@ -98,7 +138,9 @@ class FMTmodel(MTTmodel):
             else:
                 front = val_traj[:self.cm.temporal_bundling].unsqueeze(0).float().to(device)#.to(torch.bfloat16)
             #print('len:', len(val_traj) // self.cm.temporal_bundling)
-            stacked_pred = rollout_prb(front, self.model, len(val_traj) // self.cm.temporal_bundling)
+            stacked_pred = rollout_prb(front, self.model, len(val_traj) // self.cm.temporal_bundling, 
+                                       self.random_fft_perturb, self.ct.perturbation_strength,
+                                       self.ct.int_steps)
             stacked_pred = stacked_pred.float() #.to(torch.bfloat16) 
             #print('stacked_pred:', stacked_pred.shape)
             stacked_true = val_traj.unsqueeze(0).float()
@@ -141,16 +183,16 @@ class FMTmodel(MTTmodel):
             front, label = front[0].unsqueeze(0).float(), label[0].unsqueeze(0).float()  # .to(torch.bfloat16)
         #front, label = front[0].unsqueeze(0).to(torch.bfloat16), label[0].unsqueeze(0).to(torch.bfloat16)
         with torch.no_grad():
-            steps = self.cm.integration_steps
-            xt = self.random_fft_perturb(front, perturbation_strength=self.cm.perturbation_strength)
+            steps = self.ct.int_steps
+            xt = self.random_fft_perturb(front, perturbation_strength=self.ct.perturbation_strength)
             if mode == 'val_forward':
                 for _ in range(self.ct.forward_steps_loss):
                     for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
-                        pred = self(xt, t.expand(xt.size(0)))
+                        pred = self(xt, t.to(label.device).expand(xt.size(0)))
                         xt = xt + (1 / steps) * pred
             else:
                 for i, t in enumerate(torch.linspace(0, 1, steps), start=1):
-                    pred = self(xt, t.expand(xt.size(0)))
+                    pred = self(xt, t.to(label.device).expand(xt.size(0)))
                     xt = xt + (1 / steps) * pred
 
         

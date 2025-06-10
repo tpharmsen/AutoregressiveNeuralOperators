@@ -1,5 +1,5 @@
 epochs: 100
-batch_size: 128
+batch_size: 64
 init_lr: 5.0e-4
 patience: 2
 weight_decay: 0.01
@@ -14,7 +14,8 @@ prefetch_factor: 4
 strategy: "ddp"
 
 perturbation_strength: 0.4
-integration_steps: 10
+int_steps: 25
+train_steps_per_batch: 10
 
 plottrain_out: "plot_train.png"
 plotval_out: "plot_val.png"

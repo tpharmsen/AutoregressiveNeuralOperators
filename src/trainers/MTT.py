@@ -52,6 +52,7 @@ print("\nRunning MTT trainer\n")
 
 class MTTtrainer(L.LightningModule):
     def __init__(self, cb, cd, cm, ct):
+        super().__init__()
         self.cb = cb
         self.cd = cd
         self.cm = cm

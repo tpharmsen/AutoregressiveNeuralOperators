@@ -1,4 +1,4 @@
-from FluidGPT_B import *
+from .FluidGPT_B import *
 
 def gen_t_embedding(t, emb_dim, max_positions=10000):
     t = t * max_positions
