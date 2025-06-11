@@ -48,6 +48,7 @@ class FMTtrainer(MTTtrainer):
 class FMTmodel(MTTmodel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.automatic_optimization = False
     
     def _initialize_model(self):
         print()
@@ -81,10 +82,14 @@ class FMTmodel(MTTmodel):
         return x_recon
 
     def training_step(self, batch, batch_idx):
+        opt = self.optimizers()
+        
+
         front, label = batch
         total_loss = 0.0
 
         for _ in range(self.ct.train_steps_per_batch):
+            opt.zero_grad()
             xnoise = self.random_fft_perturb(front, self.ct.perturbation_strength)
             target = label - xnoise
             t = torch.rand(label.size(0), device=label.device)
@@ -94,6 +99,8 @@ class FMTmodel(MTTmodel):
             train_loss = F.mse_loss(pred, target, reduction='mean')
             self.train_losses.append(train_loss.item())
             # not sure if correct loss is returned
+            self.manual_backward(train_loss)
+            opt.step()
             total_loss += train_loss
 
         avg_loss = total_loss / self.ct.train_steps_per_batch
