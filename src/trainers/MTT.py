@@ -241,17 +241,20 @@ class MTTmodel(L.LightningModule):
             
                 self.epoch_time = time.time()
 
-    @rank_zero_only
+    
     def on_validation_epoch_end(self):
-        if not self.trainer.sanity_checking:
+        val_SS_loss = np.mean(self.val_SS_losses)
+        self.log("val_SS_loss_checkpoint", val_SS_loss)
+
+        if not self.trainer.sanity_checking and rank_zero_only.rank == 0:
             epoch = self.trainer.current_epoch
             self.epoch_time = time.time() - self.epoch_time
             self.log_time = time.time()
 
             train_loss = np.mean(self.train_losses)
-            val_SS_loss = np.mean(self.val_SS_losses)
+            #val_SS_loss = np.mean(self.val_SS_losses)
             val_FS_loss = np.mean(self.val_FS_losses)
-            self.log("val_SS_loss_checkpoint", val_SS_loss)
+            #self.log("val_SS_loss_checkpoint", val_SS_loss)
 
             self.global_mean = self.trainer.datamodule.global_mean
             self.global_std = self.trainer.datamodule.global_std
