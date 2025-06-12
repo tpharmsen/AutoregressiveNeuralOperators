@@ -1,7 +1,7 @@
 epochs: 100
 batch_size: 128
 init_lr: 5.0e-4
-patience: 3
+patience: 2
 weight_decay: 0.01
 inj_noise: False
 train_ratio: 0.8
