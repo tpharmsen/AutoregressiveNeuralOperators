@@ -110,6 +110,16 @@ class FMTmodel(MTTmodel):
     def validation_step(self, batch, batch_idx, dataloader_idx):
 
         front, label = batch
+
+        if dataloader_idx == 0:
+            xprior = self.random_fft_perturb(front, self.ct.perturbation_strength)
+            t = torch.rand(label.size(0), device=label.device)
+            xt = (1 - t[:, None, None, None, None]) * xprior + t[:, None, None, None, None] * label
+            pred = self(xt, t)
+            val_loss = F.mse_loss(pred, label, reduction='mean')
+        #elif dataloader_idx == 1: # no forward step loss in flowmatching training
+            
+        """
         steps = self.ct.int_steps
         if dataloader_idx == 0:
             xt = self.random_fft_perturb(front, self.ct.perturbation_strength)
@@ -129,7 +139,7 @@ class FMTmodel(MTTmodel):
             val_loss = F.mse_loss(xt, label, reduction='mean')
             self.val_FS_losses.append(val_loss.item())
             #self.log("val_FS_loss", val_loss, on_epoch=True, prog_bar=False, sync_dist=True)
-            
+        """
         return val_loss
 
 
