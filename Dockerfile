@@ -50,6 +50,23 @@ RUN echo "ClientAliveInterval 5" >> /etc/ssh/sshd_config
 # Expose SSH port for the openssh server
 EXPOSE 22
 
+###
+### Add non-root user with specific UID/GID
+###
+ENV USER_ID=2207
+ENV GROUP_ID=2207
+
+RUN groupadd -g ${GROUP_ID} user && \
+    useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash user && \
+    echo "user:password" | chpasswd && \
+    echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+###
+### Keep root for sshd, user available for SSH login or switching
+###
+
+USER root
+
 CMD ["/usr/sbin/sshd", "-D"]
 ###
 ###
