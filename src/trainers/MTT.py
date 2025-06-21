@@ -527,8 +527,8 @@ class MTTdata(L.LightningDataModule):
                 print("folder", item["name"], "already exists, skipping preproccessing")
 
         if hasattr(self.cd, 'preproc_only'):
-                if self.cd.preproc_only:
-                    raise ValueError("Preprocessing only mode is enabled, stopping after preprocessing.")
+            if self.cd.preproc_only:
+                raise ValueError("Preprocessing only mode is enabled, stopping after preprocessing.")
         
     def setup(self, stage=None):
 
