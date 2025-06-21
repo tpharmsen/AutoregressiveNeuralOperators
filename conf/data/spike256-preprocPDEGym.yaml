@@ -3,6 +3,12 @@ resample_mode: "fourier"
 preproc_only: True
 
 datasets:
+  - name: "pdegym-gauss-256"
+    path: "PDEGym-Gauss"
+    ppclass: "PDEGymPreProcDiv"
+    file_ext: "nc"
+    timesample: 1
+
   - name: "pdegym-sines-256"
     path: "PDEGym-Sines"
     ppclass: "PDEGymPreProcDiv"
