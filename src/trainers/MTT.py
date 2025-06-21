@@ -522,6 +522,10 @@ class MTTdata(L.LightningDataModule):
                     timesample=item["timesample"],
                     dataset_name=item["name"]
                 )
+                # if the variable self.cd.preproc_only exists and is true, we raise an error
+                if hasattr(self.cd, 'preproc_only'):
+                    if self.cd.preproc_only:
+                        raise ValueError("Preprocessing only mode is enabled, stopping after preprocessing.")
             else:
                 print("folder", item["name"], "already exists, skipping preproccessing")
         

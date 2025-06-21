@@ -1,5 +1,6 @@
 resample_shape: 256
 resample_mode: "fourier"
+preproc_only: True
 
 datasets:
   - name: "amira-256"
