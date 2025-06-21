@@ -1,0 +1,9 @@
+resample_shape: 256
+resample_mode: "fourier"
+
+datasets:
+  - name: "amira-256"
+    path: "AmiraSet/"
+    ppclass: "AmiraPreProcDiv"
+    file_ext: "am"
+    timesample: 5

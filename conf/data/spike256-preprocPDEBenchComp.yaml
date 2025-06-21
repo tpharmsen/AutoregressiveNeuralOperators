@@ -1,0 +1,9 @@
+resample_shape: 256
+resample_mode: "fourier"
+
+datasets:
+  - name: "pdebench-comp-256"
+    path: "PDEBench-Comp/"
+    ppclass: "PDEBenchCompPreProcDiv"
+    file_ext: "hdf5"
+    timesample: 1

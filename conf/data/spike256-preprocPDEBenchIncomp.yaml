@@ -1,0 +1,9 @@
+resample_shape: 256
+resample_mode: "fourier"
+
+datasets:
+  - name: "pdebench-incomp-256"
+    path: "PDEBench-Incomp/"
+    ppclass: "PDEBenchIncompPreProcDiv"
+    file_ext: "h5"
+    timesample: 10
