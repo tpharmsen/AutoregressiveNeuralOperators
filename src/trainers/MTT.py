@@ -48,8 +48,6 @@ else:
 
 torch.set_float32_matmul_precision('medium')
 
-print("\nRunning MTT trainer\n")
-
 class MTTtrainer(L.LightningModule):
     def __init__(self, cb, cd, cm, ct):
         super().__init__()
@@ -165,7 +163,7 @@ class MTTmodel(L.LightningModule):
     def _initialize_model(self):
         if self.cm.model_name == "FluidGPT":
             from modelComp.FluidGPT_B import FluidGPT_B
-            self.model = FluidGPT_B(emb_dim=96,
+            self.model = FluidGPT_B(emb_dim=self.cm.emb_dim,
                             data_dim=[self.ct.batch_size, self.cm.temporal_bundling, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(self.cm.patch_size, self.cm.patch_size),
                             hiddenout_dim=self.cm.hiddenout_dim,
@@ -505,7 +503,7 @@ class MTTdata(L.LightningDataModule):
         self.ct = ct 
 
     def prepare_data(self): 
-                
+
         for item in self.cd.datasets:
             
             preproc_savepath = str(self.cb.data_base + 'preproc_' + item["name"])
@@ -529,6 +527,7 @@ class MTTdata(L.LightningDataModule):
         if hasattr(self.cd, 'preproc_only'):
             if self.cd.preproc_only:
                 raise ValueError("Preprocessing only mode is enabled, stopping after preprocessing.")
+        
         
     def setup(self, stage=None):
 

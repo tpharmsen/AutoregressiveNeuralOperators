@@ -35,7 +35,7 @@ class LinearEmbedding(nn.Module):
         self.pH, self.pW = patch_size
         self.hiddenout_dim = hiddenout_dim
         self.patch_grid_res = (self.H // self.pH, self.W // self.pW)
-        
+        #print(self.C * self.pH * self.pW)
 
         assert self.H % self.pH == 0 and self.W % self.pW == 0, "spatial input dim must be divisible by patch_size"
         assert self.H == self.W, "must be square"

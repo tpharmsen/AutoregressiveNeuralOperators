@@ -55,7 +55,7 @@ class FMTmodel(MTTmodel):
         print(self.cm.model_name)
         if self.cm.model_name == "FluidGPT_FM":
             from modelComp.FluidGPT_FM import FluidGPT_FM   
-            self.model = FluidGPT_FM(emb_dim=96,
+            self.model = FluidGPT_FM(emb_dim=self.cm.emb_dim,
                             data_dim=[self.ct.batch_size, self.cm.temporal_bundling, self.cm.in_channels, self.cd.resample_shape, self.cd.resample_shape],
                             patch_size=(self.cm.patch_size, self.cm.patch_size),
                             hiddenout_dim=self.cm.hiddenout_dim,
