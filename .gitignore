@@ -5,3 +5,4 @@ models
 lightning_logs
 __pycache__/
 slurmlogs
+src/data
