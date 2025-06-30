@@ -1,6 +1,5 @@
-# AutoregressiveNeuralOperators
-A small repo for autoregressive neural operator training
-
+# FluidGPT
+Foundational modelling for Navier-Stokes, Auto-regressive (deterministic) approach VS (probabilistic) One-shot Flowmatching approach
 
 conda activate grad312
 python src/train.py --CB [] -- CD [] --CM [] --CT [] --out folder --name wandb_name
