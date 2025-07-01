@@ -85,18 +85,20 @@ class FMTmodel(MTTmodel):
         opt = self.optimizers()
         
 
-        front, label = batch
+        prior, target = batch
         total_loss = 0.0
 
         for _ in range(self.ct.train_steps_per_batch):
             opt.zero_grad()
-            xnoise = self.random_fft_perturb(front, self.ct.perturbation_strength)
-            target = label - xnoise
-            t = torch.rand(label.size(0), device=label.device)
-            xt = (1 - t[:, None, None, None, None]) * xnoise + t[:, None, None, None, None] * label
-            pred = self(xt, t)
-
-            train_loss = F.mse_loss(pred, target, reduction='mean')
+            #xnoise = self.random_fft_perturb(ta, self.ct.perturbation_strength)
+            tf = torch.rand(target.shape[0], device=target.device) #* (1 - eps) + eps
+            t_expand = tf.view(-1, 1, 1, 1, 1).repeat(
+                        1, target.shape[1], target.shape[2], target.shape[3], target.shape[4]
+                    )
+            xt = t_expand * target.clone() + (1 - t_expand) * prior.clone()
+            target_vector = target.clone() - prior.clone()
+            pred = self(xt, tf)
+            train_loss = F.mse_loss(pred, target_vector, reduction='mean')
             self.train_losses.append(train_loss.item())
             # not sure if correct loss is returned
             self.manual_backward(train_loss)
@@ -109,14 +111,15 @@ class FMTmodel(MTTmodel):
 
     def validation_step(self, batch, batch_idx, dataloader_idx):
 
-        front, label = batch
+        prior, target = batch
 
         if dataloader_idx == 0:
-            xprior = self.random_fft_perturb(front, self.ct.perturbation_strength)
-            t = torch.rand(label.size(0), device=label.device)
-            xt = (1 - t[:, None, None, None, None]) * xprior + t[:, None, None, None, None] * label
-            pred = self(xt, t)
-            val_loss = F.mse_loss(pred, label, reduction='mean')
+            #xprior = self.random_fft_perturb(front, self.ct.perturbation_strength)
+            tf = torch.rand(target.size(0), device=target.device)
+            xt = (1 - tf[:, None, None, None, None]) * prior + tf[:, None, None, None, None] * target
+            target_vector = target - prior
+            pred = self(xt, tf)
+            val_loss = F.mse_loss(pred, target_vector, reduction='mean')
         #elif dataloader_idx == 1: # no forward step loss in flowmatching training
             
         """
@@ -185,6 +188,7 @@ class FMTmodel(MTTmodel):
             front, label = self.trainer.datamodule.train_datasets[dataset_idx].dataset.__getitem__(sample)
             dataset_name = self.trainer.datamodule.train_datasets[dataset_idx].dataset.name
         elif mode == 'val_forward':
+            pass
             dataset_idx = torch.randint(0, len(self.trainer.datamodule.val_forward_datasets), (1,)).item()
             indices = list(self.trainer.datamodule.val_forward_samplers[dataset_idx].indices)
             sample = random.choice(indices)

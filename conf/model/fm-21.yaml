@@ -1,0 +1,15 @@
+model_name: "FluidGPT_FM"
+in_channels: 2
+temporal_bundling: 21
+emb_dim: 96
+patch_size: 8
+hiddenout_dim: 256
+flowmatching_emb_dim: 256
+depth: 2
+stage_depths: [6,6,10,6,6]
+num_heads: [6,6,12,6,6]
+window_size: 4
+use_flex_attn: True
+act: "gelu"
+skipblock: "convnext"
+gradient_flowthrough: [True, False, False]

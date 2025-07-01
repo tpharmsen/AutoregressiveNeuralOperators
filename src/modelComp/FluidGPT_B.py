@@ -641,7 +641,9 @@ class FluidGPT_B(nn.Module):
             x = self.patchMerges[i](x)
 
         # ===== MIDDLE =====
-        residual = x
+        if self.gradient_flowthrough[1]:
+            residual = x
+
         for module in self.blockMiddle:
             #print(module)
             x = module(x)

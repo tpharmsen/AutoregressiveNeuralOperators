@@ -283,7 +283,7 @@ class MTTmodel(L.LightningModule):
                 "Epoch Time": self.epoch_time,
                 "train_plot": wandb.Image(self.out_0) if visuals else None,
                 "val_plot": wandb.Image(self.out_1) if visuals else None,
-                "val_forward_plot": wandb.Image(self.out_2) if visuals else None,
+                "val_forward_plot": wandb.Image(self.out_2) if visuals and os.path.exists(self.out_2) else None,
                 "val_anim": wandb.Video(self.out_3, format="gif") if visuals else None,
                 "val_spectra": wandb.Image(self.out_4) if visuals else None,
                 "Log Time": self.log_time

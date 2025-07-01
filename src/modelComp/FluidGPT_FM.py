@@ -32,7 +32,8 @@ class FluidGPT_FM(nn.Module):
          
         self.flowmatching_emb_dim = flowmatching_emb_dim
         self.flowt_proj = nn.Linear(flowmatching_emb_dim, emb_dim) 
-
+        self.flowt_proj2 = nn.Linear(flowmatching_emb_dim, 2**depth * emb_dim)
+        
         self.depth = depth
         self.middleblocklen = stage_depths[depth]
         self.gradient_flowthrough = gradient_flowthrough
@@ -204,7 +205,15 @@ class FluidGPT_FM(nn.Module):
             x = self.patchMerges[i](x)
 
         # ===== MIDDLE =====
-        residual = x
+        t2 = self.flowt_proj2(t)
+        #print('t2 shape', t2.shape)
+        t2 = t2.unsqueeze(1).unsqueeze(2).repeat(1, x.shape[1], x.shape[2], 1)  
+        #print('t2 shape', t2.shape)
+        x = x + t2
+        
+        if self.gradient_flowthrough[1]:
+            residual = x
+
         for module in self.blockMiddle:
             #print(module)
             x = module(x)
