@@ -15,7 +15,7 @@ strategy: "ddp"
 
 perturbation_strength: 0.05
 int_steps: 30
-train_steps_per_batch: 15
+train_steps_per_batch: 10
 
 plottrain_out: "plot_train.png"
 plotval_out: "plot_val.png"
