@@ -122,7 +122,8 @@ USER $USER_UID:$USER_GID
 # Expose SSH port
 EXPOSE $SSH_PORT
 
-CMD ["/usr/sbin/sshd", "-D"]
+# Use the startup script
+CMD ["/start-sshd.sh"]
 ###
 ###
 ###
