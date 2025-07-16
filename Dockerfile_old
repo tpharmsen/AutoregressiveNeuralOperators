@@ -1,19 +1,60 @@
-# Use the official PyTorch image with CUDA support
-#FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
-FROM pytorch/pytorch:latest
-# use nvidia tested base image as pytorch: nvcr.io/nvidia/pytorch:25.02-py3-igpu
+FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
 
-WORKDIR /home/
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install deadsnakes and Python 3.11 packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    screen \
+    git \
+    curl \
+    ca-certificates \
+    libjpeg-dev \
+    libpng-dev \
+    python3.11 \
+    python3.11-dev \
+    python3.11-distutils \
+    ninja-build \
+    libnuma-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+
+# (Optional) Make python3 point to Python 3.11
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install numpy fire
+RUN python3 -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/
+
+
+WORKDIR /code/FluidGPT
 
 COPY requirements.txt .
-#RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install -r requirements.txt
+RUN python3 -m pip install -r requirements.txt
 
-# --exclude ?
-COPY . /home/
+###
+### Install OpenSSH server
+###
+RUN apt-get update && apt-get install -y openssh-server && \
+    mkdir /var/run/sshd && \
+    echo 'root:root' | chpasswd && \
+    sed -i 's/#*PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config && \
+    sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
 
-# Set the entrypoint to use torchrun for distributed training with correct formatting
-#ENTRYPOINT ["torchrun", "--nproc_per_node=1", "src/train.py", "--epochs", "100", "--batch-size", "16"]
-#CMD ["python", "AutoregressiveNeuralOperators/src/train.py", "--conf", "conf/local_128_1.yaml"]
-CMD ["python", "src/train.py", "--conf", "conf/local_128_1.yaml"]
+ENV NOTVISIBLE="in users profile"
+RUN echo "export VISIBLE=now" >> /etc/profile
+RUN echo "ClientAliveInterval 5" >> /etc/ssh/sshd_config
+# Expose SSH port for the openssh server
+EXPOSE 22
 
+CMD ["/usr/sbin/sshd", "-D"]
+###
+###
+###
