@@ -6,3 +6,5 @@ lightning_logs
 __pycache__/
 slurmlogs
 src/data
+id_ed25519.pub
+id_ed25519
