@@ -45,6 +45,10 @@ WORKDIR /code/FluidGPT
 COPY requirements.txt .
 RUN python3 -m pip install -r requirements.txt
 
+# Configure git user.name and user.email globally
+RUN git config --global user.name "tpharmsen" && \
+    git config --global user.email "t.p.harmsen@student.tue.nl"
+
 ########################### SSH Installation ##################################
 
 RUN apt update && apt install -y openssh-server
