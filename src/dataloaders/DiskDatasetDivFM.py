@@ -5,7 +5,9 @@ import numpy as np
 from pathlib import Path
 from dataloaders.utils import spatial_resample
 
-class DiskDatasetDiv(Dataset):
+from scipy.ndimage import gaussian_filter
+
+class DiskDatasetDivFM(Dataset):
     def __init__(self, preproc_path, temporal_bundling = 1, forward_steps = 1):
         self.filepath = preproc_path
         self._file = None
@@ -35,12 +37,6 @@ class DiskDatasetDiv(Dataset):
         self.idx_window = self.dt * self.tb
         self.avgnorm = None
         self.stdnorm = None
-    """    
-    def _get_file(self):
-        if self._file is None:
-            self._file = h5py.File(self.filepath, 'r')
-        return self._file
-    """
         
     def __len__(self):
         return self.traj * self.lenpertraj
@@ -55,18 +51,27 @@ class DiskDatasetDiv(Dataset):
         filename = Path(filename)
         filename = filename / f'traj{traj_idx:05d}.h5'
         with h5py.File(filename, 'r') as f:
-            front = f['data'][ts_idx : ts_idx + self.idx_window : self.dt]
-            label = f['data'][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.dt]
+            target = f['data'][ts_idx : ts_idx + self.idx_window : self.dt]
+            #label = f['data'][ts_idx + self.fs * self.idx_window : ts_idx + (self.fs + 1) * self.idx_window : self.dt]
         if self.avgnorm is not None:
             #print('normalising\n')
-            front = (front - self.avgnorm) / self.stdnorm
-            label = (label - self.avgnorm) / self.stdnorm
-        return torch.tensor(front, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
-    """
-    def __del__(self):
-        if self._file is not None:
-            self._file.close()
-    """
+            target = (target - self.avgnorm) / self.stdnorm
+        #print(target.shape)
+        prior = self.prior_prefix(target, fromframe=4, sigma=4.5, scale=0.8)
+
+        #label = (label - self.avgnorm) / self.stdnorm
+        return torch.tensor(prior, dtype=torch.float32), torch.tensor(target, dtype=torch.float32)
+    
+    def prior_prefix(self, x, fromframe=3, sigma=4.0, scale=1):
+            xnoise = x.copy()
+            #print('function called')
+            sigma = (0, sigma, sigma)
+            for i in range(fromframe, xnoise.shape[0]):
+                noise = xnoise[i-1] + scale * np.random.normal(size = xnoise[i].shape) #* torch.randn_like(xnoise[i])
+                #print(noise.shape)
+                noise = gaussian_filter(noise, sigma=sigma)
+                xnoise[i, :] = noise
+            return xnoise
 
     def get_single_traj(self, idx):
         #f = self._get_file()
