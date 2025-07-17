@@ -11,3 +11,4 @@ einops
 ipykernel
 ffmpeg-python
 scipy
+notebook
