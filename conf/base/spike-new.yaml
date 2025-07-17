@@ -1,0 +1,10 @@
+data_base: "/home/developer/data/fluidgpt/"
+device: "cuda"
+save_path: "/home/developer/data/fluidgpt/output/"
+folder_out: "0/"
+save_on: 1
+wandb: 0
+wandb_name: "base"
+
+viz: True
+viz_freq: 1

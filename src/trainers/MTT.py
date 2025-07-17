@@ -558,7 +558,7 @@ class MTTdata(L.LightningDataModule):
             self.val_samplers.append(val_sampler)
             self.val_forward_samplers.append(val_forward_sampler)
             
-            
+            #torch.synchronize() 
             split = {
                 "name": item["name"],
                 "seed": random_seed,
@@ -571,8 +571,8 @@ class MTTdata(L.LightningDataModule):
             }
             if self.cb.save_on:
                 for callback in self.trainer.callbacks:
-                    if isinstance(callback, ModelCheckpoint):
-                        save_split_path = os.path.join(callback.dirpath, "traj_split_" + item["name"] + ".json")
+                    if isinstance(callback, ModelCheckpoint): # include the rank
+                        save_split_path = os.path.join(callback.dirpath, "traj_split_" + item["name"] + "rank" + str(dist.get_rank())+ ".json")
                 if save_split_path is None:
                     raise ValueError("ModelCheckpoint callback not found, unable to save trajectory split.")
                 with open(save_split_path, "w") as f:
