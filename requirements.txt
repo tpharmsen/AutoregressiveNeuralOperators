@@ -10,3 +10,4 @@ h5py
 einops
 ipykernel
 ffmpeg-python
+scipy
