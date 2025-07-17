@@ -3,7 +3,7 @@ Foundational modelling for Navier-Stokes, Auto-regressive (deterministic) approa
 
 conda activate grad312
 python src/train.py --CB [] -- CD [] --CM [] --CT [] --out folder --name wandb_name
-
+lalala
 
 # runcommands WS:
 CUDA_VISIBLE_DEVICES=1 python src/train.py 
